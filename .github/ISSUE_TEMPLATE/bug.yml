@@ -1,0 +1,32 @@
+name: Bug
+description: 버그 수정 작업
+title: "[Fix] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptom
+      description: 보이는 문제
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduce
+      description: 재현 절차
+      placeholder: "1. "
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: 기대 동작
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: 로그, 영향 범위, 테스트 참고사항
