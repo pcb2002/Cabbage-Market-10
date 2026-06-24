@@ -155,11 +155,18 @@ Controller → WebSocket Handler → Service → Repository → DB
 ## 테스트
 
 - 테스트 메서드명은 한글로 작성해 기대 동작을 바로 드러낸다.
-- 한 테스트는 한 기대 동작만 검증한다.
+- 한 테스트는 하나의 기대 동작만 검증한다.
 - 정상, 실패, 권한, 경계값 시나리오를 함께 작성한다.
-- 외부 시스템(MySQL, Redis, S3)은 격리한다. 운영 환경에 우연히 의존하지 않는다.
-- 동시성은 단위 테스트만으로 판단하지 않고 통합 테스트를 둔다.
-- 테스트를 삭제하거나 완화해 빌드를 통과시키지 않는다.
+- 테스트는 실제 운영 환경의 MySQL, Redis, S3에 접근하지 않는다.
+- 외부 시스템은 Mock, Fake, Embedded 환경 또는 Testcontainers로 격리한다.
+- 동시성, 락, 트랜잭션 격리 수준, MySQL 특화 동작은 단위 테스트만으로 판단하지 않고 MySQL 기반 통합 테스트를 작성한다.
+- 테스트를 삭제하거나 검증 범위를 완화해 빌드를 통과시키지 않는다.
+- 테스트 의존성은 목적에 따라 `testImplementation`, `testRuntimeOnly`, `testCompileOnly`, `testAnnotationProcessor`를 사용한다.
+- Gradle `test` 태스크는 JUnit Platform과 `test` 프로필을 사용한다.
+- 기본 테스트 DB는 H2를 사용하고 설정은 `src/test/resources/application.yml`에 둔다.
+- MySQL 동작 검증이 필요한 통합 테스트는 Testcontainers 기반 MySQL을 사용한다.
+- 로컬 실행은 MySQL, Redis를 사용하며 설정은 `application-local.yml`과 `env/local.env`에 둔다.
+- 실제 비밀값은 `env/local.env`에만 두고, 예시 값은 `env/local.env.example`로 공유한다.
 
 | 계층 | 검증 대상 |
 |---|---|
