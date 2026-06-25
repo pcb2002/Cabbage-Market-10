@@ -4,6 +4,7 @@ import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.Getter;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -65,5 +66,12 @@ public class CommonResponse<T> {
      */
     public ResponseEntity<CommonResponse<T>> toResponseEntity() {
         return ResponseEntity.status(status).body(this);
+    }
+
+    /**
+     * 추가 응답 헤더와 함께 ResponseEntity로 감싸 반환한다.
+     */
+    public ResponseEntity<CommonResponse<T>> toResponseEntity(HttpHeaders headers) {
+        return ResponseEntity.status(status).headers(headers).body(this);
     }
 }

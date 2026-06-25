@@ -10,13 +10,15 @@ import com.example.cabbagemarket10.global.common.CommonResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import java.sql.SQLException;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -94,6 +96,26 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").value("이미 사용 중인 이메일입니다."));
     }
 
+    @DisplayName("이메일 유니크 제약 위반은 중복 이메일 오류로 반환한다")
+    @Test
+    void 이메일_유니크_제약_위반은_중복_이메일_오류로_반환한다() throws Exception {
+        mockMvc.perform(get("/test/email-constraint-violation"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.code").value("DUPLICATED_EMAIL"))
+                .andExpect(jsonPath("$.message").value("이미 사용 중인 이메일입니다."));
+    }
+
+    @DisplayName("이메일 외 데이터 무결성 위반은 잘못된 요청 오류로 반환한다")
+    @Test
+    void 이메일_외_데이터_무결성_위반은_잘못된_요청_오류로_반환한다() throws Exception {
+        mockMvc.perform(get("/test/other-constraint-violation"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."));
+    }
+
     @DisplayName("처리되지 않은 예외는 공통 내부 서버 오류 응답으로 반환한다")
     @Test
     void 처리되지_않은_예외는_공통_내부_서버_오류_응답으로_반환한다() throws Exception {
@@ -152,9 +174,28 @@ class GlobalExceptionHandlerTest {
             throw new BusinessException(ErrorCode.DUPLICATED_EMAIL);
         }
 
+        @GetMapping("/email-constraint-violation")
+        public org.springframework.http.ResponseEntity<CommonResponse<Void>> emailConstraintViolation() {
+            throw dataIntegrityViolation("uk_client_email");
+        }
+
+        @GetMapping("/other-constraint-violation")
+        public org.springframework.http.ResponseEntity<CommonResponse<Void>> otherConstraintViolation() {
+            throw dataIntegrityViolation("uk_other_constraint");
+        }
+
         @GetMapping("/runtime-exception")
         public org.springframework.http.ResponseEntity<CommonResponse<Void>> runtimeException() {
             throw new RuntimeException("boom");
+        }
+
+        private DataIntegrityViolationException dataIntegrityViolation(String constraintName) {
+            org.hibernate.exception.ConstraintViolationException cause =
+                    new org.hibernate.exception.ConstraintViolationException(
+                            "constraint violation",
+                            new SQLException("constraint violation"),
+                            constraintName);
+            return new DataIntegrityViolationException("constraint violation", cause);
         }
     }
 
