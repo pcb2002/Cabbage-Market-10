@@ -17,11 +17,6 @@ public enum ErrorCode {
             "서버 내부 오류가 발생했습니다."),
 
     // Auth
-    // 회원가입 요청 DTO 검증 실패
-    INVALID_SIGNUP_REQUEST(
-            HttpStatus.BAD_REQUEST,
-            "INVALID_SIGNUP_REQUEST",
-            "회원가입 요청값이 올바르지 않습니다."),
     DUPLICATED_EMAIL(HttpStatus.CONFLICT, "DUPLICATED_EMAIL", "이미 사용 중인 이메일입니다."),
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "이메일 또는 비밀번호가 올바르지 않습니다."),
 

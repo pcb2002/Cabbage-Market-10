@@ -61,9 +61,9 @@ public class CommonResponse<T> {
     }
 
     /**
-     * 현재 공통 응답 객체를 ResponseEntity로 감싸 반환한다.
+     * 현재 공통 응답 객체를 자신의 status로 ResponseEntity에 감싸 반환한다.
      */
-    public ResponseEntity<CommonResponse<T>> toResponseEntity(HttpStatus httpStatus) {
-        return ResponseEntity.status(httpStatus).body(this);
+    public ResponseEntity<CommonResponse<T>> toResponseEntity() {
+        return ResponseEntity.status(status).body(this);
     }
 }

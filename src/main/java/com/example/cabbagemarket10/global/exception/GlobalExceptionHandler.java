@@ -3,6 +3,7 @@ package com.example.cabbagemarket10.global.exception;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -15,6 +16,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -23,7 +25,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CommonResponse<Void>> handleBusinessException(BusinessException exception) {
         ErrorCode errorCode = exception.getErrorCode();
         return CommonResponse.fail(errorCode, exception.getMessage())
-                .toResponseEntity(errorCode.getHttpStatus());
+                .toResponseEntity();
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -62,26 +64,27 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<CommonResponse<Void>> handleNotFoundException(Exception exception) {
         return CommonResponse.fail(ErrorCode.NOT_FOUND)
-                .toResponseEntity(ErrorCode.NOT_FOUND.getHttpStatus());
+                .toResponseEntity();
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<CommonResponse<Void>> handleMethodNotAllowedException(
             HttpRequestMethodNotSupportedException exception) {
         return CommonResponse.fail(ErrorCode.METHOD_NOT_ALLOWED)
-                .toResponseEntity(ErrorCode.METHOD_NOT_ALLOWED.getHttpStatus());
+                .toResponseEntity();
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CommonResponse<Void>> handleException(Exception exception) {
+        log.error("처리되지 않은 예외 발생", exception);
         return CommonResponse.fail(ErrorCode.INTERNAL_SERVER_ERROR)
-                .toResponseEntity(ErrorCode.INTERNAL_SERVER_ERROR.getHttpStatus());
+                .toResponseEntity();
     }
 
     // Bean Validation 실패 응답 형식을 한 곳에서 맞춘다.
     private ResponseEntity<CommonResponse<Void>> validationErrorResponse(String message) {
         return CommonResponse.fail(ErrorCode.VALIDATION_ERROR, message)
-                .toResponseEntity(ErrorCode.VALIDATION_ERROR.getHttpStatus());
+                .toResponseEntity();
     }
 
     // 여러 필드 오류가 있어도 첫 번째 메시지만 공통 응답에 사용한다.

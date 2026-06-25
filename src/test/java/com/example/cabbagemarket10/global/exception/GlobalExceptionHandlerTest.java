@@ -132,19 +132,19 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/success")
         public org.springframework.http.ResponseEntity<CommonResponse<Map<String, String>>> success() {
             return CommonResponse.success(HttpStatus.OK, Map.of("name", "배추"))
-                    .toResponseEntity(HttpStatus.OK);
+                    .toResponseEntity();
         }
 
         @PostMapping("/validation")
         public org.springframework.http.ResponseEntity<CommonResponse<Void>> validation(
                 @Valid @RequestBody TestRequest request) {
-            return CommonResponse.success(HttpStatus.CREATED).toResponseEntity(HttpStatus.CREATED);
+            return CommonResponse.success(HttpStatus.CREATED).toResponseEntity();
         }
 
         @GetMapping("/query")
         public org.springframework.http.ResponseEntity<CommonResponse<Void>> query(
                 @RequestParam @Min(value = 1, message = "수량은 1 이상입니다.") Integer count) {
-            return CommonResponse.success(HttpStatus.OK).toResponseEntity(HttpStatus.OK);
+            return CommonResponse.success(HttpStatus.OK).toResponseEntity();
         }
 
         @GetMapping("/global-exception")
