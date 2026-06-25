@@ -1,21 +1,19 @@
 package com.example.cabbagemarket10.client.entity;
 
+import com.example.cabbagemarket10.common.entity.BaseEntity;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "client")
 @Getter
-public class Client {
+public class Client extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,10 +29,10 @@ public class Client {
     private String name;
 
     @Column(nullable = false)
-    private String phoneNumber;
+    private String phone;
 
     @Column(nullable = false)
-    private String imageKey;
+    private String profile_image_url;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
@@ -43,12 +41,5 @@ public class Client {
     @Column(nullable = false)
     private boolean isVerified;
 
-    @CreatedDate
-    private LocalDateTime createdDate;
-
-    @LastModifiedDate
-    private LocalDateTime updatedDate;
-
-    private boolean isDeleted;
-
+    private boolean deletedAt;
 }
