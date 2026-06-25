@@ -1,6 +1,6 @@
 package com.example.cabbagemarket10.domain.item.repository;
 
-import com.example.cabbagemarket10.domain.item.entity.Item
+import com.example.cabbagemarket10.domain.item.entity.Item;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
