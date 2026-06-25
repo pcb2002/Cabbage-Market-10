@@ -151,7 +151,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 회원가입 | phone | 선택, 형식 `01[0-9]-?\d{3,4}-?\d{4}` |
 | 로그인 | email | 필수, 이메일 형식 |
 | 로그인 | password | 필수, 공백 불가 |
-| 토큰 재발급 | refreshToken | 필수, 공백 불가 |
+| 토큰 재발급 | refresh_token Cookie | 필수, 유효한 Refresh Token |
 | 내 정보 수정 | nickname | 선택, 전달 시 2~20자 |
 | 내 정보 수정 | name | 선택, 전달 시 1~50자 |
 | 내 정보 수정 | phone | 선택, 형식 `01[0-9]-?\d{3,4}-?\d{4}` |
@@ -185,6 +185,12 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 토큰 재발급 | POST | `/api/auth/refresh` | 불필요 | `200 OK` |
 | 로그아웃 | POST | `/api/auth/logout` | 필요 | `200 OK` |
 
+- 로그인 성공 시 Access Token은 응답 본문으로 전달하고 Refresh Token은 `Set-Cookie`로 전달한다.
+- 인증 API는 `Authorization: Bearer {accessToken}` 헤더를 사용한다.
+- 토큰 재발급은 `refresh_token` Cookie를 사용하며 요청 본문에 Refresh Token을 받지 않는다.
+- 로그아웃 성공 시 서버는 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 만료 쿠키를 응답한다.
+- Refresh Token Cookie를 사용하는 요청은 `XSRF-TOKEN` Cookie 값을 `X-XSRF-TOKEN` Header로 전달한다.
+
 주요 오류:
 
 | 기능 | Status | Code | 설명 |
@@ -196,7 +202,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 로그인 | 403 | `WITHDRAWN_MEMBER` | 탈퇴 회원 로그인 차단 |
 | 토큰 재발급 | 401 | `INVALID_REFRESH_TOKEN` | Refresh Token 유효하지 않음 |
 | 토큰 재발급 | 401 | `REFRESH_TOKEN_EXPIRED` | Refresh Token 만료 |
-| 토큰 재발급 | 404 | `REFRESH_TOKEN_NOT_FOUND` | Redis 저장 토큰 없음 |
+| 토큰 재발급 | 401 | `BLACKLISTED_TOKEN` | 로그아웃 또는 강제 만료된 토큰 |
 | 로그아웃 | 401 | `UNAUTHORIZED` | 인증 토큰 없음·만료 |
 
 ### 마이 페이지
@@ -351,33 +357,40 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 ### 로그인
 
-`POST /api/auth/login` 성공 응답은 Access Token과 Refresh Token을 함께 반환한다.
+`POST /api/auth/login` 성공 응답은 Access Token을 응답 본문으로 전달하고 Refresh Token을 `Set-Cookie`로 전달한다.
 
 ```json
 {
   "accessToken": "jwt-access-token",
-  "refreshToken": "jwt-refresh-token",
   "tokenType": "Bearer",
   "expiresIn": 3600
 }
+```
+
+```http
+Set-Cookie: refresh_token={jwt}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1209600
 ```
 
 ### 토큰 재발급
 
-`POST /api/auth/refresh`는 Refresh Token을 검증하고 새 Access Token과 Refresh Token을 재발급한다.
+`POST /api/auth/refresh`는 `refresh_token` Cookie를 검증하고 새 Access Token은 응답 본문으로, 새 Refresh Token은 `Set-Cookie`로 재발급한다.
+요청 본문에는 Refresh Token을 받지 않는다.
 
 ```json
 {
   "accessToken": "jwt-access-token",
-  "refreshToken": "jwt-refresh-token",
   "tokenType": "Bearer",
   "expiresIn": 3600
 }
 ```
 
+```http
+Cookie: refresh_token={jwt}
+```
+
 ### 로그아웃
 
-`POST /api/auth/logout`은 인증된 사용자의 Refresh Token을 Redis에서 삭제하거나 무효화한다.
+`POST /api/auth/logout`은 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 Refresh Token 만료 쿠키를 응답한다.
 
 ## 상품 게시글
 
