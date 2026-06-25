@@ -1,6 +1,7 @@
 package com.example.cabbagemarket10.domain.item.entity;
 
 import com.example.cabbagemarket10.common.entity.BaseEntity;
+import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
