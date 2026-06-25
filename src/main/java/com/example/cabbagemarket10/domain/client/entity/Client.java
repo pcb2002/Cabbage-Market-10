@@ -1,8 +1,7 @@
-package com.example.cabbagemarket10.client.entity;
+package com.example.cabbagemarket10.domain.client.entity;
 
 import com.example.cabbagemarket10.common.entity.BaseEntity;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
