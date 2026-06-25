@@ -7,7 +7,7 @@
 - 회원가입, 로그인, 토큰 재발급, 공개 조회를 제외한 API는 인증을 요구한다.
 - 비밀번호는 Spring Security `PasswordEncoder`로 단방향 해시한다.
 - 인증 방식은 Access Token Stateless JWT와 Refresh Token Cookie 인증을 사용한다.
-- Access Token은 응답 본문으로 전달하고 API 요청마다 `Authorization: Bearer` 헤더로 전달한다.
+- Access Token은 응답 헤더로 전달하고 API 요청마다 `Authorization: Bearer` 헤더로 전달한다.
 - Refresh Token은 `HttpOnly`, `Secure`, `SameSite=Lax` Cookie로만 전달한다.
 - API 인증은 Access Token으로 처리한다.
 - 토큰 재발급은 `refresh_token` Cookie의 Refresh Token으로 처리한다.
@@ -36,7 +36,7 @@
 
 - 비밀번호, 토큰, 전화번호는 로그에 남기지 않는다.
 - Client 응답 DTO에 password를 포함하지 않는다.
-- Refresh Token을 응답 본문에 포함하지 않는다.
+- Access Token과 Refresh Token을 응답 본문에 포함하지 않는다.
 - Access Token과 Refresh Token을 로그, 예외 메시지, URL에 노출하지 않는다.
 - 운영 비밀키와 DB 계정은 환경변수 또는 Secret Store로 관리한다.
 - `.env`, 운영 설정, 인증서, 실제 키는 커밋하지 않는다.

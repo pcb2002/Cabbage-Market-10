@@ -14,7 +14,7 @@ Refresh Token을 클라이언트 저장소에 직접 보관하면 XSS 노출 위
 ## 결정
 
 - **인증 방식**: Access Token은 Stateless JWT, Refresh Token은 Cookie 기반 JWT 인증
-- **Access Token 전달**: Access Token은 응답 본문으로 전달하고 API 요청마다 `Authorization: Bearer` 헤더로 전달한다.
+- **Access Token 전달**: Access Token은 응답 헤더로 전달하고 API 요청마다 `Authorization: Bearer` 헤더로 전달한다.
 - **Refresh Token 전달**: Refresh Token은 `HttpOnly` Cookie로 전달한다.
 - **JWT 검증**: `JwtAuthenticationFilter`는 DB 조회 없이 Access Token의 JWT Claim과 Redis 블랙리스트만 검증한다.
 - **Redis 역할**: Redis는 유효 토큰 저장소가 아니라 폐기된 토큰의 블랙리스트 저장소로만 사용한다.

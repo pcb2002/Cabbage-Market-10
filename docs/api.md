@@ -185,7 +185,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 토큰 재발급 | POST | `/api/auth/refresh` | 불필요 | `200 OK` |
 | 로그아웃 | POST | `/api/auth/logout` | 필요 | `200 OK` |
 
-- 로그인 성공 시 Access Token은 응답 본문으로 전달하고 Refresh Token은 `Set-Cookie`로 전달한다.
+- 로그인 성공 시 Access Token은 응답 헤더로 전달하고 Refresh Token은 `Set-Cookie`로 전달한다.
 - 인증 API는 `Authorization: Bearer {accessToken}` 헤더를 사용한다.
 - 토큰 재발급은 `refresh_token` Cookie를 사용하며 요청 본문에 Refresh Token을 받지 않는다.
 - 로그아웃 성공 시 서버는 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 만료 쿠키를 응답한다.
@@ -357,14 +357,10 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 ### 로그인
 
-`POST /api/auth/login` 성공 응답은 Access Token을 응답 본문으로 전달하고 Refresh Token을 `Set-Cookie`로 전달한다.
+`POST /api/auth/login` 성공 응답은 Access Token을 응답 헤더로 전달하고 Refresh Token을 `Set-Cookie`로 전달한다.
 
-```json
-{
-  "accessToken": "jwt-access-token",
-  "tokenType": "Bearer",
-  "expiresIn": 3600
-}
+```http
+Authorization: Bearer {accessToken}
 ```
 
 ```http
@@ -373,15 +369,11 @@ Set-Cookie: refresh_token={jwt}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age
 
 ### 토큰 재발급
 
-`POST /api/auth/refresh`는 `refresh_token` Cookie를 검증하고 새 Access Token은 응답 본문으로, 새 Refresh Token은 `Set-Cookie`로 재발급한다.
+`POST /api/auth/refresh`는 `refresh_token` Cookie를 검증하고 새 Access Token은 응답 헤더로, 새 Refresh Token은 `Set-Cookie`로 재발급한다.
 요청 본문에는 Refresh Token을 받지 않는다.
 
-```json
-{
-  "accessToken": "jwt-access-token",
-  "tokenType": "Bearer",
-  "expiresIn": 3600
-}
+```http
+Authorization: Bearer {accessToken}
 ```
 
 ```http
