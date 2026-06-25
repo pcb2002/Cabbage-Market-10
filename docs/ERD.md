@@ -178,7 +178,7 @@ erDiagram
 - `item.seller_id` refers `client.id`.
 - `item.category_id` refers `category.id`.
 - The Primary key of `item_like` is `(client_id, item_id)`.
-- `inquiry_log.target_inquiry_id` refers `inquiry_log.id` and the `inquiry_log.target_inquiry_id` value of the tuple can be null.
+- `inquiry_log.target_inquiry_id` refers `inquiry_log.id`, can be null, and is unique so each inquiry can have at most one answer.
 - The `contents` request field of the inquiry API is stored in `inquiry_log.description`.
 - The Primary Key of `follow` is `(follower_id, following_id)`.
 - The Primary Key of `chat_member` is `(chat_room_id, client_id)`.
