@@ -1,0 +1,85 @@
+package com.example.cabbagemarket10.global.exception;
+
+import org.springframework.http.HttpStatus;
+
+public enum ErrorCode {
+
+    // Common
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "요청값 검증에 실패했습니다."),
+    INVALID_INPUT(HttpStatus.BAD_REQUEST, "INVALID_INPUT", "잘못된 요청입니다."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요합니다."),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."),
+    NOT_FOUND(HttpStatus.NOT_FOUND, "NOT_FOUND", "요청한 자원을 찾을 수 없습니다."),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", "지원하지 않는 HTTP 메서드입니다."),
+    INTERNAL_SERVER_ERROR(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "INTERNAL_SERVER_ERROR",
+            "서버 내부 오류가 발생했습니다."),
+
+    // Auth
+    DUPLICATED_EMAIL(HttpStatus.CONFLICT, "DUPLICATED_EMAIL", "이미 사용 중인 이메일입니다."),
+    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "이메일 또는 비밀번호가 올바르지 않습니다."),
+
+    INVALID_REFRESH_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "INVALID_REFRESH_TOKEN",
+            "유효하지 않은 Refresh Token입니다."),
+    REFRESH_TOKEN_EXPIRED(
+            HttpStatus.UNAUTHORIZED,
+            "REFRESH_TOKEN_EXPIRED",
+            "Refresh Token이 만료되었습니다."),
+    REFRESH_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND,
+            "REFRESH_TOKEN_NOT_FOUND",
+            "저장된 Refresh Token을 찾을 수 없습니다."),
+    ACCESS_TOKEN_MISSING(
+            HttpStatus.UNAUTHORIZED,
+            "ACCESS_TOKEN_MISSING",
+            "Access Token이 필요합니다."),
+
+    ACCESS_TOKEN_INVALID(
+            HttpStatus.UNAUTHORIZED,
+            "ACCESS_TOKEN_INVALID",
+            "유효하지 않은 Access Token입니다."),
+
+    ACCESS_TOKEN_EXPIRED(
+            HttpStatus.UNAUTHORIZED,
+            "ACCESS_TOKEN_EXPIRED",
+            "Access Token이 만료되었습니다."),
+
+    // item
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품 찾을 수 없습니다."),
+
+    // Inquiry
+    // 존재하지 않는 문의 조회 또는 수정 요청
+    INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "INQUIRY_NOT_FOUND", "문의를 찾을 수 없습니다."),
+    // 이미 답변이 달린 문의에 중복 답변 요청
+    ANSWER_ALREADY_EXISTS(HttpStatus.CONFLICT, "ANSWER_ALREADY_EXISTS", "이미 답변이 존재합니다."),
+
+    // Review
+    // 리뷰 대상 회원 또는 조회 회원 없음
+    CLIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CLIENT_NOT_FOUND", "회원을 찾을 수 없습니다."),
+    // 존재하지 않는 리뷰 조회 또는 수정 요청
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "REVIEW_NOT_FOUND", "리뷰를 찾을 수 없습니다.");
+
+    private final HttpStatus httpStatus;
+    private final String code;
+    private final String message;
+
+    ErrorCode(HttpStatus httpStatus, String code, String message) {
+        this.httpStatus = httpStatus;
+        this.code = code;
+        this.message = message;
+    }
+
+    public HttpStatus getHttpStatus() {
+        return httpStatus;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}

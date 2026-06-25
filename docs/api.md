@@ -9,6 +9,68 @@
 - 목록 조회는 Pageable 또는 cursor를 사용한다.
 - 내부 예외 메시지와 stack trace를 응답에 노출하지 않는다.
 
+## 공통 응답 형식
+
+성공 응답:
+
+```json
+{
+  "status": 200,
+  "data": {}
+}
+```
+
+오류 응답:
+
+```json
+{
+  "status": 400,
+  "code": "VALIDATION_ERROR",
+  "message": "요청값 검증에 실패했습니다.",
+  "data": null
+}
+```
+
+공통 오류 코드:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 400 | `VALIDATION_ERROR` | 요청값 검증 실패 |
+| 401 | `UNAUTHORIZED` | 인증 필요 |
+| 403 | `FORBIDDEN` | 접근 권한 없음 |
+| 404 | `NOT_FOUND` | 요청한 자원 없음 |
+| 405 | `METHOD_NOT_ALLOWED` | 지원하지 않는 HTTP 메서드 |
+| 500 | `INTERNAL_SERVER_ERROR` | 서버 내부 오류 |
+
+페이지네이션 응답:
+
+목록 조회 API는 `data` 필드에 아래 구조를 반환한다.
+
+```json
+{
+  "status": 200,
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 100,
+    "totalPages": 5
+  }
+}
+```
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `content` | array | 현재 페이지 데이터 목록 |
+| `page` | int | 현재 페이지 번호 (0부터 시작) |
+| `size` | int | 페이지당 항목 수 |
+| `totalElements` | long | 전체 항목 수 |
+| `totalPages` | int | 전체 페이지 수 |
+
+요청 파라미터: `page` (기본값 0), `size` (기본값 20)
+
+> 채팅 메시지 목록(`GET /api/chat-rooms/{chatRoomId}/messages`)은 실시간 삽입이 많아 offset 페이징이 부적합할 수 있다. cursor 방식 전환은 [docs/adr/README.md](adr/README.md)에서 관리한다.
+
 ## API 목록
 
 | 기능 | 그룹 | Method | Path |
@@ -127,7 +189,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 | 기능 | Status | Code | 설명 |
 |---|---:|---|---|
-| 회원가입 | 400 | `INVALID_SIGNUP_REQUEST` | 회원가입 요청값 오류 |
+| 회원가입 | 400 | `VALIDATION_ERROR` | 회원가입 요청값 검증 실패 |
 | 회원가입 | 409 | `DUPLICATED_EMAIL` | 이미 사용 중인 이메일 |
 | 로그인 | 400 | `INVALID_INPUT` | 이메일·비밀번호 형식 검증 실패 |
 | 로그인 | 401 | `LOGIN_FAILED` | 이메일 또는 비밀번호 불일치 |
@@ -275,14 +337,13 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 ```json
 {
-  "id": 1,
-  "email": "client@example.com",
-  "nickname": "배추판매자",
-  "name": "홍길동",
-  "role": "USER",
-  "status": "ACTIVE",
-  "verified": false,
-  "createdAt": "2026-06-24T03:00:00"
+  "status": 201,
+  "data": {
+    "clientId": 1,
+    "email": "client@example.com",
+    "nickname": "배추판매자",
+    "createdAt": "2026-06-24T03:00:00"
+  }
 }
 ```
 
