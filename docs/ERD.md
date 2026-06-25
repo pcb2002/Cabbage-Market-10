@@ -45,7 +45,7 @@ erDiagram
         boolean is_verified
         datetime created_at
         datetime updated_at
-        datetime deleted_at
+        boolean is_deleted
     }
 
     category["CATEGORY"] {
@@ -189,7 +189,7 @@ erDiagram
 
 | Entity        | Policies                   |
 |---------------|----------------------------|
-| Client        | Soft Delete, `deleted_at`  |
+| Client        | Soft Delete, `is_deleted`  |
 | Item          | Soft Delete, `is_deleted`  |
 | InquiryLog    | Soft Delete, `is_deleted`  |
 | ChatMessage   | Soft Delete, `deleted_at`  |
