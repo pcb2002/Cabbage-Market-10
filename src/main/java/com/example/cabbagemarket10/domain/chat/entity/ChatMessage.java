@@ -34,8 +34,9 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "chat_room_id", nullable = false)
-    private Long chatRoomId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id", nullable = false)
+    private ChatRoom chatRoom;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
@@ -57,13 +58,13 @@ public class ChatMessage {
 
     @Builder
     public ChatMessage(
-            Long chatRoomId,
+            ChatRoom chatRoom,
             Client sender,
             String messageType,
             String content,
             String imageUrl
     ) {
-        this.chatRoomId = chatRoomId;
+        this.chatRoom = chatRoom;
         this.sender = sender;
         this.messageType = messageType;
         this.content = content;
