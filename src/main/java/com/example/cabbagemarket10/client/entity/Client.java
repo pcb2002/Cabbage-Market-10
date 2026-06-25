@@ -21,7 +21,7 @@ public class Client {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
@@ -37,6 +37,7 @@ public class Client {
     private String imageKey;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private AccountStatus status;
 
     @Column(nullable = false)
