@@ -4,6 +4,7 @@ import com.example.cabbagemarket10.global.common.CommonResponse;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -20,11 +21,28 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final String CLIENT_EMAIL_UNIQUE_CONSTRAINT = "uk_client_email";
+
     // 서비스 계층에서 정의한 비즈니스 예외를 공통 오류 응답으로 변환한다.
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<CommonResponse<Void>> handleBusinessException(BusinessException exception) {
         ErrorCode errorCode = exception.getErrorCode();
         return CommonResponse.fail(errorCode, exception.getMessage())
+                .toResponseEntity();
+    }
+
+    // 동시 가입 등으로 이메일 유니크 제약을 직접 위반한 경우를 중복 이메일로 변환한다(레이스 안전망).
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<CommonResponse<Void>> handleDataIntegrityViolation(
+            DataIntegrityViolationException exception) {
+        if (isClientEmailUniqueConstraintViolation(exception)) {
+            log.warn("이메일 유니크 제약 위반을 중복 이메일로 처리", exception);
+            return CommonResponse.fail(ErrorCode.DUPLICATED_EMAIL)
+                    .toResponseEntity();
+        }
+
+        log.warn("데이터 무결성 위반 발생", exception);
+        return CommonResponse.fail(ErrorCode.INVALID_INPUT)
                 .toResponseEntity();
     }
 
@@ -95,5 +113,17 @@ public class GlobalExceptionHandler {
                         ErrorCode.VALIDATION_ERROR.getMessage()))
                 .findFirst()
                 .orElse(ErrorCode.VALIDATION_ERROR.getMessage());
+    }
+
+    private boolean isClientEmailUniqueConstraintViolation(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof org.hibernate.exception.ConstraintViolationException constraintException
+                    && CLIENT_EMAIL_UNIQUE_CONSTRAINT.equalsIgnoreCase(constraintException.getConstraintName())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

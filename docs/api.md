@@ -193,17 +193,17 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 주요 오류:
 
-| 기능 | Status | Code | 설명 |
-|---|---:|---|---|
-| 회원가입 | 400 | `VALIDATION_ERROR` | 회원가입 요청값 검증 실패 |
-| 회원가입 | 409 | `DUPLICATED_EMAIL` | 이미 사용 중인 이메일 |
-| 로그인 | 400 | `INVALID_INPUT` | 이메일·비밀번호 형식 검증 실패 |
-| 로그인 | 401 | `LOGIN_FAILED` | 이메일 또는 비밀번호 불일치 |
-| 로그인 | 403 | `WITHDRAWN_MEMBER` | 탈퇴 회원 로그인 차단 |
+| 기능 | Status | Code                    | 설명                    |
+|---|---:|-------------------------|-----------------------|
+| 회원가입 | 400 | `VALIDATION_ERROR`      | 회원가입 요청값 검증 실패        |
+| 회원가입 | 409 | `DUPLICATED_EMAIL`      | 이미 사용 중인 이메일          |
+| 로그인 | 400 | `INVALID_INPUT`         | 이메일·비밀번호 형식 검증 실패     |
+| 로그인 | 401 | `LOGIN_FAILED`          | 이메일 또는 비밀번호 불일치       |
+| 로그인 | 403 | `SUSPENDED_ACCOUNT`            | 정지 회원 로그인 차단          |
 | 토큰 재발급 | 401 | `INVALID_REFRESH_TOKEN` | Refresh Token 유효하지 않음 |
-| 토큰 재발급 | 401 | `REFRESH_TOKEN_EXPIRED` | Refresh Token 만료 |
-| 토큰 재발급 | 401 | `BLACKLISTED_TOKEN` | 로그아웃 또는 강제 만료된 토큰 |
-| 로그아웃 | 401 | `UNAUTHORIZED` | 인증 토큰 없음·만료 |
+| 토큰 재발급 | 401 | `REFRESH_TOKEN_EXPIRED` | Refresh Token 만료      |
+| 토큰 재발급 | 401 | `BLACKLISTED_TOKEN`     | 로그아웃 또는 강제 만료된 토큰     |
+| 로그아웃 | 401 | `UNAUTHORIZED`          | 인증 토큰 없음·만료           |
 
 ### 마이 페이지
 
