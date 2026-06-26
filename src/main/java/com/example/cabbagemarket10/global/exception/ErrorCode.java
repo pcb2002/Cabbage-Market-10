@@ -49,6 +49,10 @@ public enum ErrorCode {
     // item
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품 찾을 수 없습니다."),
 
+    // Auction
+    AUCTION_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "AUCTION_ALREADY_CLOSED", "이미 마감된 경매입니다."),
+    INVALID_BID_PRICE(HttpStatus.BAD_REQUEST, "INVALID_BID_PRICE", "입찰가는 현재 최고 입찰가보다 높아야 합니다."),
+
     // Inquiry
     // 존재하지 않는 문의 조회 또는 수정 요청
     INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "INQUIRY_NOT_FOUND", "문의를 찾을 수 없습니다."),
