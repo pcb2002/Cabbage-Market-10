@@ -1,0 +1,113 @@
+package com.example.cabbagemarket10.domain.client.controller;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.example.cabbagemarket10.domain.client.entity.Client;
+import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.MockMvc;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class ClientControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ClientRepository clientRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        deleteIfExists("review");
+        deleteIfExists("auction_status");
+        deleteIfExists("item");
+        deleteIfExists("category");
+        deleteIfExists("client");
+    }
+
+    @DisplayName("인증된 회원은 내 정보를 조회할 수 있다")
+    @Test
+    void 인증된_회원은_내_정보를_조회할_수_있다() throws Exception {
+        Client client = saveClient(
+                "me@example.com",
+                "cabbage",
+                "홍길동",
+                "010-1234-5678");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+
+        mockMvc.perform(get("/api/clients/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.clientId").value(client.getId()))
+                .andExpect(jsonPath("$.data.email").value("me@example.com"))
+                .andExpect(jsonPath("$.data.nickname").value("cabbage"))
+                .andExpect(jsonPath("$.data.name").value("홍길동"));
+    }
+
+    @DisplayName("내 정보 조회 응답에는 password가 포함되지 않는다")
+    @Test
+    void 내_정보_조회_응답에는_password가_포함되지_않는다() throws Exception {
+        Client client = saveClient(
+                "secure@example.com",
+                "securecabbage",
+                "김보안",
+                "010-1111-2222");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+
+        mockMvc.perform(get("/api/clients/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.password").doesNotExist());
+    }
+
+    @DisplayName("토큰 없이 내 정보 조회를 요청하면 401을 반환한다")
+    @Test
+    void 토큰_없이_내_정보_조회를_요청하면_401을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/clients/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    private Client saveClient(String email, String nickname, String name, String phone) {
+        return clientRepository.save(Client.create(
+                email,
+                passwordEncoder.encode("password123!"),
+                nickname,
+                name,
+                phone));
+    }
+
+    private void deleteIfExists(String tableName) {
+        Integer tableCount = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.tables where table_name = ?",
+                Integer.class,
+                tableName);
+
+        if (tableCount != null && tableCount > 0) {
+            jdbcTemplate.update("delete from " + tableName);
+        }
+    }
+}
