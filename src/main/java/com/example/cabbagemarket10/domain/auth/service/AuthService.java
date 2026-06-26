@@ -42,7 +42,7 @@ public class AuthService {
         Client client = clientRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
-        if (!passwordEncoder.matches(request.password(), client.getPassword())) {
+        if (!client.isCorrectPassword(passwordEncoder, request.password())) {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
