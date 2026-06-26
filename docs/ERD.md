@@ -97,6 +97,7 @@ erDiagram
         bigint item_id FK
         bigint author_id FK
         bigint target_inquiry_id FK
+        varchar title
         text description
         varchar status
         datetime created_at
@@ -179,6 +180,7 @@ erDiagram
 - `item.category_id` refers `category.id`.
 - The Primary key of `item_like` is `(client_id, item_id)`.
 - `inquiry_log.target_inquiry_id` refers `inquiry_log.id`, can be null, and is unique so each inquiry can have at most one answer.
+- The `title` request field of the inquiry API is stored in `inquiry_log.title`.
 - The `contents` request field of the inquiry API is stored in `inquiry_log.description`.
 - The Primary Key of `follow` is `(follower_id, following_id)`.
 - The Primary Key of `chat_member` is `(chat_room_id, client_id)`.

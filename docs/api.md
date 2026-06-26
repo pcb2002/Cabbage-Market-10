@@ -167,6 +167,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 검색 | keyword | 선택, 최대 100자, 공백이면 전체 목록 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
+| 상품 문의 작성 | title | 필수, 1~200자 |
 | 상품 문의 작성 | contents | 필수, 1~2000자 |
 | 상품 문의 수정 | contents | 필수, 1~2000자 |
 | 상품 문의 답변 등록·수정 | contents | 필수, 1~2000자 |
@@ -256,7 +257,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 | 기능 | Method | Path | 인증 | 요청 | 성공 |
 |---|---:|---|---|---|---|
-| 상품 문의 작성 | POST | `/api/items/{itemId}/inquiries` | 필요 | `contents` | `201 Created` |
+| 상품 문의 작성 | POST | `/api/items/{itemId}/inquiries` | 필요 | `title`, `contents` | `201 Created` |
 | 상품 문의 목록 조회 | GET | `/api/items/{itemId}/inquiries` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 문의 수정 | PATCH | `/api/inquiries/{inquiryId}` | 필요 | `contents` | `200 OK` |
 | 상품 문의 삭제 | DELETE | `/api/inquiries/{inquiryId}` | 필요 | Path `inquiryId` | `204 No Content` |
@@ -271,7 +272,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 400 | `VALIDATION_ERROR` | 입력값 누락 또는 형식 오류 |
 | 401 | `UNAUTHORIZED` | 미인증 사용자 |
 | 403 | `FORBIDDEN` | 작성자 또는 판매자가 아닌 사용자 |
-| 404 | `INQUIRY_NOT_FOUND` | 문의 없음 |
+| 404 | `ITEM_NOT_FOUND`, `INQUIRY_NOT_FOUND` | 대상 상품 또는 문의 없음 |
 | 409 | `ANSWER_ALREADY_EXISTS` | 이미 답변이 존재함 |
 
 ### 팔로우·리뷰

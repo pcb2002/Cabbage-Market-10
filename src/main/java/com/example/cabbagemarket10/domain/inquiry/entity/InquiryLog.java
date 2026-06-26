@@ -44,6 +44,9 @@ public class InquiryLog extends BaseEntity {
     @JoinColumn(name = "target_inquiry_id", unique = true)
     private InquiryLog targetInquiry;
 
+    @Column(nullable = false, length = 200)
+    private String title;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
@@ -58,12 +61,14 @@ public class InquiryLog extends BaseEntity {
             Item item,
             Client author,
             InquiryLog targetInquiry,
+            String title,
             String description,
             String status
     ) {
         this.item = item;
         this.author = author;
         this.targetInquiry = targetInquiry;
+        this.title = title;
         this.description = description;
         this.status = status;
         this.isDeleted = false;
