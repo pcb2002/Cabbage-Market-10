@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.item.entity;
 
 import com.example.cabbagemarket10.common.entity.BaseEntity;
 import com.example.cabbagemarket10.domain.category.entity.Category;
+import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
@@ -28,6 +29,10 @@ public class Item extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_id", nullable = false)
+    private Client seller;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -57,9 +62,10 @@ public class Item extends BaseEntity {
     private Boolean isDeleted = false; // Soft Delete 플래그
 
     @Builder
-    public Item(Category category, TradeType tradeType, String title, String description,
+    public Item(Category category, Client seller, TradeType tradeType, String title, String description,
                 Long initialPrice, ConditionType conditionType, TradeStatus tradeStatus, Boolean isDraft) {
         this.category = category;
+        this.seller = seller;
         this.tradeType = tradeType;
         this.title = title;
         this.description = description;
