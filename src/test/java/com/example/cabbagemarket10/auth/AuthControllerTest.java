@@ -49,7 +49,7 @@ class AuthControllerTest {
 
     @DisplayName("회원가입 성공 시 비밀번호와 전화번호를 제외한 회원 정보를 반환한다")
     @Test
-    void signupSuccessReturnsClientInfoWithoutSensitiveFields() throws Exception {
+    void 회원가입_성공_시_비밀번호를_제외한_회원_정보를_반환한다() throws Exception {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -72,7 +72,7 @@ class AuthControllerTest {
 
     @DisplayName("이미 가입된 이메일이면 회원가입에 실패한다")
     @Test
-    void signupFailsWhenEmailAlreadyExists() throws Exception {
+    void 이미_가입된_이메일이면_회원가입에_실패한다() throws Exception {
         clientRepository.save(Client.create(
                 "client@example.com",
                 passwordEncoder.encode("password123!"),
@@ -98,7 +98,7 @@ class AuthControllerTest {
 
     @DisplayName("탈퇴 회원 이메일로는 재가입할 수 없다")
     @Test
-    void signupFailsWhenEmailBelongsToWithdrawnClient() throws Exception {
+    void 탈퇴한_회원의_이메일로는_재가입할_수_없다() throws Exception {
         Client withdrawn = clientRepository.save(Client.create(
                 "withdrawn@example.com",
                 passwordEncoder.encode("password123!"),
@@ -125,7 +125,7 @@ class AuthControllerTest {
 
     @DisplayName("회원가입 비밀번호는 PasswordEncoder로 암호화되어 저장된다")
     @Test
-    void signupEncodesPassword() throws Exception {
+    void 회원가입_비밀번호는_PasswordEncoder로_암호화되어_저장된다() throws Exception {
         mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -147,7 +147,7 @@ class AuthControllerTest {
 
     @DisplayName("로그인 성공 시 Access Token을 응답 헤더로 반환한다")
     @Test
-    void loginSuccessReturnsAccessTokenHeader() throws Exception {
+    void 로그인_성공_시_Access_Token을_응답_헤더로_반환한다() throws Exception {
         clientRepository.save(Client.create(
                 "client@example.com",
                 passwordEncoder.encode("password123!"),
@@ -171,7 +171,7 @@ class AuthControllerTest {
 
     @DisplayName("로그인 실패 시 공통 오류 응답을 반환한다")
     @Test
-    void loginFailureReturnsCommonErrorResponse() throws Exception {
+    void 로그인_실패_시_공통_오류_응답을_반환한다() throws Exception {
         clientRepository.save(Client.create(
                 "client@example.com",
                 passwordEncoder.encode("password123!"),
@@ -194,7 +194,7 @@ class AuthControllerTest {
 
     @DisplayName("탈퇴 회원은 로그인할 수 없다")
     @Test
-    void withdrawnClientCannotLogin() throws Exception {
+    void 탈퇴_회원은_로그인할_수_없다() throws Exception {
         Client withdrawn = clientRepository.save(Client.create(
                 "withdrawn-login@example.com",
                 passwordEncoder.encode("password123!"),
@@ -218,7 +218,7 @@ class AuthControllerTest {
 
     @DisplayName("정지 회원은 로그인할 수 없다")
     @Test
-    void suspendedClientCannotLogin() throws Exception {
+    void 정지_회원은_로그인할_수_없다() throws Exception {
         Client client = Client.create(
                 "suspended@example.com",
                 passwordEncoder.encode("password123!"),
