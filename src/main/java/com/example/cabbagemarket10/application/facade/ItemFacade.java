@@ -9,6 +9,7 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
+import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,14 +26,10 @@ public class ItemFacade {
 
     @Transactional
     public Long createItem(Long sellerId, ItemCreateRequest request) {
-        // 1. 회원 및 카테고리 도메인에서 엔티티 조회
         Client seller = clientService.getClient(sellerId);
         Category category = categoryService.getCategory(request.categoryId());
 
-        // 2. Item 도메인에 저장 위임
         Item item = itemService.saveItem(seller, category, request);
-
-        // 3. Auction 도메인에 저장 위임
         auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate());
 
         return item.getId();
@@ -40,25 +37,20 @@ public class ItemFacade {
 
     @Transactional
     public ItemDraftResponse createItemDraft(Long sellerId, ItemDraftRequest request) {
-        // 1. 회원 및 카테고리 도메인에서 엔티티 조회
         Client seller = clientService.getClient(sellerId);
-        Category category = null;
-        if (request.categoryId() != null) {
-            category = categoryService.getCategory(request.categoryId());
-        }
+        Category category = categoryService.getCategory(request.categoryId());
 
-        // 2. Item 도메인에 임시저장 위임
         Item item = itemService.saveItemDraft(seller, category, request);
-
-        // 3. Auction 도메인에 선택적 저장 위임
-        if (request.closeDate() != null || request.initialPrice() != null) {
-            auctionStatusService.createAuctionStatus(
-                    item,
-                    request.initialPrice() != null ? request.initialPrice() : 0L,
-                    request.closeDate()
-            );
+        if (isAuctionDraftReady(request)) {
+            auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate());
         }
 
         return ItemDraftResponse.from(item);
+    }
+
+    private boolean isAuctionDraftReady(ItemDraftRequest request) {
+        return request.tradeType() == TradeType.AUCTION
+                && request.initialPrice() != null
+                && request.closeDate() != null;
     }
 }

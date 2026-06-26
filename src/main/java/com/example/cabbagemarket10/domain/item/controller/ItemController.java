@@ -11,7 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/items")
@@ -25,10 +28,7 @@ public class ItemController {
             @Valid @RequestBody ItemCreateRequest request,
             @AuthenticationPrincipal AuthenticatedClient userDetails) {
 
-        // JWT 토큰 인증을 통해 SecurityContext에 저장된 사용자 ID 추출
         Long sellerId = userDetails.clientId();
-
-        // 2. 메서드 호출: itemFacade 위임
         Long itemId = itemFacade.createItem(sellerId, request);
 
         return CommonResponse.success(HttpStatus.CREATED, itemId).toResponseEntity();
@@ -36,12 +36,10 @@ public class ItemController {
 
     @PostMapping("/drafts")
     public ResponseEntity<CommonResponse<ItemDraftResponse>> createItemDraft(
-            @RequestBody ItemDraftRequest request, // @Valid 없음!
+            @Valid @RequestBody ItemDraftRequest request,
             @AuthenticationPrincipal AuthenticatedClient userDetails) {
 
         Long sellerId = userDetails.clientId();
-
-        // 2. 메서드 호출: itemFacade 위임
         ItemDraftResponse response = itemFacade.createItemDraft(sellerId, request);
 
         return CommonResponse.success(HttpStatus.CREATED, response).toResponseEntity();
