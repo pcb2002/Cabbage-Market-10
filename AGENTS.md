@@ -31,7 +31,7 @@
 
 ## Subagents Rules
 
-* Do not perform subagents unless user requests it.
+* Do not perform subagents unless user requests to do so.
 * Main agent will not work by itself. It will delegate tasks to subagents for specific purposes. 
 * Each subagent will have its own rules and responsibilities, which must be followed strictly.
 * Do not reuse threads of subagents for different tasks. Each subagent should be used for its intended purpose only.
