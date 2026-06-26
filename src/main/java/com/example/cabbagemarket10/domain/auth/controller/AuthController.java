@@ -2,7 +2,6 @@ package com.example.cabbagemarket10.domain.auth.controller;
 
 import com.example.cabbagemarket10.domain.auth.dto.request.LoginRequest;
 import com.example.cabbagemarket10.domain.auth.dto.request.SignupRequest;
-import com.example.cabbagemarket10.domain.auth.dto.response.LoginResponse;
 import com.example.cabbagemarket10.domain.auth.dto.response.SignupResponse;
 import com.example.cabbagemarket10.domain.auth.service.AuthService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
@@ -33,9 +32,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<CommonResponse<Void>> login(
             @Valid @RequestBody LoginRequest request) {
-        LoginResponse tokens = authService.login(request);
+        String accessToken = authService.login(request);
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken());
+        headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
         return CommonResponse.success(HttpStatus.OK).toResponseEntity(headers);
     }
 }

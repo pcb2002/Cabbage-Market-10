@@ -2,7 +2,6 @@ package com.example.cabbagemarket10.domain.auth.service;
 
 import com.example.cabbagemarket10.domain.auth.dto.request.LoginRequest;
 import com.example.cabbagemarket10.domain.auth.dto.request.SignupRequest;
-import com.example.cabbagemarket10.domain.auth.dto.response.LoginResponse;
 import com.example.cabbagemarket10.domain.auth.dto.response.SignupResponse;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
@@ -39,7 +38,7 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public LoginResponse login(LoginRequest request) {
+    public String login(LoginRequest request) {
         Client client = clientRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
@@ -51,6 +50,6 @@ public class AuthService {
             throw new BusinessException(ErrorCode.SUSPENDED_ACCOUNT);
         }
 
-        return LoginResponse.from(jwtTokenProvider.createAccessToken(client));
+        return jwtTokenProvider.createAccessToken(client);
     }
 }
