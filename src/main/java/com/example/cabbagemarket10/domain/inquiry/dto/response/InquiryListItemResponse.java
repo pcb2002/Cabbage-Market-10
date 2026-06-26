@@ -4,7 +4,7 @@ import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
 import java.time.LocalDateTime;
 
 public record InquiryListItemResponse(
-        Long enquiryID,
+        Long inquiryID,
         String authorName,
         String contents,
         LocalDateTime date
