@@ -3,6 +3,7 @@ package com.example.cabbagemarket10.domain.category.controller;
 import com.example.cabbagemarket10.domain.category.dto.CategoryResponse;
 import com.example.cabbagemarket10.domain.category.service.CategoryService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -19,11 +20,11 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public ResponseEntity<CommonResponse<Page<CategoryResponse>>> getCategories(
+    public ResponseEntity<CommonResponse<PageResponse<CategoryResponse>>> getCategories(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "20") int size) {
 
-        Page<CategoryResponse> data = categoryService.getCategories(page, size);
-        return CommonResponse.success(HttpStatus.OK, data).toResponseEntity();
+        Page<CategoryResponse> categories = categoryService.getCategories(page, size);
+        return CommonResponse.success(HttpStatus.OK, PageResponse.from(categories)).toResponseEntity();
     }
 }
