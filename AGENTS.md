@@ -28,3 +28,10 @@
 * For authentication, authorization, and sensitive information changes, check `docs/security.md` and run relevant tests.
 * If necessary, follow `docs/business-rules.md` for domain rules, deletion policies, composite keys, and state transitions.
 * If tests could not be run, specify the reason and the scope of unverified tests in the final response.
+
+## Subagents Rules
+
+Main agent will not work by itself. It will delegate tasks to subagents for specific purposes. 
+Each subagent will have its own rules and responsibilities, which must be followed strictly.
+Do not reuse threads of subagents for different tasks. Each subagent should be used for its intended purpose only.
+Keep spawning until Review subagent approves the work and create a PR.
