@@ -258,7 +258,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 기능 | Method | Path | 인증 | 요청 | 성공 |
 |---|---:|---|---|---|---|
 | 상품 문의 작성 | POST | `/api/items/{itemId}/inquiries` | 필요 | `title`, `contents` | `201 Created` |
-| 상품 문의 목록 조회 | GET | `/api/items/{itemId}/inquiries` | 불필요 | Path `itemId` | `200 OK` |
+| 상품 문의 목록 조회 | GET | `/api/items/{itemId}/inquiries` | 불필요 | Path `itemId`, Query `page`, `size` 선택 | `200 OK` |
 | 상품 문의 수정 | PATCH | `/api/inquiries/{inquiryId}` | 필요 | `contents` | `200 OK` |
 | 상품 문의 삭제 | DELETE | `/api/inquiries/{inquiryId}` | 필요 | Path `inquiryId` | `204 No Content` |
 | 상품 문의 답변 등록 | POST | `/api/inquiries/{inquiryId}/answer` | 필요 | `contents` | `201 Created` |
@@ -274,6 +274,10 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 403 | `FORBIDDEN` | 작성자 또는 판매자가 아닌 사용자 |
 | 404 | `ITEM_NOT_FOUND`, `INQUIRY_NOT_FOUND` | 대상 상품 또는 문의 없음 |
 | 409 | `ANSWER_ALREADY_EXISTS` | 이미 답변이 존재함 |
+
+상품 문의 목록 조회 응답은 `data.itemList`에 문의 항목을 담고, 각 항목은 `enquiryID`, `authorName`, `contents`, `date`를 포함한다.
+페이지 메타데이터는 `page`, `size`, `totalElements`, `totalPages`로 응답한다.
+`page` 기본값은 0, `size` 기본값은 20이며 잘못된 쿼리 값은 `400 Bad Request`로 응답한다.
 
 ### 팔로우·리뷰
 

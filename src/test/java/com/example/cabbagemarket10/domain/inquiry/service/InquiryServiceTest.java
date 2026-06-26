@@ -12,6 +12,7 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryCreateRequest;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryCreateResponse;
+import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryListResponse;
 import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
 import com.example.cabbagemarket10.domain.inquiry.repository.InquiryLogRepository;
 import com.example.cabbagemarket10.domain.item.entity.Item;
@@ -22,6 +23,7 @@ import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +51,47 @@ class InquiryServiceTest {
 
     @InjectMocks
     private InquiryService inquiryService;
+
+    @DisplayName("상품이 존재하면 문의 목록을 페이징 응답하고 Pageable로 조회한다")
+    @Test
+    void 상품이_존재하면_문의_목록을_페이징_응답하고_Pageable로_조회한다() {
+        Item item = item();
+        Client author = client("author@example.com", "문의작성자", "홍길동");
+        InquiryLog inquiry = inquiry(item, author, "상품 문의", "거래 가능한가요?");
+        LocalDateTime createdAt = LocalDateTime.of(2026, 6, 26, 12, 0);
+        ReflectionTestUtils.setField(inquiry, "id", 10L);
+        ReflectionTestUtils.setField(inquiry, "createdAt", createdAt);
+        Pageable pageable = PageRequest.of(1, 2);
+
+        given(itemRepository.existsById(1L)).willReturn(true);
+        given(inquiryLogRepository.findRootInquiriesByItemIdWithAuthor(1L, pageable))
+                .willReturn(new PageImpl<>(List.of(inquiry), pageable, 3));
+
+        InquiryListResponse response = inquiryService.getInquiries(1L, 1, 2);
+
+        verify(inquiryLogRepository).findRootInquiriesByItemIdWithAuthor(1L, pageable);
+        assertThat(response.itemList()).hasSize(1);
+        assertThat(response.itemList().get(0).enquiryID()).isEqualTo(10L);
+        assertThat(response.itemList().get(0).authorName()).isEqualTo("홍길동");
+        assertThat(response.itemList().get(0).contents()).isEqualTo("거래 가능한가요?");
+        assertThat(response.itemList().get(0).date()).isEqualTo(createdAt);
+        assertThat(response.page()).isEqualTo(1);
+        assertThat(response.size()).isEqualTo(2);
+        assertThat(response.totalElements()).isEqualTo(3);
+        assertThat(response.totalPages()).isEqualTo(2);
+    }
+
+    @DisplayName("문의 목록 조회 시 상품이 없으면 ITEM_NOT_FOUND 예외가 발생하고 문의를 조회하지 않는다")
+    @Test
+    void 문의_목록_조회_시_상품이_없으면_ITEM_NOT_FOUND_예외가_발생하고_문의를_조회하지_않는다() {
+        given(itemRepository.existsById(1L)).willReturn(false);
+
+        assertThatThrownBy(() -> inquiryService.getInquiries(1L, 0, 20))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ITEM_NOT_FOUND));
+
+        verify(inquiryLogRepository, never()).findRootInquiriesByItemIdWithAuthor(any(), any());
+    }
 
     @DisplayName("문의 생성 성공 시 contents를 description으로 저장하고 응답한다")
     @Test
@@ -124,6 +170,16 @@ class InquiryServiceTest {
                 .conditionType(ConditionType.USED)
                 .tradeStatus(TradeStatus.ON_SALE)
                 .isDraft(false)
+                .build();
+    }
+
+    private InquiryLog inquiry(Item item, Client author, String title, String description) {
+        return InquiryLog.builder()
+                .item(item)
+                .author(author)
+                .title(title)
+                .description(description)
+                .status("QUESTION")
                 .build();
     }
 
