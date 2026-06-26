@@ -1,7 +1,10 @@
 package com.example.cabbagemarket10.domain.category.service;
 
 import com.example.cabbagemarket10.domain.category.dto.CategoryResponse;
+import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.category.repository.CategoryRepository;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,5 +23,10 @@ public class CategoryService {
         // page는 0부터 시작, sortOrder 기준 정렬 및 페이징
         Pageable pageable = PageRequest.of(page, size, Sort.by("sortOrder").ascending());
         return categoryRepository.findAll(pageable).map(CategoryResponse::from);
+    }
+
+    public Category getCategory(Long categoryId) {
+        return categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 }

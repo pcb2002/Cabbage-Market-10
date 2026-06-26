@@ -1,6 +1,7 @@
 package com.example.cabbagemarket10.domain.inquiry.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,12 +10,16 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.category.repository.CategoryRepository;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
+import com.example.cabbagemarket10.domain.inquiry.repository.InquiryLogRepository;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +49,9 @@ class InquiryControllerTest {
     private ItemRepository itemRepository;
 
     @Autowired
+    private InquiryLogRepository inquiryLogRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -58,6 +66,89 @@ class InquiryControllerTest {
         jdbcTemplate.update("delete from item");
         jdbcTemplate.update("delete from category");
         jdbcTemplate.update("delete from client");
+    }
+
+    @DisplayName("인증 없이 상품 문의 목록을 기본 페이징으로 조회할 수 있고 답변 행은 제외된다")
+    @Test
+    void 인증_없이_상품_문의_목록을_기본_페이징으로_조회할_수_있고_답변_행은_제외된다() throws Exception {
+        Client author = saveClient("list-author@example.com", "목록작성자", "홍길동");
+        Client seller = saveClient("list-seller@example.com", "목록판매자", "김판매");
+        Item item = saveItem(seller);
+        InquiryLog olderInquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "첫 번째 문의입니다.",
+                LocalDateTime.of(2026, 6, 26, 10, 0));
+        InquiryLog newerInquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "두 번째 문의입니다.",
+                LocalDateTime.of(2026, 6, 26, 11, 0));
+        saveInquiry(
+                item,
+                seller,
+                olderInquiry,
+                "첫 번째 문의에 대한 답변입니다.",
+                LocalDateTime.of(2026, 6, 26, 12, 0));
+
+        mockMvc.perform(get("/api/items/{itemId}/inquiries", item.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(20))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.itemList.length()").value(2))
+                .andExpect(jsonPath("$.data.itemList[0].enquiryID").value(newerInquiry.getId()))
+                .andExpect(jsonPath("$.data.itemList[0].authorName").value("홍길동"))
+                .andExpect(jsonPath("$.data.itemList[0].contents").value("두 번째 문의입니다."))
+                .andExpect(jsonPath("$.data.itemList[0].date").exists())
+                .andExpect(jsonPath("$.data.itemList[1].enquiryID").value(olderInquiry.getId()))
+                .andExpect(jsonPath("$.data.itemList[1].contents").value("첫 번째 문의입니다."));
+    }
+
+    @DisplayName("상품 문의 목록 조회 시 요청한 page와 size 메타데이터를 반환한다")
+    @Test
+    void 상품_문의_목록_조회_시_요청한_page와_size_메타데이터를_반환한다() throws Exception {
+        Client author = saveClient("paged-list-author@example.com", "페이징작성자", "이작성");
+        Client seller = saveClient("paged-list-seller@example.com", "페이징판매자", "박판매");
+        Item item = saveItem(seller);
+        saveInquiry(item, author, null, "첫 번째 문의입니다.", LocalDateTime.of(2026, 6, 26, 10, 0));
+        saveInquiry(item, author, null, "두 번째 문의입니다.", LocalDateTime.of(2026, 6, 26, 11, 0));
+        saveInquiry(item, author, null, "세 번째 문의입니다.", LocalDateTime.of(2026, 6, 26, 12, 0));
+
+        mockMvc.perform(get("/api/items/{itemId}/inquiries", item.getId())
+                        .param("page", "1")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.size").value(2))
+                .andExpect(jsonPath("$.data.totalElements").value(3))
+                .andExpect(jsonPath("$.data.totalPages").value(2))
+                .andExpect(jsonPath("$.data.itemList.length()").value(1))
+                .andExpect(jsonPath("$.data.itemList[0].contents").value("첫 번째 문의입니다."));
+    }
+
+    @DisplayName("상품 문의 목록 조회 시 page 또는 size가 잘못되면 VALIDATION_ERROR 400 응답을 반환한다")
+    @Test
+    void 상품_문의_목록_조회_시_page_또는_size가_잘못되면_VALIDATION_ERROR_400_응답을_반환한다() throws Exception {
+        Client seller = saveClient("invalid-list-seller@example.com", "목록검증판매자", "최판매");
+        Item item = saveItem(seller);
+
+        mockMvc.perform(get("/api/items/{itemId}/inquiries", item.getId())
+                        .param("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        mockMvc.perform(get("/api/items/{itemId}/inquiries", item.getId())
+                        .param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @DisplayName("인증된 회원은 상품 문의를 생성할 수 있다")
@@ -270,5 +361,29 @@ class InquiryControllerTest {
                 .tradeStatus(TradeStatus.ON_SALE)
                 .isDraft(false)
                 .build());
+    }
+
+    private InquiryLog saveInquiry(
+            Item item,
+            Client author,
+            InquiryLog targetInquiry,
+            String contents,
+            LocalDateTime createdAt
+    ) {
+        InquiryLog savedInquiry = inquiryLogRepository.save(InquiryLog.builder()
+                .item(item)
+                .author(author)
+                .targetInquiry(targetInquiry)
+                .title("상품 문의")
+                .description(contents)
+                .status(targetInquiry == null ? "QUESTION" : "ANSWER")
+                .build());
+
+        jdbcTemplate.update(
+                "update inquiry_log set created_at = ?, updated_at = ? where id = ?",
+                Timestamp.valueOf(createdAt),
+                Timestamp.valueOf(createdAt),
+                savedInquiry.getId());
+        return savedInquiry;
     }
 }
