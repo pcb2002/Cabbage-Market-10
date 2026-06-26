@@ -40,7 +40,6 @@ public class AuctionStatus {
     @Builder
     public AuctionStatus(Item item, Long currentBid, LocalDateTime closeDate) {
         this.item = item;
-        this.itemId = item.getId();
         this.currentBid = currentBid;
         this.closeDate = closeDate;
     }
