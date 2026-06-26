@@ -4,11 +4,15 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,5 +48,10 @@ public class ItemService {
                 .tradeStatus(TradeStatus.ON_SALE)
                 .build();
         return itemRepository.save(item);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ItemListItemResponse> getItemList(Long categoryId, String tradeStatus, Pageable pageable) {
+        return itemRepository.searchItems(categoryId, tradeStatus, pageable);
     }
 }
