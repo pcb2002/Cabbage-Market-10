@@ -175,3 +175,46 @@ Controller → WebSocket Handler → Service → Repository → DB
 | API 테스트 | 요청 검증, 응답 DTO, 상태 코드 |
 | Security 테스트 | 인증, 소유권, 채팅 참여자 검증 |
 | 동시성 테스트 | 좋아요 중복, 팔로우 중복, 경매 입찰 |
+
+# Facade 패키지 우선 규칙
+
+이 섹션은 기존 패키지/계층 설명보다 우선 적용한다. 현재 프로젝트는 Facade 패턴을 사용하며, 여러 도메인을 조합하는 유스케이스는 `application.facade` 패키지에 둔다.
+단, Facade 패턴은 "여러 도메인 서비스의 조합이 필요할 때"만 적용한다. 단일 도메인 서비스만 필요한 경우 Facade 패턴을 사용하지 않는다.
+
+```text
+src/main/java/com/example/cabbagemarket10
+├── application
+│   └── facade        # 여러 도메인 서비스를 조합하는 유스케이스 조정 계층
+├── common            # 전 도메인 공통 기반 코드
+├── domain            # 도메인별 controller, service, repository, entity, dto
+└── global            # 전역 응답, 예외, 보안, 초기화
+```
+
+Facade는 특정 도메인 내부 구현이 아니라 애플리케이션 유스케이스 계층이다. 예를 들어 상품 등록처럼 `Client`, `Category`, `Item`, `AuctionStatus`가 함께 필요한 흐름은 `application.facade.ItemFacade`에서 조정한다.
+
+기본 호출 흐름은 다음을 따른다.
+
+```text
+Controller -> Facade -> Domain Service(s) -> Repository -> DB
+```
+
+단일 도메인만 조회하거나 변경하는 단순 흐름은 Controller에서 해당 Domain Service를 직접 호출할 수 있다. 단, 하나의 요청에서 두 개 이상의 Domain Service를 호출하거나 여러 Aggregate를 함께 저장/변경하면 반드시 Facade를 둔다.
+
+| 계층 | 책임 | 금지 |
+|---|---|---|
+| Controller | HTTP 요청 검증, 인증 사용자 추출, Request/Response DTO 처리, 공통 응답 반환 | 비즈니스 로직, 여러 Service 직접 조합, DB 직접 접근 |
+| Facade | 여러 Domain Service 조합, 유스케이스 흐름 조정, 유스케이스 단위 트랜잭션 경계 | Repository 직접 접근, 세부 도메인 규칙 직접 구현, HTTP 응답 생성 |
+| Domain Service | 단일 도메인의 상태 변경, 조회, 도메인 규칙 검증 | 다른 도메인 Service 조합, HTTP 의존, 응답 DTO 직접 생성 |
+| Repository | Entity 조회와 영속화 | 비즈니스 판단 |
+| Entity | 도메인 상태와 최소 행위 | 외부 인프라 의존 |
+| DTO | API 요청/응답 계약 | 비즈니스 로직 |
+
+패키지 작성 규칙:
+
+- Facade 클래스명은 `{UseCase대상}Facade`로 작성한다. 예: `ItemFacade`.
+- Facade는 `application.facade` 아래에만 둔다. `domain.{domain}.facade`는 사용하지 않는다.
+- Domain Service는 같은 도메인의 Repository와 Entity 중심으로 동작한다.
+- Controller가 직접 사용하는 DTO는 `domain.{domain}.dto.request`, `domain.{domain}.dto.response`로 분리한다.
+- 도메인 내부 전달용 DTO가 필요할 때만 `domain.{domain}.dto` 바로 아래에 둔다.
+
+---

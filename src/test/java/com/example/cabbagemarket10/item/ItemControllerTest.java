@@ -60,6 +60,7 @@ class ItemControllerTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("delete from inquiry_log");
         jdbcTemplate.update("delete from auction_status");
         jdbcTemplate.update("delete from item");
         jdbcTemplate.update("delete from category");
@@ -148,6 +149,162 @@ class ItemControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("인증 회원이 상품을 임시저장하면 isDraft true인 Item과 AuctionStatus가 저장된다")
+    @Test
+    void authenticatedClientCanCreateItemDraft() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "draft-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "draftSeller",
+                "draftSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("draft-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        LocalDateTime closeDate = LocalDateTime.of(2026, 7, 1, 10, 30, 0);
+
+        String itemId = mockMvc.perform(post("/api/items/drafts")
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": %d,
+                                  "title": "draft cabbage",
+                                  "tradeType": "AUCTION",
+                                  "conditionType": "USED",
+                                  "description": "draft description",
+                                  "initialPrice": 5000,
+                                  "closeDate": "2026-07-01T10:30:00"
+                                }
+                                """.formatted(category.getId())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(201))
+                .andExpect(jsonPath("$.data.itemId").isNumber())
+                .andExpect(jsonPath("$.data.updatedAt").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .replaceAll(".*\"itemId\":(\\d+).*", "$1");
+
+        Long savedItemId = Long.valueOf(itemId);
+        Item item = itemRepository.findById(savedItemId).orElseThrow();
+        AuctionStatus auctionStatus = auctionStatusRepository.findById(savedItemId).orElseThrow();
+
+        assertThat(item.getTitle()).isEqualTo("draft cabbage");
+        assertThat(item.getTradeType()).isEqualTo(TradeType.AUCTION);
+        assertThat(item.getConditionType()).isEqualTo(ConditionType.USED);
+        assertThat(item.getInitialPrice()).isEqualTo(5000L);
+        assertThat(item.getTradeStatus()).isEqualTo(TradeStatus.ON_SALE);
+        assertThat(item.getIsDraft()).isTrue();
+        assertThat(auctionStatus.getCurrentBid()).isEqualTo(5000L);
+        assertThat(auctionStatus.getCloseDate()).isEqualTo(closeDate);
+
+        Long sellerId = jdbcTemplate.queryForObject(
+                "select seller_id from item where id = ?",
+                Long.class,
+                savedItemId);
+        Long categoryId = jdbcTemplate.queryForObject(
+                "select category_id from item where id = ?",
+                Long.class,
+                savedItemId);
+        assertThat(sellerId).isEqualTo(seller.getId());
+        assertThat(categoryId).isEqualTo(category.getId());
+    }
+
+    @DisplayName("인증 없이 상품 임시저장을 요청하면 401을 반환한다")
+    @Test
+    void unauthenticatedClientCannotCreateItemDraft() throws Exception {
+        mockMvc.perform(post("/api/items/drafts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": 1,
+                                  "title": "draft cabbage",
+                                  "tradeType": "AUCTION",
+                                  "conditionType": "USED",
+                                  "description": "draft description",
+                                  "initialPrice": 5000,
+                                  "closeDate": "2026-07-01T10:30:00"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("상품 임시저장 필수값이 없으면 400을 반환한다")
+    @Test
+    void itemDraftMissingRequiredFieldReturnsBadRequest() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "invalid-draft-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "invalidDraftSeller",
+                "invalidDraftSeller",
+                "010-1234-5678"));
+
+        mockMvc.perform(post("/api/items/drafts")
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": 1,
+                                  "tradeType": "AUCTION",
+                                  "conditionType": "USED",
+                                  "description": "draft description",
+                                  "initialPrice": 5000,
+                                  "closeDate": "2026-07-01T10:30:00"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @DisplayName("경매 임시저장에 closeDate가 없으면 AuctionStatus를 생성하지 않는다")
+    @Test
+    void auctionDraftWithoutCloseDateDoesNotCreateAuctionStatus() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "auction-draft-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "auctionDraftSeller",
+                "auctionDraftSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("auction-draft-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+
+        String itemId = mockMvc.perform(post("/api/items/drafts")
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": %d,
+                                  "title": "auction draft without close date",
+                                  "tradeType": "AUCTION",
+                                  "conditionType": "USED",
+                                  "description": "draft description",
+                                  "initialPrice": 5000
+                                }
+                                """.formatted(category.getId())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(201))
+                .andExpect(jsonPath("$.data.itemId").isNumber())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .replaceAll(".*\"itemId\":(\\d+).*", "$1");
+
+        Long savedItemId = Long.valueOf(itemId);
+        Item item = itemRepository.findById(savedItemId).orElseThrow();
+
+        assertThat(item.getTradeType()).isEqualTo(TradeType.AUCTION);
+        assertThat(item.getIsDraft()).isTrue();
+        assertThat(auctionStatusRepository.findById(savedItemId)).isEmpty();
     }
 
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {
