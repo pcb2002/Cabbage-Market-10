@@ -163,7 +163,13 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 등록 | initialPrice | 필수, 0 이상 정수 |
 | 상품 등록 | conditionType | 필수, `NEW` 또는 `USED` |
 | 상품 등록 | closeDate | `AUCTION`일 때 필수, 현재 시각 이후 |
-| 상품 임시저장 | 전체 필드 | 선택, 전달 시 상품 등록 제약 동일, 저장 시 `isDraft=true` |
+| 상품 임시저장 | categoryId | 필수, 존재하는 카테고리 ID |
+| 상품 임시저장 | title | 필수, 1~100자 |
+| 상품 임시저장 | tradeType | 필수, `DIRECT` 또는 `AUCTION` |
+| 상품 임시저장 | conditionType | 필수, `NEW` 또는 `USED` |
+| 상품 임시저장 | description | 필수 |
+| 상품 임시저장 | initialPrice | 필수, 0 이상 정수 |
+| 상품 임시저장 | closeDate | 선택, `AUCTION`이고 전달된 경우 AuctionStatus 생성 |
 | 상품 검색 | keyword | 선택, 최대 100자, 공백이면 전체 목록 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
@@ -222,7 +228,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 |---|---:|---|---|---|---|
 | 카테고리 목록 조회 | GET | `/api/categories` | 불필요 | 없음 | `200 OK` |
 | 상품 등록 | POST | `/api/items` | 필요 | 상품 필수 필드 | `201 Created` |
-| 상품 임시저장 | POST | `/api/items/drafts` | 필요 | 상품 필드 선택 | `200 OK` |
+| 상품 임시저장 | POST | `/api/items/drafts` | 필요 | 상품 필수 필드, `closeDate` 선택 | `201 Created` |
 | 상품 목록 조회 | GET | `/api/items` | 불필요 | `page`, `size` 선택 | `200 OK` |
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 검색 | GET | `/api/items?keyword={keyword}` | 불필요 | Query `keyword` | `200 OK` |
