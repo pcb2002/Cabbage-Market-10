@@ -31,7 +31,8 @@
 
 ## Subagents Rules
 
-Main agent will not work by itself. It will delegate tasks to subagents for specific purposes. 
-Each subagent will have its own rules and responsibilities, which must be followed strictly.
-Do not reuse threads of subagents for different tasks. Each subagent should be used for its intended purpose only.
-Keep spawning until Review subagent approves the work and create a PR.
+* Do not perform subagents unless user requests it.
+* Main agent will not work by itself. It will delegate tasks to subagents for specific purposes. 
+* Each subagent will have its own rules and responsibilities, which must be followed strictly.
+* Do not reuse threads of subagents for different tasks. Each subagent should be used for its intended purpose only.
+* Keep spawning until Review subagent approves the work and create a PR.
