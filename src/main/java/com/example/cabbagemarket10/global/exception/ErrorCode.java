@@ -19,7 +19,7 @@ public enum ErrorCode {
     // Auth
     DUPLICATED_EMAIL(HttpStatus.CONFLICT, "DUPLICATED_EMAIL", "이미 사용 중인 이메일입니다."),
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "이메일 또는 비밀번호가 올바르지 않습니다."),
-
+    SUSPENDED_ACCOUNT(HttpStatus.FORBIDDEN,"SUSPENDED_ACCOUNT", "정지된 회원은 로그인할 수 없습니다."),
     INVALID_REFRESH_TOKEN(
             HttpStatus.UNAUTHORIZED,
             "INVALID_REFRESH_TOKEN",
