@@ -22,7 +22,7 @@ public class AuctionStatus {
     @Column(name = "item_id")
     private Long itemId;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "item_id")
     private Item item;
@@ -45,15 +45,11 @@ public class AuctionStatus {
         this.closeDate = closeDate;
     }
 
-    // 2. 입찰 검증 로직 추가 및 파라미터 타입 변경
     public void updateBid(Long bidPrice, Client bidder, LocalDateTime currentTime) {
-        // 검증 1: 마감 시간 체크
-        if (currentTime.isAfter(this.closeDate)) {
-            // 프로젝트의 예외 처리 컨벤션(ErrorCode)에 맞게 커스텀 예외로 변경하시는 것을 추천합니다.
+        if (!currentTime.isBefore(this.closeDate)) {
             throw new BusinessException(ErrorCode.AUCTION_ALREADY_CLOSED);
         }
 
-        // 검증 2: 입찰가 체크
         if (bidPrice <= this.currentBid) {
             throw new BusinessException(ErrorCode.INVALID_BID_PRICE);
         }
