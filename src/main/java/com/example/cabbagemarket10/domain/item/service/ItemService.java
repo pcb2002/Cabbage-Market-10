@@ -7,6 +7,8 @@ import com.example.cabbagemarket10.domain.category.repository.CategoryRepository
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
+import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
@@ -63,5 +65,48 @@ public class ItemService {
         auctionStatusRepository.save(auctionStatus);
 
         return item.getId();
+    }
+
+    @Transactional
+    public ItemDraftResponse createItemDraft(Long sellerId, ItemDraftRequest request) {
+
+        // 1. 판매자 조회 (이건 필수)
+        Client seller = clientRepository.findById(sellerId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CLIENT_NOT_FOUND));
+
+        // 2. 카테고리 조회 (선택적으로 처리)
+        Category category = null;
+        if (request.categoryId() != null) {
+            category = categoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        }
+
+        // 3. Item 임시저장 엔티티 생성
+        Item item = Item.builder()
+                .seller(seller)
+                .category(category)
+                .title(request.title())
+                .description(request.description())
+                .initialPrice(request.initialPrice())
+                .tradeType(request.tradeType())
+                .conditionType(request.conditionType())
+                .isDraft(true) // 핵심: 작성 중인 문서임을 식별
+                .tradeStatus(TradeStatus.ON_SALE) // 임시저장 상태이므로 대기 상태 등으로 설정
+                .build();
+
+        itemRepository.save(item);
+
+        // 4. 경매 상태(AuctionStatus) 선택적 저장
+        // 임시저장 단계에서도 closeDate나 initialPrice가 입력되었다면 빈 껍데기를 만들어 둘 수 있습니다.
+        if (request.closeDate() != null || request.initialPrice() != null) {
+            AuctionStatus auctionStatus = AuctionStatus.builder()
+                    .item(item)
+                    .currentBid(request.initialPrice() != null ? request.initialPrice() : 0L)
+                    .closeDate(request.closeDate())
+                    .build();
+            auctionStatusRepository.save(auctionStatus);
+        }
+
+        return ItemDraftResponse.from(item);
     }
 }

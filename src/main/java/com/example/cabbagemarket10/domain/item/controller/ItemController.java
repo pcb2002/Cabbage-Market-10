@@ -1,6 +1,8 @@
 package com.example.cabbagemarket10.domain.item.controller;
 
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
+import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
@@ -30,5 +32,16 @@ public class ItemController {
         Long itemId = itemService.createItem(sellerId, request);
 
         return CommonResponse.success(HttpStatus.CREATED, itemId).toResponseEntity();
+    }
+
+    @PostMapping("/drafts")
+    public ResponseEntity<CommonResponse<ItemDraftResponse>> createItemDraft(
+            @RequestBody ItemDraftRequest request, // @Valid 없음!
+            @AuthenticationPrincipal AuthenticatedClient userDetails) {
+
+        Long sellerId = userDetails.clientId();
+        ItemDraftResponse response = itemService.createItemDraft(sellerId, request);
+
+        return CommonResponse.success(HttpStatus.CREATED, response).toResponseEntity();
     }
 }
