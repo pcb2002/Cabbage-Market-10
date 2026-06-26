@@ -22,8 +22,6 @@ public class ClientService {
 
         return ClientMyInfoResponse.from(client);
     }
-}
-    private final ClientRepository clientRepository;
 
     public Client getClient(Long clientId) {
         return clientRepository.findById(clientId)
