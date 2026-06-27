@@ -10,7 +10,9 @@ import static org.mockito.Mockito.verify;
 import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryAnswerCreateRequest;
 import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryCreateRequest;
+import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryAnswerCreateResponse;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryCreateResponse;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryListResponse;
 import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
@@ -155,14 +157,110 @@ class InquiryServiceTest {
         verify(inquiryLogRepository, never()).save(any());
     }
 
+    @DisplayName("상품 판매자는 문의 답변을 등록할 수 있다")
+    @Test
+    void 상품_판매자는_문의_답변을_등록할_수_있다() {
+        Client seller = client("seller@example.com", "판매자", "김판매");
+        ReflectionTestUtils.setField(seller, "id", 2L);
+        Client author = client("author@example.com", "문의작성자", "홍길동");
+        Item item = item(seller);
+        InquiryLog inquiry = inquiry(item, author, "상품 문의", "거래 가능한가요?");
+        ReflectionTestUtils.setField(inquiry, "id", 10L);
+        InquiryAnswerCreateRequest request = new InquiryAnswerCreateRequest("답변입니다", "거래 가능합니다.");
+        LocalDateTime createdAt = LocalDateTime.of(2026, 6, 26, 13, 0);
+
+        given(inquiryLogRepository.findQuestionByIdWithItemSeller(10L)).willReturn(Optional.of(inquiry));
+        given(inquiryLogRepository.existsByTargetInquiryId(10L)).willReturn(false);
+        given(inquiryLogRepository.save(any(InquiryLog.class))).willAnswer(invocation -> {
+            InquiryLog answer = invocation.getArgument(0);
+            ReflectionTestUtils.setField(answer, "id", 20L);
+            ReflectionTestUtils.setField(answer, "createdAt", createdAt);
+            return answer;
+        });
+
+        InquiryAnswerCreateResponse response = inquiryService.createAnswer(10L, 2L, request);
+
+        ArgumentCaptor<InquiryLog> captor = ArgumentCaptor.forClass(InquiryLog.class);
+        verify(inquiryLogRepository).save(captor.capture());
+        InquiryLog savedAnswer = captor.getValue();
+        assertThat(savedAnswer.getItem()).isSameAs(item);
+        assertThat(savedAnswer.getAuthor()).isSameAs(seller);
+        assertThat(savedAnswer.getTargetInquiry()).isSameAs(inquiry);
+        assertThat(savedAnswer.getTitle()).isEqualTo("답변입니다");
+        assertThat(savedAnswer.getDescription()).isEqualTo("거래 가능합니다.");
+        assertThat(savedAnswer.getStatus()).isEqualTo("ANSWER");
+
+        assertThat(response.inquiryId()).isEqualTo(10L);
+        assertThat(response.answerData().id()).isEqualTo(20L);
+        assertThat(response.answerData().authorName()).isEqualTo("김판매");
+        assertThat(response.answerData().contents()).isEqualTo("거래 가능합니다.");
+        assertThat(response.answerData().date()).isEqualTo(createdAt);
+    }
+
+    @DisplayName("문의 답변 등록 시 문의가 없으면 INQUIRY_NOT_FOUND 예외가 발생한다")
+    @Test
+    void 문의_답변_등록_시_문의가_없으면_INQUIRY_NOT_FOUND_예외가_발생한다() {
+        InquiryAnswerCreateRequest request = new InquiryAnswerCreateRequest("답변입니다", "거래 가능합니다.");
+        given(inquiryLogRepository.findQuestionByIdWithItemSeller(10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> inquiryService.createAnswer(10L, 2L, request))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INQUIRY_NOT_FOUND));
+
+        verify(inquiryLogRepository, never()).existsByTargetInquiryId(any());
+        verify(inquiryLogRepository, never()).save(any());
+    }
+
+    @DisplayName("상품 판매자가 아니면 문의 답변 등록 시 FORBIDDEN 예외가 발생한다")
+    @Test
+    void 상품_판매자가_아니면_문의_답변_등록_시_FORBIDDEN_예외가_발생한다() {
+        Client seller = client("seller@example.com", "판매자", "김판매");
+        ReflectionTestUtils.setField(seller, "id", 2L);
+        Item item = item(seller);
+        InquiryLog inquiry = inquiry(item, client("author@example.com", "문의작성자", "홍길동"), "상품 문의", "거래 가능한가요?");
+        InquiryAnswerCreateRequest request = new InquiryAnswerCreateRequest("답변입니다", "거래 가능합니다.");
+
+        given(inquiryLogRepository.findQuestionByIdWithItemSeller(10L)).willReturn(Optional.of(inquiry));
+
+        assertThatThrownBy(() -> inquiryService.createAnswer(10L, 3L, request))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
+
+        verify(inquiryLogRepository, never()).existsByTargetInquiryId(any());
+        verify(inquiryLogRepository, never()).save(any());
+    }
+
+    @DisplayName("이미 답변이 존재하면 문의 답변 등록 시 ANSWER_ALREADY_EXISTS 예외가 발생한다")
+    @Test
+    void 이미_답변이_존재하면_문의_답변_등록_시_ANSWER_ALREADY_EXISTS_예외가_발생한다() {
+        Client seller = client("seller@example.com", "판매자", "김판매");
+        ReflectionTestUtils.setField(seller, "id", 2L);
+        Item item = item(seller);
+        InquiryLog inquiry = inquiry(item, client("author@example.com", "문의작성자", "홍길동"), "상품 문의", "거래 가능한가요?");
+        InquiryAnswerCreateRequest request = new InquiryAnswerCreateRequest("답변입니다", "거래 가능합니다.");
+
+        given(inquiryLogRepository.findQuestionByIdWithItemSeller(10L)).willReturn(Optional.of(inquiry));
+        given(inquiryLogRepository.existsByTargetInquiryId(10L)).willReturn(true);
+
+        assertThatThrownBy(() -> inquiryService.createAnswer(10L, 2L, request))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ANSWER_ALREADY_EXISTS));
+
+        verify(inquiryLogRepository, never()).save(any());
+    }
+
     private Item item() {
+        return item(client("seller@example.com", "판매자", "김판매"));
+    }
+
+    private Item item(Client seller) {
         return Item.builder()
                 .category(Category.builder()
                         .name("디지털/가전")
                         .sortOrder(1)
                         .isActive(true)
                         .build())
-                .seller(client("seller@example.com", "판매자", "김판매"))
+                .seller(seller)
                 .tradeType(TradeType.DIRECT)
                 .title("중고 노트북")
                 .description("상태 좋은 노트북입니다.")
