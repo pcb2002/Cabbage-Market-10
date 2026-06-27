@@ -101,11 +101,11 @@ class InquiryControllerTest {
                 .andExpect(jsonPath("$.data.totalElements").value(2))
                 .andExpect(jsonPath("$.data.totalPages").value(1))
                 .andExpect(jsonPath("$.data.itemList.length()").value(2))
-                .andExpect(jsonPath("$.data.itemList[0].enquiryID").value(newerInquiry.getId()))
+                .andExpect(jsonPath("$.data.itemList[0].inquiryID").value(newerInquiry.getId()))
                 .andExpect(jsonPath("$.data.itemList[0].authorName").value("홍길동"))
                 .andExpect(jsonPath("$.data.itemList[0].contents").value("두 번째 문의입니다."))
                 .andExpect(jsonPath("$.data.itemList[0].date").exists())
-                .andExpect(jsonPath("$.data.itemList[1].enquiryID").value(olderInquiry.getId()))
+                .andExpect(jsonPath("$.data.itemList[1].inquiryID").value(olderInquiry.getId()))
                 .andExpect(jsonPath("$.data.itemList[1].contents").value("첫 번째 문의입니다."));
     }
 
@@ -323,6 +323,150 @@ class InquiryControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+    }
+
+    @DisplayName("상품 판매자는 문의 답변을 등록할 수 있다")
+    @Test
+    void 상품_판매자는_문의_답변을_등록할_수_있다() throws Exception {
+        Client author = saveClient("answer-author@example.com", "답변문의자", "홍길동");
+        Client seller = saveClient("answer-seller@example.com", "답변판매자", "김판매");
+        Item item = saveItem(seller);
+        InquiryLog inquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "거래 가능한가요?",
+                LocalDateTime.of(2026, 6, 26, 10, 0));
+        String accessToken = jwtTokenProvider.createAccessToken(seller);
+
+        mockMvc.perform(post("/api/inquiries/{inquiryId}/answer", inquiry.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("답변입니다", "거래 가능합니다.")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(201))
+                .andExpect(jsonPath("$.data.inquiryId").value(inquiry.getId()))
+                .andExpect(jsonPath("$.data.answerData.id").exists())
+                .andExpect(jsonPath("$.data.answerData.authorName").value("김판매"))
+                .andExpect(jsonPath("$.data.answerData.contents").value("거래 가능합니다."))
+                .andExpect(jsonPath("$.data.answerData.date").exists());
+
+        Long savedTargetInquiryId = jdbcTemplate.queryForObject(
+                "select target_inquiry_id from inquiry_log where author_id = ? and status = 'ANSWER'",
+                Long.class,
+                seller.getId());
+        String savedTitle = jdbcTemplate.queryForObject(
+                "select title from inquiry_log where author_id = ? and status = 'ANSWER'",
+                String.class,
+                seller.getId());
+        String savedDescription = jdbcTemplate.queryForObject(
+                "select description from inquiry_log where author_id = ? and status = 'ANSWER'",
+                String.class,
+                seller.getId());
+        assertThat(savedTargetInquiryId).isEqualTo(inquiry.getId());
+        assertThat(savedTitle).isEqualTo("답변입니다");
+        assertThat(savedDescription).isEqualTo("거래 가능합니다.");
+    }
+
+    @DisplayName("문의 답변 제목이 없으면 400 응답을 반환한다")
+    @Test
+    void 문의_답변_제목이_없으면_400_응답을_반환한다() throws Exception {
+        Client author = saveClient("missing-answer-title-author@example.com", "답변제목누락문의자", "홍길동");
+        Client seller = saveClient("missing-answer-title-seller@example.com", "답변제목누락판매자", "김판매");
+        Item item = saveItem(seller);
+        InquiryLog inquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "거래 가능한가요?",
+                LocalDateTime.of(2026, 6, 26, 10, 0));
+        String accessToken = jwtTokenProvider.createAccessToken(seller);
+
+        mockMvc.perform(post("/api/inquiries/{inquiryId}/answer", inquiry.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "contents": "거래 가능합니다."
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @DisplayName("토큰이 없으면 문의 답변을 등록할 수 없다")
+    @Test
+    void 토큰이_없으면_문의_답변을_등록할_수_없다() throws Exception {
+        Client author = saveClient("unauthorized-answer-author@example.com", "미인증답변문의자", "홍길동");
+        Client seller = saveClient("unauthorized-answer-seller@example.com", "미인증답변판매자", "김판매");
+        Item item = saveItem(seller);
+        InquiryLog inquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "거래 가능한가요?",
+                LocalDateTime.of(2026, 6, 26, 10, 0));
+
+        mockMvc.perform(post("/api/inquiries/{inquiryId}/answer", inquiry.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("답변입니다", "거래 가능합니다.")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("상품 판매자가 아니면 문의 답변 등록 시 403 응답을 반환한다")
+    @Test
+    void 상품_판매자가_아니면_문의_답변_등록_시_403_응답을_반환한다() throws Exception {
+        Client author = saveClient("forbidden-answer-author@example.com", "권한답변문의자", "홍길동");
+        Client seller = saveClient("forbidden-answer-seller@example.com", "권한답변판매자", "김판매");
+        Client otherClient = saveClient("forbidden-answer-other@example.com", "권한없는회원", "이회원");
+        Item item = saveItem(seller);
+        InquiryLog inquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "거래 가능한가요?",
+                LocalDateTime.of(2026, 6, 26, 10, 0));
+        String accessToken = jwtTokenProvider.createAccessToken(otherClient);
+
+        mockMvc.perform(post("/api/inquiries/{inquiryId}/answer", inquiry.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("답변입니다", "거래 가능합니다.")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @DisplayName("이미 답변이 존재하면 문의 답변 등록 시 409 응답을 반환한다")
+    @Test
+    void 이미_답변이_존재하면_문의_답변_등록_시_409_응답을_반환한다() throws Exception {
+        Client author = saveClient("conflict-answer-author@example.com", "중복답변문의자", "홍길동");
+        Client seller = saveClient("conflict-answer-seller@example.com", "중복답변판매자", "김판매");
+        Item item = saveItem(seller);
+        InquiryLog inquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "거래 가능한가요?",
+                LocalDateTime.of(2026, 6, 26, 10, 0));
+        saveInquiry(
+                item,
+                seller,
+                inquiry,
+                "이미 답변했습니다.",
+                LocalDateTime.of(2026, 6, 26, 11, 0));
+        String accessToken = jwtTokenProvider.createAccessToken(seller);
+
+        mockMvc.perform(post("/api/inquiries/{inquiryId}/answer", inquiry.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("답변입니다", "거래 가능합니다.")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.code").value("ANSWER_ALREADY_EXISTS"));
     }
 
     private String json(String title, String contents) {
