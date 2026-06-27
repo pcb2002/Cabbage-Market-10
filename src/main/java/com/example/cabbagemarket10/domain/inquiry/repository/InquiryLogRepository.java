@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface InquiryLogRepository extends JpaRepository<InquiryLog, Long> {
 
@@ -31,4 +33,16 @@ public interface InquiryLogRepository extends JpaRepository<InquiryLog, Long> {
             @Param("itemId") Long itemId,
             Pageable pageable
     );
+
+    @Query("""
+            select inquiryLog
+            from InquiryLog inquiryLog
+            join fetch inquiryLog.item item
+            join fetch item.seller
+            where inquiryLog.id = :inquiryId
+              and inquiryLog.targetInquiry is null
+            """)
+    Optional<InquiryLog> findQuestionByIdWithItemSeller(@Param("inquiryId") Long inquiryId);
+
+    boolean existsByTargetInquiryId(Long inquiryId);
 }
