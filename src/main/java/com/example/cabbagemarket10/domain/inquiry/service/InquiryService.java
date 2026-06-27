@@ -14,6 +14,7 @@ import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -87,6 +88,10 @@ public class InquiryService {
                 .status(ANSWER_STATUS)
                 .build();
 
-        return InquiryAnswerCreateResponse.from(inquiryLogRepository.save(answer));
+        try {
+            return InquiryAnswerCreateResponse.from(inquiryLogRepository.save(answer));
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.ANSWER_ALREADY_EXISTS);
+        }
     }
 }
