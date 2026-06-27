@@ -34,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -247,6 +248,25 @@ class InquiryServiceTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ANSWER_ALREADY_EXISTS));
 
         verify(inquiryLogRepository, never()).save(any());
+    }
+
+    @DisplayName("중복 답변 저장 무결성 위반 시 ANSWER_ALREADY_EXISTS 예외가 발생한다")
+    @Test
+    void 중복_답변_저장_무결성_위반_시_ANSWER_ALREADY_EXISTS_예외가_발생한다() {
+        Client seller = client("seller@example.com", "판매자", "김판매");
+        ReflectionTestUtils.setField(seller, "id", 2L);
+        Item item = item(seller);
+        InquiryLog inquiry = inquiry(item, client("author@example.com", "문의작성자", "홍길동"), "상품 문의", "거래 가능한가요?");
+        InquiryAnswerCreateRequest request = new InquiryAnswerCreateRequest("답변입니다", "거래 가능합니다.");
+
+        given(inquiryLogRepository.findQuestionByIdWithItemSeller(10L)).willReturn(Optional.of(inquiry));
+        given(inquiryLogRepository.existsByTargetInquiryId(10L)).willReturn(false);
+        given(inquiryLogRepository.save(any(InquiryLog.class)))
+                .willThrow(new DataIntegrityViolationException("duplicate answer"));
+
+        assertThatThrownBy(() -> inquiryService.createAnswer(10L, 2L, request))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.ANSWER_ALREADY_EXISTS));
     }
 
     private Item item() {

@@ -395,6 +395,33 @@ class InquiryControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    @DisplayName("문의 답변 내용이 없으면 400 응답을 반환한다")
+    @Test
+    void 문의_답변_내용이_없으면_400_응답을_반환한다() throws Exception {
+        Client author = saveClient("missing-answer-contents-author@example.com", "답변내용누락문의자", "홍길동");
+        Client seller = saveClient("missing-answer-contents-seller@example.com", "답변내용누락판매자", "김판매");
+        Item item = saveItem(seller);
+        InquiryLog inquiry = saveInquiry(
+                item,
+                author,
+                null,
+                "거래 가능한가요?",
+                LocalDateTime.of(2026, 6, 26, 10, 0));
+        String accessToken = jwtTokenProvider.createAccessToken(seller);
+
+        mockMvc.perform(post("/api/inquiries/{inquiryId}/answer", inquiry.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "답변입니다"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
     @DisplayName("토큰이 없으면 문의 답변을 등록할 수 없다")
     @Test
     void 토큰이_없으면_문의_답변을_등록할_수_없다() throws Exception {
