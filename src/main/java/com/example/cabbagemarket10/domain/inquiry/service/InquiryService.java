@@ -56,4 +56,16 @@ public class InquiryService {
 
         return InquiryCreateResponse.from(inquiryLogRepository.save(inquiryLog));
     }
+
+    @Transactional
+    public void deleteInquiry(Long inquiryId, Long authorId) {
+        InquiryLog inquiryLog = inquiryLogRepository.findRootInquiryByIdWithAuthor(inquiryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+
+        if (!inquiryLog.getAuthor().getId().equals(authorId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        inquiryLogRepository.delete(inquiryLog);
+    }
 }

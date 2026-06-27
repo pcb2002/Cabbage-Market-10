@@ -71,7 +71,7 @@ class InquiryServiceTest {
 
         verify(inquiryLogRepository).findRootInquiriesByItemIdWithAuthor(1L, pageable);
         assertThat(response.itemList()).hasSize(1);
-        assertThat(response.itemList().get(0).inquiryID()).isEqualTo(10L);
+        assertThat(response.itemList().get(0).inquiryId()).isEqualTo(10L);
         assertThat(response.itemList().get(0).authorName()).isEqualTo("홍길동");
         assertThat(response.itemList().get(0).contents()).isEqualTo("거래 가능한가요?");
         assertThat(response.itemList().get(0).date()).isEqualTo(createdAt);
@@ -153,6 +153,50 @@ class InquiryServiceTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_FOUND));
 
         verify(inquiryLogRepository, never()).save(any());
+    }
+
+    @DisplayName("문의 작성자는 문의를 삭제할 수 있다")
+    @Test
+    void 문의_작성자는_문의를_삭제할_수_있다() {
+        Item item = item();
+        Client author = client("author@example.com", "문의작성자", "홍길동");
+        ReflectionTestUtils.setField(author, "id", 2L);
+        InquiryLog inquiry = inquiry(item, author, "상품 문의", "거래 가능한가요?");
+
+        given(inquiryLogRepository.findRootInquiryByIdWithAuthor(10L)).willReturn(Optional.of(inquiry));
+
+        inquiryService.deleteInquiry(10L, 2L);
+
+        verify(inquiryLogRepository).delete(inquiry);
+    }
+
+    @DisplayName("문의 삭제 시 문의가 없으면 INQUIRY_NOT_FOUND 예외가 발생한다")
+    @Test
+    void 문의_삭제_시_문의가_없으면_INQUIRY_NOT_FOUND_예외가_발생한다() {
+        given(inquiryLogRepository.findRootInquiryByIdWithAuthor(10L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> inquiryService.deleteInquiry(10L, 2L))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INQUIRY_NOT_FOUND));
+
+        verify(inquiryLogRepository, never()).delete(any());
+    }
+
+    @DisplayName("문의 작성자가 아니면 문의 삭제 시 FORBIDDEN 예외가 발생한다")
+    @Test
+    void 문의_작성자가_아니면_문의_삭제_시_FORBIDDEN_예외가_발생한다() {
+        Item item = item();
+        Client author = client("author@example.com", "문의작성자", "홍길동");
+        ReflectionTestUtils.setField(author, "id", 2L);
+        InquiryLog inquiry = inquiry(item, author, "상품 문의", "거래 가능한가요?");
+
+        given(inquiryLogRepository.findRootInquiryByIdWithAuthor(10L)).willReturn(Optional.of(inquiry));
+
+        assertThatThrownBy(() -> inquiryService.deleteInquiry(10L, 3L))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
+
+        verify(inquiryLogRepository, never()).delete(any());
     }
 
     private Item item() {
