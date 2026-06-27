@@ -102,11 +102,11 @@ class InquiryControllerTest {
                 .andExpect(jsonPath("$.data.totalElements").value(2))
                 .andExpect(jsonPath("$.data.totalPages").value(1))
                 .andExpect(jsonPath("$.data.itemList.length()").value(2))
-                .andExpect(jsonPath("$.data.itemList[0].enquiryID").value(newerInquiry.getId()))
+                .andExpect(jsonPath("$.data.itemList[0].inquiryId").value(newerInquiry.getId()))
                 .andExpect(jsonPath("$.data.itemList[0].authorName").value("홍길동"))
                 .andExpect(jsonPath("$.data.itemList[0].contents").value("두 번째 문의입니다."))
                 .andExpect(jsonPath("$.data.itemList[0].date").exists())
-                .andExpect(jsonPath("$.data.itemList[1].enquiryID").value(olderInquiry.getId()))
+                .andExpect(jsonPath("$.data.itemList[1].inquiryId").value(olderInquiry.getId()))
                 .andExpect(jsonPath("$.data.itemList[1].contents").value("첫 번째 문의입니다."));
     }
 

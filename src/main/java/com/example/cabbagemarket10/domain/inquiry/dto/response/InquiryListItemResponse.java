@@ -1,12 +1,10 @@
 package com.example.cabbagemarket10.domain.inquiry.dto.response;
 
 import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 public record InquiryListItemResponse(
-        @JsonProperty("enquiryID")
-        Long inquiryID,
+        Long inquiryId,
         String authorName,
         String contents,
         LocalDateTime date

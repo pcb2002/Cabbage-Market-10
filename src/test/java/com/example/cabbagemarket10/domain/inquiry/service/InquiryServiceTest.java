@@ -73,7 +73,7 @@ class InquiryServiceTest {
 
         verify(inquiryLogRepository).findRootInquiriesByItemIdWithAuthor(1L, pageable);
         assertThat(response.itemList()).hasSize(1);
-        assertThat(response.itemList().get(0).inquiryID()).isEqualTo(10L);
+        assertThat(response.itemList().get(0).inquiryId()).isEqualTo(10L);
         assertThat(response.itemList().get(0).authorName()).isEqualTo("홍길동");
         assertThat(response.itemList().get(0).contents()).isEqualTo("거래 가능한가요?");
         assertThat(response.itemList().get(0).date()).isEqualTo(createdAt);
