@@ -1,6 +1,7 @@
 package com.example.cabbagemarket10.domain.client.service;
 
 import com.example.cabbagemarket10.domain.client.dto.response.ClientMyInfoResponse;
+import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileResponse;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
@@ -21,6 +22,14 @@ public class ClientService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CLIENT_NOT_FOUND));
 
         return ClientMyInfoResponse.from(client);
+    }
+
+    @Transactional(readOnly = true)
+    public ClientProfileResponse getClientProfile(Long clientId) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CLIENT_NOT_FOUND));
+
+        return ClientProfileResponse.from(client);
     }
 
     public Client getClient(Long clientId) {
