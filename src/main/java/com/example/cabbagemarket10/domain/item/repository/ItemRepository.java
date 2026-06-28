@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface ItemRepository extends JpaRepository<Item, Long> {
+public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositoryCustom {
     // 1. 특정 카테고리에 속한 상품 목록 조회 (페이징)
     Page<Item> findByCategoryId(Long categoryId, Pageable pageable);
 
