@@ -35,6 +35,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @SQLRestriction("is_deleted = false")
 public class Client extends BaseEntity {
 
+    private static final String DEFAULT_PROFILE_IMAGE_URL =
+            "https://cdn.cabbage-market.com/client/images/default-profile.png";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -73,14 +76,15 @@ public class Client extends BaseEntity {
             String password,
             String nickname,
             String name,
-            String phone
+            String phone,
+            String profileImageUrl
     ) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.name = name;
         this.phone = phone;
-        this.profileImageUrl = "";
+        this.profileImageUrl = profileImageUrl;
         this.status = AccountStatus.ACTIVE;
         this.isVerified = false;
         this.isDeleted = false;
@@ -99,7 +103,12 @@ public class Client extends BaseEntity {
                 .nickname(nickname)
                 .name(name)
                 .phone(phone)
+                .profileImageUrl(DEFAULT_PROFILE_IMAGE_URL)
                 .build();
+    }
+
+    public static String defaultProfileImageUrl() {
+        return DEFAULT_PROFILE_IMAGE_URL;
     }
 
     public boolean isActive() {
