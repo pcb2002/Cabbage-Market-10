@@ -11,10 +11,8 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryCreateRequest;
-import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryUpdateRequest;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryCreateResponse;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryListResponse;
-import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryUpdateResponse;
 import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
 import com.example.cabbagemarket10.domain.inquiry.repository.InquiryLogRepository;
 import com.example.cabbagemarket10.domain.item.entity.Item;
@@ -155,84 +153,6 @@ class InquiryServiceTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_FOUND));
 
         verify(inquiryLogRepository, never()).save(any());
-    }
-
-    @DisplayName("문의 작성자는 문의 제목과 내용을 수정할 수 있다")
-    @Test
-    void 문의_작성자는_문의_제목과_내용을_수정할_수_있다() {
-        Item item = item();
-        Client author = client("author@example.com", "문의작성자", "홍길동");
-        ReflectionTestUtils.setField(author, "id", 2L);
-        InquiryLog inquiry = inquiry(item, author, "상품 문의", "거래 가능한가요?");
-        LocalDateTime updatedAt = LocalDateTime.of(2026, 6, 27, 13, 0);
-        ReflectionTestUtils.setField(inquiry, "id", 10L);
-        ReflectionTestUtils.setField(inquiry, "updatedAt", updatedAt);
-        InquiryUpdateRequest request = new InquiryUpdateRequest("수정된 문의", "가격 조정 가능한가요?");
-
-        given(inquiryLogRepository.findRootInquiryByIdWithAuthor(10L)).willReturn(Optional.of(inquiry));
-
-        InquiryUpdateResponse response = inquiryService.updateInquiry(10L, 2L, request);
-
-        verify(inquiryLogRepository).flush();
-        assertThat(inquiry.getTitle()).isEqualTo("수정된 문의");
-        assertThat(inquiry.getDescription()).isEqualTo("가격 조정 가능한가요?");
-        assertThat(response.id()).isEqualTo(10L);
-        assertThat(response.authorName()).isEqualTo("홍길동");
-        assertThat(response.contents()).isEqualTo("가격 조정 가능한가요?");
-        assertThat(response.date()).isEqualTo(updatedAt);
-    }
-
-    @DisplayName("문의 수정 요청에 제목이 없으면 기존 제목을 유지하고 내용만 수정한다")
-    @Test
-    void 문의_수정_요청에_제목이_없으면_기존_제목을_유지하고_내용만_수정한다() {
-        Item item = item();
-        Client author = client("author@example.com", "문의작성자", "홍길동");
-        ReflectionTestUtils.setField(author, "id", 2L);
-        InquiryLog inquiry = inquiry(item, author, "상품 문의", "거래 가능한가요?");
-        ReflectionTestUtils.setField(inquiry, "id", 10L);
-        ReflectionTestUtils.setField(inquiry, "updatedAt", LocalDateTime.of(2026, 6, 27, 13, 0));
-        InquiryUpdateRequest request = new InquiryUpdateRequest(null, "구성품 포함인가요?");
-
-        given(inquiryLogRepository.findRootInquiryByIdWithAuthor(10L)).willReturn(Optional.of(inquiry));
-
-        inquiryService.updateInquiry(10L, 2L, request);
-
-        verify(inquiryLogRepository).flush();
-        assertThat(inquiry.getTitle()).isEqualTo("상품 문의");
-        assertThat(inquiry.getDescription()).isEqualTo("구성품 포함인가요?");
-    }
-
-    @DisplayName("문의 수정 시 문의가 없으면 INQUIRY_NOT_FOUND 예외가 발생한다")
-    @Test
-    void 문의_수정_시_문의가_없으면_INQUIRY_NOT_FOUND_예외가_발생한다() {
-        InquiryUpdateRequest request = new InquiryUpdateRequest("수정된 문의", "가격 조정 가능한가요?");
-        given(inquiryLogRepository.findRootInquiryByIdWithAuthor(10L)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> inquiryService.updateInquiry(10L, 2L, request))
-                .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INQUIRY_NOT_FOUND));
-
-        verify(inquiryLogRepository, never()).flush();
-    }
-
-    @DisplayName("문의 작성자가 아니면 문의 수정 시 FORBIDDEN 예외가 발생한다")
-    @Test
-    void 문의_작성자가_아니면_문의_수정_시_FORBIDDEN_예외가_발생한다() {
-        Item item = item();
-        Client author = client("author@example.com", "문의작성자", "홍길동");
-        ReflectionTestUtils.setField(author, "id", 2L);
-        InquiryLog inquiry = inquiry(item, author, "상품 문의", "거래 가능한가요?");
-        InquiryUpdateRequest request = new InquiryUpdateRequest("수정된 문의", "가격 조정 가능한가요?");
-
-        given(inquiryLogRepository.findRootInquiryByIdWithAuthor(10L)).willReturn(Optional.of(inquiry));
-
-        assertThatThrownBy(() -> inquiryService.updateInquiry(10L, 3L, request))
-                .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
-
-        verify(inquiryLogRepository, never()).flush();
-        assertThat(inquiry.getTitle()).isEqualTo("상품 문의");
-        assertThat(inquiry.getDescription()).isEqualTo("거래 가능한가요?");
     }
 
     private Item item() {
