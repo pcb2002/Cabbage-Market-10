@@ -57,7 +57,7 @@ public class Client extends BaseEntity {
     @Column
     private String phone;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
@@ -117,5 +117,20 @@ public class Client extends BaseEntity {
 
     public boolean isCorrectPassword(PasswordEncoder passwordEncoder, String rawPassword) {
         return passwordEncoder.matches(rawPassword, this.password);
+    }
+
+    public void updateProfile(String nickname, String name, String phone, String profileImageUrl) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (name != null) {
+            this.name = name;
+        }
+        if (phone != null) {
+            this.phone = phone;
+        }
+        if (profileImageUrl != null) {
+            this.profileImageUrl = profileImageUrl;
+        }
     }
 }
