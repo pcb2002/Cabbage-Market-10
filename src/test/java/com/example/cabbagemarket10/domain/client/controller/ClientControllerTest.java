@@ -91,6 +91,77 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
+    @DisplayName("비회원도 회원 공개 프로필을 조회할 수 있다")
+    @Test
+    void 비회원도_회원_공개_프로필을_조회할_수_있다() throws Exception {
+        Client client = saveClient(
+                "public@example.com",
+                "공개배추",
+                "공개이름",
+                "010-2222-3333");
+
+        mockMvc.perform(get("/api/clients/{clientId}", client.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.clientId").value(client.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("공개배추"))
+                .andExpect(jsonPath("$.data.profileImageUrl").value(""))
+                .andExpect(jsonPath("$.data.email").doesNotExist())
+                .andExpect(jsonPath("$.data.password").doesNotExist())
+                .andExpect(jsonPath("$.data.status").doesNotExist())
+                .andExpect(jsonPath("$.data.phone").doesNotExist());
+    }
+
+    @DisplayName("회원도 회원 공개 프로필을 조회할 수 있다")
+    @Test
+    void 회원도_회원_공개_프로필을_조회할_수_있다() throws Exception {
+        Client client = saveClient(
+                "target@example.com",
+                "대상회원",
+                "대상",
+                "010-3333-4444");
+        Client viewer = saveClient(
+                "viewer@example.com",
+                "조회회원",
+                "조회",
+                "010-4444-5555");
+        String accessToken = jwtTokenProvider.createAccessToken(viewer);
+
+        mockMvc.perform(get("/api/clients/{clientId}", client.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.clientId").value(client.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("대상회원"));
+    }
+
+    @DisplayName("존재하지 않는 회원 공개 프로필 조회 시 404를 반환한다")
+    @Test
+    void 존재하지_않는_회원_공개_프로필_조회_시_404를_반환한다() throws Exception {
+        mockMvc.perform(get("/api/clients/{clientId}", 9999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("CLIENT_NOT_FOUND"));
+    }
+
+    @DisplayName("삭제된 회원 공개 프로필 조회 시 404를 반환한다")
+    @Test
+    void 삭제된_회원_공개_프로필_조회_시_404를_반환한다() throws Exception {
+        Client client = saveClient(
+                "deleted@example.com",
+                "삭제회원",
+                "삭제",
+                "010-5555-6666");
+        Long clientId = client.getId();
+        clientRepository.delete(client);
+        clientRepository.flush();
+
+        mockMvc.perform(get("/api/clients/{clientId}", clientId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("CLIENT_NOT_FOUND"));
+    }
+
     private Client saveClient(String email, String nickname, String name, String phone) {
         return clientRepository.save(Client.create(
                 email,
