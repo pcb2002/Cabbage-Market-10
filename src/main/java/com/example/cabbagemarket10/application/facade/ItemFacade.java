@@ -64,13 +64,19 @@ public class ItemFacade {
         // 2. 카테고리 검증 및 조회 (Category 도메인)
         Category category = categoryService.getCategory(request.categoryId());
 
-        // 3. 경매 상태 비즈니스 룰 검증 및 수정 (AuctionStatus 도메인)
-        auctionStatusService.validateAndUpdateRules(
-                itemId,
-                item.getInitialPrice(),  // 기존 시작가
-                request.initialPrice(),  // 변경 요청 시작가
-                request.closeDate()      // 변경 요청 종료일
-        );
+        // 3. 거래 타입에 따른 비즈니스 로직 분기
+        if (item.isAuction()) {
+            // [경매 상품] 경매 상태 검증 및 종료일 수정
+            auctionStatusService.validateAndUpdateRules(
+                    itemId,
+                    item.getInitialPrice(),
+                    request.initialPrice(),
+                    request.closeDate()
+            );
+        } else {
+            // [일반 상품] 별도의 경매 검증 로직 없음
+            // 필요 시 일반 상품만의 비즈니스 룰을 여기서 검증
+        }
 
         // 4. 상품 정보 수정 반영 (더티 체킹)
         item.updateInfo(category, request.title(), request.description(), request.initialPrice());

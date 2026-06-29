@@ -105,6 +105,10 @@ public class Item extends BaseEntity {
         }
     }
 
+    public boolean isAuction() {
+        return this.tradeType == TradeType.AUCTION;
+    }
+
     // 상품 정보 수정 로직
     public void updateInfo(Category category, String title, String description, Long initialPrice) {
         this.category = category;
