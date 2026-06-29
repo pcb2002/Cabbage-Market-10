@@ -13,11 +13,13 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Getter
+@DynamicUpdate
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "item")
 @SQLDelete(sql = "UPDATE item SET is_deleted = true WHERE id = ?")
@@ -123,11 +125,21 @@ public class Item extends BaseEntity {
         }
     }
 
+    public void validateStatusUpdatable() {
+        if (Boolean.TRUE.equals(this.isDraft)) {
+            throw new BusinessException(ErrorCode.ITEM_STATUS_UPDATE_NOT_ALLOWED);
+        }
+    }
+
     // 상품 정보 수정 로직
     public void updateInfo(Category category, String title, String description, Long initialPrice) {
         this.category = category;
         this.title = title;
         this.description = description;
         this.initialPrice = initialPrice;
+    }
+
+    public void updateStatus(TradeStatus tradeStatus) {
+        this.tradeStatus = tradeStatus;
     }
 }

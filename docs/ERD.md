@@ -148,7 +148,7 @@ erDiagram
         text content
         datetime created_at
         datetime updated_at
-        datetime deleted_at
+        boolean is_deleted
     }
 
     auctionStatus["AUCTION_STATUS"] {
@@ -195,7 +195,7 @@ erDiagram
 | Item          | Draft: Hard Delete / Published: Soft Delete, `is_deleted` |
 | InquiryLog    | Soft Delete, `is_deleted`  |
 | ChatMessage   | Soft Delete, `deleted_at`  |
-| Review        | Soft Delete, `deleted_at`  |
+| Review        | Soft Delete, `is_deleted`  |
 | ItemImage     | Hard Delete                |
 | ItemLike      | Hard Delete                |
 | Follow        | Hard Delete                |
