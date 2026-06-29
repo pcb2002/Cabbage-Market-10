@@ -80,6 +80,7 @@ public class ItemFacade {
 
         // 4. 상품 정보 수정 반영 (더티 체킹)
         item.updateInfo(category, request.title(), request.description(), request.initialPrice());
+        itemService.flush();
 
         return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
     }

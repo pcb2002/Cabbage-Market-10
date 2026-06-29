@@ -62,6 +62,10 @@ public class AuctionStatus {
         this.closeDate = closeDate;
     }
 
+    public void updateCurrentBid(Long currentBid) {
+        this.currentBid = currentBid;
+    }
+
     public boolean hasBidder() {
         return this.currentBidder != null;
     }

@@ -20,7 +20,6 @@ public record ItemUpdateRequest(
         @Min(value = 0, message = "시작가는 0 이상이어야 합니다.")
         Long initialPrice,
 
-        @NotNull(message = "경매 종료일은 필수입니다.")
         @Future(message = "경매 종료일은 현재 시간 이후여야 합니다.")
         LocalDateTime closeDate
 ) {}

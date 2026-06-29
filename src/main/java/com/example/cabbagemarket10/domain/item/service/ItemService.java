@@ -79,4 +79,8 @@ public class ItemService {
 
         return item;
     }
+
+    public void flush() {
+        itemRepository.flush();
+    }
 }

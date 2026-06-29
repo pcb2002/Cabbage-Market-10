@@ -28,6 +28,10 @@ public class AuctionStatusService {
 
     @Transactional
     public void validateAndUpdateRules(Long itemId, Long originalPrice, Long newPrice, LocalDateTime newCloseDate) {
+        if (newCloseDate == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "경매 상품은 종료일이 필요합니다.");
+        }
+
         AuctionStatus auctionStatus = auctionStatusRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_STATUS_NOT_FOUND));
 
@@ -42,6 +46,7 @@ public class AuctionStatusService {
             }
         } else {
             // 3. 입찰자가 없을 때만 종료일 수정 반영
+            auctionStatus.updateCurrentBid(newPrice);
             auctionStatus.updateCloseDate(newCloseDate);
         }
     }
