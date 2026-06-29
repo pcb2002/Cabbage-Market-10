@@ -170,11 +170,15 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 임시저장 | description | 필수 |
 | 상품 임시저장 | initialPrice | 필수, 0 이상 정수 |
 | 상품 임시저장 | closeDate | 선택, `AUCTION`이고 전달된 경우 AuctionStatus 생성 |
+| 상품 목록 조회 | categoryId | 선택, 해당 카테고리 상품만 조회 |
+| 상품 목록 조회 | tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
+| 상품 목록 조회 | page, size | 선택, 페이징 |
 | 상품 검색 | keyword | 선택, 최대 100자, 공백이면 전체 목록 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
 | 상품 문의 작성 | title | 필수, 1~200자 |
 | 상품 문의 작성 | contents | 필수, 1~2000자 |
+| 상품 문의 수정 | title | 선택, 전달 시 1~200자 |
 | 상품 문의 수정 | contents | 필수, 1~2000자 |
 | 상품 문의 답변 등록 | title | 필수, 1~200자 |
 | 상품 문의 답변 등록·수정 | contents | 필수, 1~2000자 |
@@ -230,7 +234,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 카테고리 목록 조회 | GET | `/api/categories` | 불필요 | 없음 | `200 OK` |
 | 상품 등록 | POST | `/api/items` | 필요 | 상품 필수 필드 | `201 Created` |
 | 상품 임시저장 | POST | `/api/items/drafts` | 필요 | 상품 필수 필드, `closeDate` 선택 | `201 Created` |
-| 상품 목록 조회 | GET | `/api/items` | 불필요 | `page`, `size` 선택 | `200 OK` |
+| 상품 목록 조회 | GET | `/api/items` | 불필요 | `categoryId`, `tradeStatus`, `page`, `size` 선택 | `200 OK` |
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 검색 | GET | `/api/items?keyword={keyword}` | 불필요 | Query `keyword` | `200 OK` |
 | 상품 정보 수정 | PUT | `/api/items/{itemId}` | 필요 | 수정할 상품 필드 | `200 OK` |
@@ -266,7 +270,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 |---|---:|---|---|---|---|
 | 상품 문의 작성 | POST | `/api/items/{itemId}/inquiries` | 필요 | `title`, `contents` | `201 Created` |
 | 상품 문의 목록 조회 | GET | `/api/items/{itemId}/inquiries` | 불필요 | Path `itemId`, Query `page`, `size` 선택 | `200 OK` |
-| 상품 문의 수정 | PATCH | `/api/inquiries/{inquiryId}` | 필요 | `contents` | `200 OK` |
+| 상품 문의 수정 | PUT | `/api/inquiries/{inquiryId}` | 필요 | `title` 선택, `contents` | `200 OK` |
 | 상품 문의 삭제 | DELETE | `/api/inquiries/{inquiryId}` | 필요 | Path `inquiryId` | `204 No Content` |
 | 상품 문의 답변 등록 | POST | `/api/inquiries/{inquiryId}/answer` | 필요 | `title`, `contents` | `201 Created` |
 | 상품 문의 답변 수정 | PATCH | `/api/inquiries/{inquiryId}/answer` | 필요 | `contents` | `200 OK` |
@@ -285,6 +289,8 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 상품 문의 목록 조회 응답은 `data.itemList`에 문의 항목을 담고, 각 항목은 `inquiryID`, `authorName`, `contents`, `date`를 포함한다.
 페이지 메타데이터는 `page`, `size`, `totalElements`, `totalPages`로 응답한다.
 `page` 기본값은 0, `size` 기본값은 20이며 잘못된 쿼리 값은 `400 Bad Request`로 응답한다.
+상품 문의 삭제 성공 응답은 `data: null`을 반환하며, 삭제는 soft delete로 처리한다.
+상품 문의 수정 응답은 `id`, `authorName`, `contents`, `date`를 포함하며 `date`는 수정 시각이다.
 
 ### 팔로우·리뷰
 
@@ -450,6 +456,30 @@ Cookie: refresh_token={jwt}
 ```
 
 존재하지 않는 카테고리는 `404 Not Found`, 입력 검증 실패는 `400 Bad Request`로 응답한다.
+
+### 상품 목록 조회
+
+`GET /api/items`는 공개 상품 목록을 페이징으로 조회한다.
+
+요청 Query:
+
+| 필드 | 규칙 |
+|---|---|
+| categoryId | 선택, 해당 카테고리 상품만 조회 |
+| tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
+| page | 선택, 0부터 시작 |
+| size | 선택 |
+
+응답 `data.content` 항목:
+
+| 필드 | 설명 |
+|---|---|
+| itemId | 상품 ID |
+| title | 상품 제목 |
+| initialPrice | 시작가 |
+| currentBid | 현재 입찰가, 경매 상태가 없으면 null |
+| tradeStatus | 판매 상태 |
+| closeDate | 경매 마감 일시, 경매 상태가 없으면 null |
 
 ## 열린 결정
 

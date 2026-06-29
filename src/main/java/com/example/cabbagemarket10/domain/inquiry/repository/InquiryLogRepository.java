@@ -36,6 +36,15 @@ public interface InquiryLogRepository extends JpaRepository<InquiryLog, Long> {
     @Query("""
             select inquiryLog
             from InquiryLog inquiryLog
+            join fetch inquiryLog.author
+            where inquiryLog.id = :inquiryId
+              and inquiryLog.targetInquiry is null
+            """)
+    Optional<InquiryLog> findRootInquiryByIdWithAuthor(@Param("inquiryId") Long inquiryId);
+
+    @Query("""
+            select inquiryLog
+            from InquiryLog inquiryLog
             join fetch inquiryLog.item item
             join fetch item.seller
             where inquiryLog.id = :inquiryId
