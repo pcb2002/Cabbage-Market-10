@@ -1,6 +1,5 @@
 package com.example.cabbagemarket10.domain.client.controller;
 
-import static java.nio.file.Files.deleteIfExists;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -9,6 +8,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.domain.follow.entity.Follow;
+import com.example.cabbagemarket10.domain.follow.repository.FollowRepository;
+import com.example.cabbagemarket10.domain.item.entity.Item;
+import com.example.cabbagemarket10.domain.item.enums.ConditionType;
+import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
+import com.example.cabbagemarket10.domain.item.enums.TradeType;
+import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.category.entity.Category;
+import com.example.cabbagemarket10.domain.category.repository.CategoryRepository;
+import com.example.cabbagemarket10.domain.review.entity.Review;
+import com.example.cabbagemarket10.domain.review.repository.ReviewRepository;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +43,18 @@ class ClientControllerTest {
     private ClientRepository clientRepository;
 
     @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private ItemRepository itemRepository;
+
+    @Autowired
+    private FollowRepository followRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -43,6 +65,7 @@ class ClientControllerTest {
 
     @BeforeEach
     void setUp() {
+        deleteIfExists("follow");
         deleteIfExists("review");
         deleteIfExists("auction_status");
         deleteIfExists("item");
@@ -111,6 +134,12 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.data.clientId").value(client.getId()))
                 .andExpect(jsonPath("$.data.nickname").value("공개배추"))
                 .andExpect(jsonPath("$.data.profileImageUrl").value(Client.defaultProfileImageUrl()))
+                .andExpect(jsonPath("$.data.averageRating").value(0.0))
+                .andExpect(jsonPath("$.data.reviewCount").value(0))
+                .andExpect(jsonPath("$.data.followerCount").value(0))
+                .andExpect(jsonPath("$.data.isFollowing").value(false))
+                .andExpect(jsonPath("$.data.sellingItemCount").value(0))
+                .andExpect(jsonPath("$.data.soldItemCount").value(0))
                 .andExpect(jsonPath("$.data.email").doesNotExist())
                 .andExpect(jsonPath("$.data.password").doesNotExist())
                 .andExpect(jsonPath("$.data.status").doesNotExist())
@@ -130,6 +159,25 @@ class ClientControllerTest {
                 "조회회원",
                 "조회",
                 "010-4444-5555");
+        Category category = saveCategory();
+        saveItem(category, client, "판매중 상품", TradeStatus.ON_SALE, false);
+        saveItem(category, client, "판매완료 상품", TradeStatus.SOLD_OUT, false);
+        saveItem(category, client, "임시저장 상품", TradeStatus.ON_SALE, true);
+        followRepository.save(new Follow(viewer, client));
+        reviewRepository.save(Review.builder()
+                .reviewer(viewer)
+                .reviewee(client)
+                .rating(4)
+                .content("좋습니다")
+                .build());
+        Review deletedReview = reviewRepository.save(Review.builder()
+                .reviewer(viewer)
+                .reviewee(client)
+                .rating(2)
+                .content("삭제된 리뷰")
+                .build());
+        reviewRepository.delete(deletedReview);
+        reviewRepository.flush();
         String accessToken = jwtTokenProvider.createAccessToken(viewer);
 
         mockMvc.perform(get("/api/clients/{clientId}", client.getId())
@@ -137,7 +185,13 @@ class ClientControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.clientId").value(client.getId()))
-                .andExpect(jsonPath("$.data.nickname").value("대상회원"));
+                .andExpect(jsonPath("$.data.nickname").value("대상회원"))
+                .andExpect(jsonPath("$.data.averageRating").value(4.0))
+                .andExpect(jsonPath("$.data.reviewCount").value(1))
+                .andExpect(jsonPath("$.data.followerCount").value(1))
+                .andExpect(jsonPath("$.data.isFollowing").value(true))
+                .andExpect(jsonPath("$.data.sellingItemCount").value(1))
+                .andExpect(jsonPath("$.data.soldItemCount").value(1));
     }
 
     @DisplayName("존재하지 않는 회원 공개 프로필 조회 시 404를 반환한다")
@@ -167,103 +221,105 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.code").value("CLIENT_NOT_FOUND"));
     }
 
-        @DisplayName("인증된 회원은 내 정보를 부분 수정할 수 있다")
-        @Test
-        void 인증된_회원은_내_정보를_부분_수정할_수_있다 () throws Exception {
-            Client client = saveClient(
-                    "update@example.com",
-                    "beforeNickname",
-                    "홍길동",
-                    "010-1234-5678");
-            String accessToken = jwtTokenProvider.createAccessToken(client);
+    @DisplayName("인증된 회원은 내 정보를 부분 수정할 수 있다")
+    @Test
+    void 인증된_회원은_내_정보를_부분_수정할_수_있다() throws Exception {
+        Client client = saveClient(
+                "update@example.com",
+                "beforeNickname",
+                "홍길동",
+                "010-1234-5678");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
 
-            mockMvc.perform(patch("/api/clients/me")
-                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {
-                                      "nickname": "afterNickname",
-                                      "profileImageUrl": "http://localhost:9000/me.png"
-                                    }
-                                    """))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value(200))
-                    .andExpect(jsonPath("$.data.clientId").value(client.getId()))
-                    .andExpect(jsonPath("$.data.nickname").value("afterNickname"))
-                    .andExpect(jsonPath("$.data.name").value("홍길동"))
-                    .andExpect(jsonPath("$.data.phone").value("010-1234-5678"))
-                    .andExpect(jsonPath("$.data.profileImageUrl").value("http://localhost:9000/me.png"));
+        mockMvc.perform(patch("/api/clients/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "afterNickname",
+                                  "profileImageUrl": "http://localhost:9000/me.png"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.clientId").value(client.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("afterNickname"))
+                .andExpect(jsonPath("$.data.name").value("홍길동"))
+                .andExpect(jsonPath("$.data.phone").value("010-1234-5678"))
+                .andExpect(jsonPath("$.data.profileImageUrl").value("http://localhost:9000/me.png"));
 
-            Client updatedClient = clientRepository.findById(client.getId()).orElseThrow();
-            assertThat(updatedClient.getNickname()).isEqualTo("afterNickname");
-            assertThat(updatedClient.getProfileImageUrl()).isEqualTo("http://localhost:9000/me.png");
-            assertThat(updatedClient.getName()).isEqualTo("홍길동");
-            assertThat(updatedClient.getPhone()).isEqualTo("010-1234-5678");
-        }
+        Client updatedClient = clientRepository.findById(client.getId()).orElseThrow();
+        assertThat(updatedClient.getNickname()).isEqualTo("afterNickname");
+        assertThat(updatedClient.getProfileImageUrl()).isEqualTo("http://localhost:9000/me.png");
+        assertThat(updatedClient.getName()).isEqualTo("홍길동");
+        assertThat(updatedClient.getPhone()).isEqualTo("010-1234-5678");
+    }
 
-        @DisplayName("내 정보 수정 시 전달하지 않은 필드는 기존 값을 유지한다")
-        @Test
-        void 내_정보_수정_시_전달하지_않은_필드는_기존_값을_유지한다 () throws Exception {
-            Client client = saveClient(
-                    "keep@example.com",
-                    "keepNickname",
-                    "기존이름",
-                    "010-2222-3333");
-            String accessToken = jwtTokenProvider.createAccessToken(client);
+    @DisplayName("내 정보 수정 시 전달하지 않은 필드는 기존 값을 유지한다")
+    @Test
+    void 내_정보_수정_시_전달하지_않은_필드는_기존_값을_유지한다() throws Exception {
+        Client client = saveClient(
+                "keep@example.com",
+                "keepNickname",
+                "기존이름",
+                "010-2222-3333");
 
-            mockMvc.perform(patch("/api/clients/me")
-                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {
-                                      "name": "새이름"
-                                    }
-                                    """))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.nickname").value("keepNickname"))
-                    .andExpect(jsonPath("$.data.name").value("새이름"))
-                    .andExpect(jsonPath("$.data.phone").value("010-2222-3333"))
-                    .andExpect(jsonPath("$.data.profileImageUrl").value(Client.defaultProfileImageUrl()));
-        }
+        String accessToken = jwtTokenProvider.createAccessToken(client);
 
-        @DisplayName("내 정보 수정 시 프로필 이미지 URL 형식이 잘못되면 400을 반환한다")
-        @Test
-        void 내_정보_수정_시_프로필_이미지_URL_형식이_잘못되면_400을_반환한다 () throws Exception {
-            Client client = saveClient(
-                    "invalid-url@example.com",
-                    "nickname",
-                    "홍길동",
-                    "010-1234-5678");
-            String accessToken = jwtTokenProvider.createAccessToken(client);
+        mockMvc.perform(patch("/api/clients/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "새이름"
+                                }
+                                """))
+                .andExpect(status().isOk())
 
-            mockMvc.perform(patch("/api/clients/me")
-                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {
-                                      "profileImageUrl": "not-a-url"
-                                    }
-                                    """))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.status").value(400))
-                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
-        }
+                .andExpect(jsonPath("$.data.nickname").value("keepNickname"))
+                .andExpect(jsonPath("$.data.name").value("새이름"))
+                .andExpect(jsonPath("$.data.phone").value("010-2222-3333"))
+                .andExpect(jsonPath("$.data.profileImageUrl").value(Client.defaultProfileImageUrl()));
 
-        @DisplayName("토큰 없이 내 정보 수정을 요청하면 401을 반환한다")
-        @Test
-        void 토큰_없이_내_정보_수정을_요청하면_401을_반환한다 () throws Exception {
-            mockMvc.perform(patch("/api/clients/me")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {
-                                      "nickname": "afterNickname"
-                                    }
-                                    """))
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(jsonPath("$.status").value(401))
-                    .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
 
-        }
+    @DisplayName("내 정보 수정 시 프로필 이미지 URL 형식이 잘못되면 400을 반환한다")
+    @Test
+    void 내_정보_수정_시_프로필_이미지_URL_형식이_잘못되면_400을_반환한다() throws Exception {
+        Client client = saveClient(
+                "invalid-url@example.com",
+                "nickname",
+                "홍길동",
+                "010-1234-5678");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+        mockMvc.perform(patch("/api/clients/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "profileImageUrl": "not-a-url"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+    }
+
+    @DisplayName("토큰 없이 내 정보 수정을 요청하면 401을 반환한다")
+    @Test
+    void 토큰_없이_내_정보_수정을_요청하면_401을_반환한다() throws Exception {
+        mockMvc.perform(patch("/api/clients/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "afterNickname"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
 
     private Client saveClient(String email, String nickname, String name, String phone) {
         return clientRepository.save(Client.create(
@@ -272,6 +328,28 @@ class ClientControllerTest {
                 nickname,
                 name,
                 phone));
+    }
+
+    private Category saveCategory() {
+        return categoryRepository.save(Category.builder()
+                .name("디지털/가전-" + System.nanoTime())
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+    }
+
+    private Item saveItem(Category category, Client seller, String title, TradeStatus tradeStatus, boolean isDraft) {
+        return itemRepository.save(Item.builder()
+                .category(category)
+                .seller(seller)
+                .tradeType(TradeType.DIRECT)
+                .title(title)
+                .description("설명")
+                .initialPrice(1000L)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(tradeStatus)
+                .isDraft(isDraft)
+                .build());
     }
 
     private void deleteIfExists(String tableName) {
