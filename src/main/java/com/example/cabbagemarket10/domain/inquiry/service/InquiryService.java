@@ -60,7 +60,21 @@ public class InquiryService {
     }
 
     @Transactional
+    public void deleteInquiry(Long inquiryId, Long authorId) {
+
+        InquiryLog log = inquiryLogRepository.findRootInquiryByIdWithAuthor(inquiryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+
+        if (!log.getAuthor().getId().equals(authorId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        inquiryLogRepository.delete(log);
+    }
+
+    @Transactional
     public InquiryUpdateResponse updateInquiry(Long inquiryId, Long authorId, InquiryUpdateRequest request) {
+
         InquiryLog inquiryLog = inquiryLogRepository.findRootInquiryByIdWithAuthor(inquiryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
 

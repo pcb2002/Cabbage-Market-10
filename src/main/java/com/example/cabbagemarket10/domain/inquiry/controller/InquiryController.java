@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -57,6 +58,18 @@ public class InquiryController {
         );
 
         return CommonResponse.success(HttpStatus.CREATED, response)
+                .toResponseEntity();
+    }
+
+
+    @DeleteMapping("/inquiries/{inquiryId}")
+    public ResponseEntity<CommonResponse<Void>> deleteInquiry(
+            @PathVariable Long inquiryId,
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient
+    ) {
+        inquiryService.deleteInquiry(inquiryId, authenticatedClient.clientId());
+
+        return CommonResponse.success(HttpStatus.OK)
                 .toResponseEntity();
     }
 
