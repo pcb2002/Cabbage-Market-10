@@ -84,4 +84,13 @@ public class ItemController {
 
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
+
+    @DeleteMapping("/{itemId}")
+    public ResponseEntity<CommonResponse<Void>> deleteItem(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal AuthenticatedClient userDetails
+    ) {
+        itemFacade.deleteItem(itemId, userDetails.clientId());
+        return CommonResponse.success(HttpStatus.NO_CONTENT).toResponseEntity();
+    }
 }

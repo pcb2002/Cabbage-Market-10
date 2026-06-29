@@ -3,11 +3,8 @@ package com.example.cabbagemarket10.domain.auction.service;
 import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
 import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
 import com.example.cabbagemarket10.domain.item.entity.Item;
-import com.example.cabbagemarket10.global.exception.BusinessException;
-import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -40,5 +37,9 @@ public class AuctionStatusService {
                                 createAuctionStatus(item, initialPrice, closeDate);
                             }
                         });
+    }
+
+    public void deleteByItemId(Long itemId) {
+        auctionStatusRepository.deleteByItemId(itemId);
     }
 }

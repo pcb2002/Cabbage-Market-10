@@ -80,6 +80,14 @@ public class ItemService {
         return item;
     }
 
+    public void softDelete(Item item) {
+        itemRepository.delete(item);
+    }
+
+    public void hardDeleteById(Long itemId) {
+        itemRepository.hardDeleteById(itemId);
+    }
+
     public void flush() {
         itemRepository.flush();
     }
