@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -537,6 +538,165 @@ class ItemControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+    }
+
+    @DisplayName("직거래 상품은 경매 종료일 없이 상품 정보를 수정할 수 있다")
+    @Test
+    void updateDirectItemWithoutCloseDateSucceeds() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "direct-update-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "directUpdateSeller",
+                "directUpdateSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("direct-update-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Category updatedCategory = categoryRepository.save(Category.builder()
+                .name("direct-updated-category")
+                .sortOrder(2)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("direct item")
+                .description("direct description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(put("/api/items/{itemId}", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": %d,
+                                  "title": "updated direct item",
+                                  "description": "updated direct description",
+                                  "initialPrice": 15000
+                                }
+                                """.formatted(updatedCategory.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.updatedAt").exists());
+
+        Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(updatedItem.getCategory().getId()).isEqualTo(updatedCategory.getId());
+        assertThat(updatedItem.getTitle()).isEqualTo("updated direct item");
+        assertThat(updatedItem.getDescription()).isEqualTo("updated direct description");
+        assertThat(updatedItem.getInitialPrice()).isEqualTo(15000L);
+        assertThat(auctionStatusRepository.findById(item.getId())).isEmpty();
+    }
+
+    @DisplayName("입찰자가 없는 경매 상품의 시작가를 수정하면 현재 입찰가도 함께 수정된다")
+    @Test
+    void updateAuctionItemWithoutBidderSynchronizesCurrentBid() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "auction-update-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "auctionUpdateSeller",
+                "auctionUpdateSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("auction-update-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("auction item")
+                .description("auction description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.AUCTION)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+        LocalDateTime originalCloseDate = LocalDateTime.of(2026, 8, 1, 10, 0, 0);
+        auctionStatusRepository.save(AuctionStatus.builder()
+                .item(item)
+                .currentBid(10000L)
+                .closeDate(originalCloseDate)
+                .build());
+
+        mockMvc.perform(put("/api/items/{itemId}", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": %d,
+                                  "title": "updated auction item",
+                                  "description": "updated auction description",
+                                  "initialPrice": 20000,
+                                  "closeDate": "2026-08-05T15:30:00"
+                                }
+                                """.formatted(category.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.updatedAt").exists());
+
+        Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        AuctionStatus auctionStatus = auctionStatusRepository.findById(item.getId()).orElseThrow();
+        assertThat(updatedItem.getInitialPrice()).isEqualTo(20000L);
+        assertThat(auctionStatus.getCurrentBid()).isEqualTo(20000L);
+        assertThat(auctionStatus.getCloseDate()).isEqualTo(LocalDateTime.of(2026, 8, 5, 15, 30, 0));
+    }
+
+    @DisplayName("상품 판매자가 아니면 상품을 수정할 수 없다")
+    @Test
+    void updateItemByNonSellerReturnsForbidden() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "forbidden-update-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "forbidSeller",
+                "forbidSeller",
+                "010-1234-5678"));
+        Client otherClient = clientRepository.save(Client.create(
+                "forbidden-update-other@example.com",
+                passwordEncoder.encode("password123!"),
+                "forbidOther",
+                "forbidOther",
+                "010-9876-5432"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("forbidden-update-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("forbidden item")
+                .description("forbidden description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(put("/api/items/{itemId}", item.getId())
+                        .with(authentication(authenticationOf(otherClient)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": %d,
+                                  "title": "forbidden update",
+                                  "description": "forbidden update description",
+                                  "initialPrice": 15000
+                                }
+                                """.formatted(category.getId())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {
