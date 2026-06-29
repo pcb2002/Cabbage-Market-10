@@ -46,8 +46,12 @@ public enum ErrorCode {
             "ACCESS_TOKEN_EXPIRED",
             "Access Token이 만료되었습니다."),
 
+
+    // category
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다."),
+
     // item
-    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품 찾을 수 없습니다."),
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품을 찾을 수 없습니다."),
 
     // Auction
     AUCTION_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION_STATUS_NOT_FOUND","경매 상태 정보를 찾을 수 없습니다."),
