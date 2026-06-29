@@ -3,6 +3,7 @@ package com.example.cabbagemarket10.item;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,6 +22,7 @@ import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +36,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -59,6 +62,9 @@ class ItemControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
@@ -752,6 +758,190 @@ class ItemControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @DisplayName("판매자는 등록된 상품의 판매 상태를 변경할 수 있다")
+    @Test
+    void 판매자는_등록된_상품의_판매_상태를_변경할_수_있다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "status-update-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "statusSeller",
+                "statusSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("status-update-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("status item")
+                .description("status description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        String responseBody = mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tradeStatus": "RESERVED"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.tradeStatus").value("RESERVED"))
+                .andExpect(jsonPath("$.data.updatedAt").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        LocalDateTime responseUpdatedAt = LocalDateTime.parse(
+                objectMapper.readTree(responseBody).path("data").path("updatedAt").asText());
+
+        assertThat(updatedItem.getTradeStatus()).isEqualTo(TradeStatus.RESERVED);
+        assertThat(responseUpdatedAt.truncatedTo(ChronoUnit.MICROS))
+                .isEqualTo(updatedItem.getUpdatedAt().truncatedTo(ChronoUnit.MICROS));
+    }
+
+    @DisplayName("상품 판매자가 아니면 판매 상태를 변경할 수 없다")
+    @Test
+    void 상품_판매자가_아니면_판매_상태를_변경할_수_없다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "status-forbidden-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "statusForbidSeller",
+                "statusForbidSeller",
+                "010-1234-5678"));
+        Client otherClient = clientRepository.save(Client.create(
+                "status-forbidden-other@example.com",
+                passwordEncoder.encode("password123!"),
+                "statusForbiddenOther",
+                "statusForbiddenOther",
+                "010-9876-5432"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("status-forbidden-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("status forbidden item")
+                .description("status forbidden description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
+                        .with(authentication(authenticationOf(otherClient)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tradeStatus": "RESERVED"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        Item notUpdatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notUpdatedItem.getTradeStatus()).isEqualTo(TradeStatus.ON_SALE);
+    }
+
+    @DisplayName("임시저장 상품은 판매 상태를 변경할 수 없다")
+    @Test
+    void 임시저장_상품은_판매_상태를_변경할_수_없다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "status-draft-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "statusDraftSeller",
+                "statusDraftSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("status-draft-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("status draft item")
+                .description("status draft description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+
+        mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tradeStatus": "RESERVED"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("ITEM_STATUS_UPDATE_NOT_ALLOWED"));
+
+        Item notUpdatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notUpdatedItem.getTradeStatus()).isEqualTo(TradeStatus.ON_SALE);
+    }
+
+    @DisplayName("정의되지 않은 판매 상태를 요청하면 INVALID_INPUT을 반환한다")
+    @Test
+    void 정의되지_않은_판매_상태를_요청하면_INVALID_INPUT을_반환한다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "status-invalid-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "statusInvalidSeller",
+                "statusInvalidSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("status-invalid-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("status invalid item")
+                .description("status invalid description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tradeStatus": "INVALID"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+
+        Item notUpdatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notUpdatedItem.getTradeStatus()).isEqualTo(TradeStatus.ON_SALE);
     }
 
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {
