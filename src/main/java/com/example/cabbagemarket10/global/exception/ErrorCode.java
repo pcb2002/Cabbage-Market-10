@@ -53,10 +53,12 @@ public enum ErrorCode {
     // item
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품을 찾을 수 없습니다."),
     ITEM_UPDATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ITEM_UPDATE_NOT_ALLOWED", "등록된 경매 상품은 수정할 수 없습니다."),
+    ITEM_PUBLISH_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ITEM_PUBLISH_NOT_ALLOWED", "이미 게시된 상품입니다."),
 
     // Auction
     AUCTION_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION_STATUS_NOT_FOUND","경매 상태 정보를 찾을 수 없습니다."),
     AUCTION_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "AUCTION_ALREADY_CLOSED", "이미 마감된 경매입니다."),
+    INVALID_AUCTION_CLOSE_DATE(HttpStatus.BAD_REQUEST, "INVALID_AUCTION_CLOSE_DATE", "경매 종료일은 현재 시각 이후로 설정해야 합니다."),
     INVALID_BID_PRICE(HttpStatus.BAD_REQUEST, "INVALID_BID_PRICE", "입찰가는 현재 최고 입찰가보다 높아야 합니다."),
     AUCTION_ALREADY_IN_PROGRESS(HttpStatus.BAD_REQUEST, "AUCTION_ALREADY_IN_PROGRESS","이미 입찰자가 존재하여 수정할 수 없습니다."),
 
