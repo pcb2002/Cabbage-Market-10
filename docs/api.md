@@ -174,6 +174,11 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 목록 조회 | tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 상품 목록 조회 | page, size | 선택, 페이징 |
 | 상품 검색 | keyword | 선택, 최대 100자, 공백이면 전체 목록 |
+| 상품 정보 수정 | categoryId | 필수, 존재하는 카테고리 ID |
+| 상품 정보 수정 | title | 필수, 공백 불가 |
+| 상품 정보 수정 | description | 필수, 공백 불가 |
+| 상품 정보 수정 | initialPrice | 필수, 0 이상 정수 |
+| 상품 정보 수정 | closeDate | 경매 상품이면 필수, 현재 시각 이후. 직거래 상품이면 생략 가능 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
 | 상품 문의 작성 | title | 필수, 1~200자 |
@@ -254,6 +259,45 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
   "closeDate": "2026-06-30T23:59:59"
 }
 ```
+
+상품 정보 수정 요청 예시:
+
+```json
+{
+  "categoryId": 2,
+  "title": "아이폰 14 프로 S급",
+  "description": "풀박스 상태 매우 좋습니다.",
+  "initialPrice": 800000,
+  "closeDate": "2026-08-05T15:30:00"
+}
+```
+
+직거래 상품은 `closeDate`를 생략할 수 있다. 경매 상품은 `closeDate`가 필수이며, 입찰자가 없는 경우 `initialPrice` 변경 시 `auction_status.current_bid`도 함께 변경된다.
+
+상품 정보 수정 성공 응답:
+
+```json
+{
+  "status": 200,
+  "data": {
+    "itemId": 1,
+    "updatedAt": "2026-06-29T13:30:00"
+  }
+}
+```
+
+상품 정보 수정 오류:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 400 | `VALIDATION_ERROR` | 요청값 누락 또는 형식 오류 |
+| 400 | `INVALID_INPUT` | 경매 상품 수정 시 `closeDate` 누락 |
+| 400 | `AUCTION_ALREADY_IN_PROGRESS` | 입찰자가 있는 경매 상품의 시작가 또는 종료일 변경 요청 |
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
+| 404 | `CATEGORY_NOT_FOUND` | 존재하지 않는 카테고리 |
+| 404 | `AUCTION_STATUS_NOT_FOUND` | 경매 상품의 경매 상태 정보 없음 |
 
 ### 상품 이미지·좋아요·경매
 
