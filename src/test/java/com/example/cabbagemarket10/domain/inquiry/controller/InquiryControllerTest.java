@@ -105,7 +105,7 @@ class InquiryControllerTest {
                 .andExpect(jsonPath("$.data.itemList[0].authorName").value("홍길동"))
                 .andExpect(jsonPath("$.data.itemList[0].contents").value("두 번째 문의입니다."))
                 .andExpect(jsonPath("$.data.itemList[0].date").exists())
-                .andExpect(jsonPath("$.data.itemList[1].inquiryID").value(olderInquiry.getId()))
+                .andExpect(jsonPath("$.data.itemList[1].inquiryId").value(olderInquiry.getId()))
                 .andExpect(jsonPath("$.data.itemList[1].contents").value("첫 번째 문의입니다."));
     }
 
