@@ -4,10 +4,13 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -53,5 +56,19 @@ public class ItemService {
     @Transactional(readOnly = true)
     public Page<ItemListItemResponse> getItemList(Long categoryId, String tradeStatus, Pageable pageable) {
         return itemRepository.searchItems(categoryId, tradeStatus, pageable);
+    }
+
+    @Transactional
+    public ItemDetailResponse getItemDetail(Long itemId) {
+        // 1. 데이터 존재 여부 확인 및 DTO 조회
+        ItemDetailResponse detail = itemRepository.findItemDetail(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+
+        // 2. 조회수 증가 (엔티티 조회 후 변경 감지 활용)
+        Item itemEntity = itemRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+        itemEntity.incrementViewCount();
+
+        return detail;
     }
 }
