@@ -484,6 +484,61 @@ class ItemControllerTest {
         assertThat(viewCount).isEqualTo(0L);
     }
 
+    @DisplayName("Item detail returns auction fields when auction status exists")
+    @Test
+    void getItemDetailReturnsAuctionFields() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "auction-detail-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "auctionDetailSeller",
+                "auctionDetailSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("auction-detail-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("auction detail item")
+                .description("auction detail description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.AUCTION)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+        LocalDateTime closeDate = LocalDateTime.of(2026, 8, 5, 15, 30, 0);
+        auctionStatusRepository.save(AuctionStatus.builder()
+                .item(item)
+                .currentBid(15000L)
+                .closeDate(closeDate)
+                .build());
+
+        mockMvc.perform(get("/api/items/{itemId}", item.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.title").value("auction detail item"))
+                .andExpect(jsonPath("$.data.initialPrice").value(10000))
+                .andExpect(jsonPath("$.data.currentBid").value(15000))
+                .andExpect(jsonPath("$.data.tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.closeDate").value("2026-08-05T15:30:00"))
+                .andExpect(jsonPath("$.data.viewCount").value(1))
+                .andExpect(jsonPath("$.data.likeCount").value(0))
+                .andExpect(jsonPath("$.data.inquiryCount").value(0));
+    }
+
+    @DisplayName("Item detail returns ITEM_NOT_FOUND for unknown item")
+    @Test
+    void getItemDetailReturnsNotFoundForUnknownItem() throws Exception {
+        mockMvc.perform(get("/api/items/{itemId}", Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+    }
+
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {
         return new UsernamePasswordAuthenticationToken(
                 new AuthenticatedClient(seller.getId(), seller.getEmail()),
