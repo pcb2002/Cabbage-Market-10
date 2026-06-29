@@ -56,4 +56,17 @@ public class AuctionStatus {
         this.currentBid = bidPrice;
         this.currentBidder = bidder;
     }
+
+    // 경매 종료일 수정 로직
+    public void updateCloseDate(LocalDateTime closeDate) {
+        this.closeDate = closeDate;
+    }
+
+    public void updateCurrentBid(Long currentBid) {
+        this.currentBid = currentBid;
+    }
+
+    public boolean hasBidder() {
+        return this.currentBidder != null;
+    }
 }

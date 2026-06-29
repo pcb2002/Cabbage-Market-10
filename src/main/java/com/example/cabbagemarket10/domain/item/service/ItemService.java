@@ -4,8 +4,10 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.request.ItemStatusUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
@@ -67,5 +69,33 @@ public class ItemService {
 
         return itemRepository.findItemDetail(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public Item getItemValidatingAuthor(Long itemId, Long clientId) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+
+        // 작성자 권한 검증
+        item.verifySeller(clientId);
+
+        return item;
+    }
+
+    @Transactional
+    public ItemStatusUpdateResponse updateItemStatus(Long itemId, Long clientId, ItemStatusUpdateRequest request) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+        item.verifySeller(clientId);
+        item.validateStatusUpdatable();
+
+        item.updateStatus(request.tradeStatus());
+        itemRepository.flush();
+
+        return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), item.getUpdatedAt());
+    }
+
+    public void flush() {
+        itemRepository.flush();
     }
 }

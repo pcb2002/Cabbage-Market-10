@@ -6,16 +6,20 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Getter
+@DynamicUpdate
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "item")
 @SQLDelete(sql = "UPDATE item SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
@@ -94,5 +98,40 @@ public class Item extends BaseEntity {
             this.viewCount = 0L;
         }
         this.viewCount++;
+    }
+
+    // 작성자 검증 로직
+    public void verifySeller(Long clientId) {
+        if (!this.seller.getId().equals(clientId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    public boolean isAuction() {
+        return this.tradeType == TradeType.AUCTION;
+    }
+
+    public void validateUpdatable() {
+        if (!this.isDraft && isAuction()) {
+            throw new BusinessException(ErrorCode.ITEM_UPDATE_NOT_ALLOWED);
+        }
+    }
+
+    public void validateStatusUpdatable() {
+        if (Boolean.TRUE.equals(this.isDraft)) {
+            throw new BusinessException(ErrorCode.ITEM_STATUS_UPDATE_NOT_ALLOWED);
+        }
+    }
+
+    // 상품 정보 수정 로직
+    public void updateInfo(Category category, String title, String description, Long initialPrice) {
+        this.category = category;
+        this.title = title;
+        this.description = description;
+        this.initialPrice = initialPrice;
+    }
+
+    public void updateStatus(TradeStatus tradeStatus) {
+        this.tradeStatus = tradeStatus;
     }
 }

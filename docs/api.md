@@ -85,6 +85,7 @@
 | 카테고리 목록 조회 | 카테고리 | GET | `/api/categories` |
 | 상품 등록 | 상품 게시글 | POST | `/api/items` |
 | 상품 임시저장 | 상품 게시글 | POST | `/api/items/drafts` |
+| 상품 임시저장 게시 | 상품 게시글 | POST | `/api/items/{itemId}/publish` |
 | 상품 목록 조회 | 상품 게시글 | GET | `/api/items` |
 | 상품 상세 조회 | 상품 게시글 | GET | `/api/items/{itemId}` |
 | 인기 검색어 조회 | 검색어 | GET | `/api/search/popular` |
@@ -134,7 +135,7 @@
 
 | 공개 API | 인증 필요 API |
 |---|---|
-| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세, 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰 |
+| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세, 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·게시·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰 |
 
 ## Notion DB 상세 명세
 
@@ -170,10 +171,16 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 임시저장 | description | 필수 |
 | 상품 임시저장 | initialPrice | 필수, 0 이상 정수 |
 | 상품 임시저장 | closeDate | 선택, `AUCTION`이고 전달된 경우 AuctionStatus 생성 |
+| 상품 임시저장 게시 | itemId | Path 필수, 판매자 본인의 임시저장 상품 ID |
 | 상품 목록 조회 | categoryId | 선택, 해당 카테고리 상품만 조회 |
 | 상품 목록 조회 | tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 상품 목록 조회 | page, size | 선택, 페이징 |
 | 상품 검색 | keyword | 선택, 최대 100자, 공백이면 전체 목록 |
+| 상품 정보 수정 | categoryId | 필수, 존재하는 카테고리 ID |
+| 상품 정보 수정 | title | 필수, 공백 불가 |
+| 상품 정보 수정 | description | 필수, 공백 불가 |
+| 상품 정보 수정 | initialPrice | 필수, 0 이상 정수 |
+| 상품 정보 수정 | closeDate | 임시저장 경매 상품이면 선택, 전달 시 현재 시각 이후. 직거래 상품이면 생략 가능 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
 | 상품 문의 작성 | title | 필수, 1~200자 |
@@ -248,6 +255,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 카테고리 목록 조회 | GET | `/api/categories` | 불필요 | 없음 | `200 OK` |
 | 상품 등록 | POST | `/api/items` | 필요 | 상품 필수 필드 | `201 Created` |
 | 상품 임시저장 | POST | `/api/items/drafts` | 필요 | 상품 필수 필드, `closeDate` 선택 | `201 Created` |
+| 상품 임시저장 게시 | POST | `/api/items/{itemId}/publish` | 필요 | Path `itemId` | `200 OK` |
 | 상품 목록 조회 | GET | `/api/items` | 불필요 | `categoryId`, `tradeStatus`, `page`, `size` 선택 | `200 OK` |
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 검색 | GET | `/api/items?keyword={keyword}` | 불필요 | Query `keyword` | `200 OK` |
@@ -268,6 +276,104 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
   "closeDate": "2026-06-30T23:59:59"
 }
 ```
+
+상품 정보 수정 요청 예시:
+
+```json
+{
+  "categoryId": 2,
+  "title": "아이폰 14 프로 S급",
+  "description": "풀박스 상태 매우 좋습니다.",
+  "initialPrice": 800000,
+  "closeDate": "2026-08-05T15:30:00"
+}
+```
+
+임시저장 상품과 등록된 직거래 상품만 수정할 수 있다. 등록된 경매 상품은 수정할 수 없다. 직거래 상품은 `closeDate`를 생략할 수 있고, 임시저장 경매 상품은 `closeDate` 전달 시 경매 종료일을 함께 수정한다. 임시저장 경매 상품의 `initialPrice` 변경 시 `auction_status.current_bid`도 함께 변경된다.
+
+상품 정보 수정 성공 응답:
+
+```json
+{
+  "status": 200,
+  "data": {
+    "itemId": 1,
+    "updatedAt": "2026-06-29T13:30:00"
+  }
+}
+```
+
+상품 정보 수정 오류:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 400 | `VALIDATION_ERROR` | 요청값 누락 또는 형식 오류 |
+| 400 | `ITEM_UPDATE_NOT_ALLOWED` | 등록된 경매 상품 수정 요청 |
+| 400 | `AUCTION_ALREADY_IN_PROGRESS` | 입찰자가 있는 임시저장 경매 상품의 시작가 또는 종료일 변경 요청 |
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
+| 404 | `CATEGORY_NOT_FOUND` | 존재하지 않는 카테고리 |
+| 404 | `AUCTION_STATUS_NOT_FOUND` | 경매 상품의 경매 상태 정보 없음 |
+
+판매 상태 변경 요청 예시:
+
+```json
+{
+  "tradeStatus": "RESERVED"
+}
+```
+
+판매 상태 변경은 판매자 본인의 등록된 상품에만 가능하다. 임시저장 상품의 판매 상태는 변경할 수 없다.
+
+판매 상태 변경 성공 응답:
+
+```json
+{
+  "status": 200,
+  "data": {
+    "itemId": 1,
+    "tradeStatus": "RESERVED",
+    "updatedAt": "2026-06-29T13:30:00"
+  }
+}
+```
+
+판매 상태 변경 오류:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 400 | `VALIDATION_ERROR` | 요청값 누락 또는 형식 오류 |
+| 400 | `INVALID_INPUT` | 정의되지 않은 `tradeStatus` 요청 |
+| 400 | `ITEM_STATUS_UPDATE_NOT_ALLOWED` | 임시저장 상품 판매 상태 변경 요청 |
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
+
+상품 임시저장 게시는 판매자 본인의 `isDraft = true` 상품을 등록 상태(`isDraft = false`)로 전환한다. 요청 본문은 없다. 직거래 상품은 임시저장된 상품 필수 정보가 유효해야 하며, 경매 상품은 현재 시각 이후의 `closeDate`를 가진 `auction_status`가 준비되어 있어야 한다.
+
+상품 임시저장 게시 성공 응답:
+
+```json
+{
+  "status": 200,
+  "data": {
+    "itemId": 1,
+    "updatedAt": "2026-06-29T13:30:00"
+  }
+}
+```
+
+상품 임시저장 게시 오류:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 400 | `ITEM_PUBLISH_NOT_ALLOWED` | 이미 등록된 상품이거나 게시 조건을 만족하지 않는 상품 |
+| 400 | `AUCTION_ALREADY_CLOSED` | 경매 종료일이 현재 시각 이전인 경매 상품 게시 요청 |
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
+| 404 | `AUCTION_STATUS_NOT_FOUND` | 경매 상품의 경매 상태 정보 없음 |
 
 ### 상품 이미지·좋아요·경매
 

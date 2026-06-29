@@ -7,7 +7,9 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
@@ -52,5 +54,22 @@ public class ItemFacade {
         return request.tradeType() == TradeType.AUCTION
                 && request.initialPrice() != null
                 && request.closeDate() != null;
+    }
+
+    @Transactional
+    public ItemUpdateResponse updateItem(Long itemId, Long clientId, ItemUpdateRequest request) {
+        Item item = itemService.getItemValidatingAuthor(itemId, clientId);
+        item.validateUpdatable();
+
+        Category category = categoryService.getCategory(request.categoryId());
+
+        if (item.isAuction()) {
+            auctionStatusService.syncDraftAuctionStatus(item, request.initialPrice(), request.closeDate());
+        }
+
+        item.updateInfo(category, request.title(), request.description(), request.initialPrice());
+        itemService.flush();
+
+        return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
     }
 }

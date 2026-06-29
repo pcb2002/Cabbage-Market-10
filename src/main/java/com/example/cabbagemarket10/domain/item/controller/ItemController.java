@@ -3,9 +3,13 @@ package com.example.cabbagemarket10.domain.item.controller;
 import com.example.cabbagemarket10.application.facade.ItemFacade;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.request.ItemStatusUpdateRequest;
+import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.common.PageResponse;
@@ -66,6 +70,30 @@ public class ItemController {
     @GetMapping("/{itemId}")
     public ResponseEntity<CommonResponse<ItemDetailResponse>> getItemDetail(@PathVariable Long itemId) {
         ItemDetailResponse response = itemService.getItemDetail(itemId);
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
+    @PutMapping("/{itemId}")
+    public ResponseEntity<CommonResponse<ItemUpdateResponse>> updateItem(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal AuthenticatedClient userDetails,
+            @Valid @RequestBody ItemUpdateRequest request
+    ) {
+        Long clientId = userDetails.clientId();
+
+        // Facade로 흐름 위임
+        ItemUpdateResponse response = itemFacade.updateItem(itemId, clientId, request);
+
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
+    @PatchMapping("/{itemId}/status")
+    public ResponseEntity<CommonResponse<ItemStatusUpdateResponse>> updateItemStatus(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal AuthenticatedClient userDetails,
+            @Valid @RequestBody ItemStatusUpdateRequest request
+    ) {
+        ItemStatusUpdateResponse response = itemService.updateItemStatus(itemId, userDetails.clientId(), request);
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 }
