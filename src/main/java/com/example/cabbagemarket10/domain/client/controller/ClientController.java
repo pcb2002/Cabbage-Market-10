@@ -1,14 +1,18 @@
 package com.example.cabbagemarket10.domain.client.controller;
 
+import com.example.cabbagemarket10.domain.client.dto.request.ClientMyInfoUpdateRequest;
 import com.example.cabbagemarket10.domain.client.dto.response.ClientMyInfoResponse;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,6 +28,17 @@ public class ClientController {
             @AuthenticationPrincipal AuthenticatedClient authenticatedClient
     ) {
         ClientMyInfoResponse response = clientService.getMyInfo(authenticatedClient.clientId());
+
+        return CommonResponse.success(HttpStatus.OK, response)
+                .toResponseEntity();
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<CommonResponse<ClientMyInfoResponse>> updateMyInfo(
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            @Valid @RequestBody ClientMyInfoUpdateRequest request
+    ) {
+        ClientMyInfoResponse response = clientService.updateMyInfo(authenticatedClient.clientId(), request);
 
         return CommonResponse.success(HttpStatus.OK, response)
                 .toResponseEntity();

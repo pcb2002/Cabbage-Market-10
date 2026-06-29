@@ -39,7 +39,7 @@ erDiagram
         varchar nickname
         varchar name
         varchar phone
-        varchar profile_image_url
+        varchar(500) profile_image_url
         varchar role
         varchar status
         boolean is_verified
