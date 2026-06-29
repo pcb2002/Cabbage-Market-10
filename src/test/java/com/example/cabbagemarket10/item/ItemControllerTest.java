@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.item;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -305,6 +306,93 @@ class ItemControllerTest {
         assertThat(item.getTradeType()).isEqualTo(TradeType.AUCTION);
         assertThat(item.getIsDraft()).isTrue();
         assertThat(auctionStatusRepository.findById(savedItemId)).isEmpty();
+    }
+
+    @DisplayName("상품 목록 조회는 필터 조건에 맞는 공개 상품만 반환한다")
+    @Test
+    void getItemListReturnsOnlyVisibleItemsMatchingFilters() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "list-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "listSeller",
+                "listSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("list-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Category otherCategory = categoryRepository.save(Category.builder()
+                .name("other-list-category")
+                .sortOrder(2)
+                .isActive(true)
+                .build());
+        LocalDateTime closeDate = LocalDateTime.of(2026, 8, 1, 10, 0, 0);
+
+        Item visibleItem = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("visible auction cabbage")
+                .description("visible item")
+                .initialPrice(7000L)
+                .tradeType(TradeType.AUCTION)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+        auctionStatusRepository.save(AuctionStatus.builder()
+                .item(visibleItem)
+                .currentBid(9000L)
+                .closeDate(closeDate)
+                .build());
+        itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("draft item")
+                .description("draft item")
+                .initialPrice(3000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+        itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(otherCategory)
+                .title("other category item")
+                .description("other category item")
+                .initialPrice(4000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.NEW)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(get("/api/items")
+                        .param("categoryId", String.valueOf(category.getId()))
+                        .param("tradeStatus", "ON_SALE")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(visibleItem.getId()))
+                .andExpect(jsonPath("$.data.content[0].title").value("visible auction cabbage"))
+                .andExpect(jsonPath("$.data.content[0].initialPrice").value(7000))
+                .andExpect(jsonPath("$.data.content[0].currentBid").value(9000))
+                .andExpect(jsonPath("$.data.content[0].tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.content[0].closeDate").value("2026-08-01T10:00:00"))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    @DisplayName("상품 목록 조회 tradeStatus가 잘못되면 400을 반환한다")
+    @Test
+    void getItemListWithInvalidTradeStatusReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/items")
+                        .param("tradeStatus", "INVALID"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
     }
 
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {
