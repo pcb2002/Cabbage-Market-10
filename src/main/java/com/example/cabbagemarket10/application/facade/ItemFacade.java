@@ -9,6 +9,7 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
@@ -56,6 +57,22 @@ public class ItemFacade {
         return request.tradeType() == TradeType.AUCTION
                 && request.initialPrice() != null
                 && request.closeDate() != null;
+    }
+
+    @Transactional
+    public ItemPublishResponse publishItem(Long itemId, Long clientId) {
+        // 1. 상품 조회 및 판매자 검증
+        Item item = itemService.getItemValidatingAuthor(itemId, clientId);
+
+        // 2. 경매 상품일 경우 추가 검증
+        if (item.isAuction()) {
+            auctionStatusService.validateForPublish(itemId);
+        }
+
+        // 3. 게시 상태 전환
+        item.publish();
+
+        return new ItemPublishResponse(item.getId(), item.getUpdatedAt());
     }
 
     @Transactional
