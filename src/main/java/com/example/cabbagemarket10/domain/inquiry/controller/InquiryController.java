@@ -71,6 +71,7 @@ public class InquiryController {
 
         return CommonResponse.success(HttpStatus.OK)
                 .toResponseEntity();
+    }
 
     @PutMapping("/inquiries/{inquiryId}")
     public ResponseEntity<CommonResponse<InquiryUpdateResponse>> updateInquiry(
