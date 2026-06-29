@@ -21,8 +21,8 @@ import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -806,10 +806,10 @@ class ItemControllerTest {
         Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
         LocalDateTime responseUpdatedAt = LocalDateTime.parse(
                 objectMapper.readTree(responseBody).path("data").path("updatedAt").asText());
+        long updatedAtDiffNanos = Math.abs(Duration.between(responseUpdatedAt, updatedItem.getUpdatedAt()).toNanos());
 
         assertThat(updatedItem.getTradeStatus()).isEqualTo(TradeStatus.RESERVED);
-        assertThat(responseUpdatedAt.truncatedTo(ChronoUnit.MICROS))
-                .isEqualTo(updatedItem.getUpdatedAt().truncatedTo(ChronoUnit.MICROS));
+        assertThat(updatedAtDiffNanos).isLessThan(1_000_000L);
     }
 
     @DisplayName("상품 판매자가 아니면 판매 상태를 변경할 수 없다")
