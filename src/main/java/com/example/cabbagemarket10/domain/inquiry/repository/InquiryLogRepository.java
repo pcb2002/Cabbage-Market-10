@@ -41,4 +41,16 @@ public interface InquiryLogRepository extends JpaRepository<InquiryLog, Long> {
               and inquiryLog.targetInquiry is null
             """)
     Optional<InquiryLog> findRootInquiryByIdWithAuthor(@Param("inquiryId") Long inquiryId);
+
+    @Query("""
+            select inquiryLog
+            from InquiryLog inquiryLog
+            join fetch inquiryLog.item item
+            join fetch item.seller
+            where inquiryLog.id = :inquiryId
+              and inquiryLog.targetInquiry is null
+            """)
+    Optional<InquiryLog> findQuestionByIdWithItemSeller(@Param("inquiryId") Long inquiryId);
+
+    boolean existsByTargetInquiryId(Long inquiryId);
 }

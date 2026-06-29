@@ -2,7 +2,9 @@ package com.example.cabbagemarket10.domain.inquiry.service;
 
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryAnswerCreateRequest;
 import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryCreateRequest;
+import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryAnswerCreateResponse;
 import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryUpdateRequest;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryCreateResponse;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryListResponse;
@@ -14,6 +16,7 @@ import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InquiryService {
 
     private static final String QUESTION_STATUS = "QUESTION";
+    private static final String ANSWER_STATUS = "ANSWER";
 
     private final InquiryLogRepository inquiryLogRepository;
     private final ItemRepository itemRepository;
@@ -86,5 +90,39 @@ public class InquiryService {
         inquiryLogRepository.flush();
 
         return InquiryUpdateResponse.from(inquiryLog);
+    }
+
+    @Transactional
+    public InquiryAnswerCreateResponse createAnswer(
+            Long inquiryId,
+            Long authorId,
+            InquiryAnswerCreateRequest request
+    ) {
+        InquiryLog inquiry = inquiryLogRepository.findQuestionByIdWithItemSeller(inquiryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+        Client seller = inquiry.getItem().getSeller();
+
+        if (!seller.getId().equals(authorId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        if (inquiryLogRepository.existsByTargetInquiryId(inquiryId)) {
+            throw new BusinessException(ErrorCode.ANSWER_ALREADY_EXISTS);
+        }
+
+        InquiryLog answer = InquiryLog.builder()
+                .item(inquiry.getItem())
+                .author(seller)
+                .targetInquiry(inquiry)
+                .title(request.title())
+                .description(request.contents())
+                .status(ANSWER_STATUS)
+                .build();
+
+        try {
+            return InquiryAnswerCreateResponse.from(inquiryLogRepository.save(answer));
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.ANSWER_ALREADY_EXISTS);
+        }
     }
 }

@@ -68,6 +68,28 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.nickname").value("cabbage"))
                 .andExpect(jsonPath("$.data.password").doesNotExist())
                 .andExpect(jsonPath("$.data.phone").doesNotExist());
+
+        Client client = clientRepository.findByEmail("client@example.com").orElseThrow();
+
+        assertThat(client.getProfileImageUrl()).isEqualTo(Client.defaultProfileImageUrl());
+    }
+
+    @DisplayName("회원가입 시 전화번호가 없으면 400을 반환한다")
+    @Test
+    void 회원가입_시_전화번호가_없으면_400을_반환한다() throws Exception {
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "default-image@example.com",
+                                  "password": "password123!",
+                                  "nickname": "defaultimage",
+                                  "name": "client"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @DisplayName("이미 가입된 이메일이면 회원가입에 실패한다")
