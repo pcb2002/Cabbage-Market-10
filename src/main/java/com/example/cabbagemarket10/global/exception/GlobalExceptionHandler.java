@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import tools.jackson.databind.exc.InvalidFormatException;
 
 @Slf4j
 @RestControllerAdvice
@@ -73,6 +74,10 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException.class
     })
     public ResponseEntity<CommonResponse<Void>> handleBadRequestException(Exception exception) {
+        if (exception instanceof HttpMessageNotReadableException && isEnumDeserializationError(exception)) {
+            return CommonResponse.fail(ErrorCode.INVALID_INPUT)
+                    .toResponseEntity();
+        }
         return validationErrorResponse(ErrorCode.VALIDATION_ERROR.getMessage());
     }
 
@@ -113,6 +118,19 @@ public class GlobalExceptionHandler {
                         ErrorCode.VALIDATION_ERROR.getMessage()))
                 .findFirst()
                 .orElse(ErrorCode.VALIDATION_ERROR.getMessage());
+    }
+
+    private boolean isEnumDeserializationError(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof InvalidFormatException invalidFormatException
+                    && invalidFormatException.getTargetType() != null
+                    && invalidFormatException.getTargetType().isEnum()) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private boolean isClientEmailUniqueConstraintViolation(Throwable exception) {
