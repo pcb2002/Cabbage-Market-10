@@ -245,6 +245,12 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | clientId | 회원 ID |
 | nickname | 공개 닉네임 |
 | profileImageUrl | 프로필 이미지 URL |
+| averageRating | 받은 리뷰 평균 평점 |
+| reviewCount | 삭제되지 않은 받은 리뷰 수 |
+| followerCount | 팔로워 수 |
+| isFollowing | 현재 로그인 사용자의 팔로우 여부, 비회원이면 `false` |
+| sellingItemCount | 공개 판매중 상품 수 (`ON_SALE`, 임시저장 제외) |
+| soldItemCount | 거래완료 상품 수 (`SOLD_OUT`, 임시저장 제외) |
 
 민감정보인 `email`, `password`, `phone`과 내부 상태값은 공개 프로필 응답에 포함하지 않는다.
 
