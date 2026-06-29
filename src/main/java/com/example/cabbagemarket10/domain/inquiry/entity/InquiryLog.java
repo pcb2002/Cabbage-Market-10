@@ -73,4 +73,11 @@ public class InquiryLog extends BaseEntity {
         this.status = status;
         this.isDeleted = false;
     }
+
+    public void update(String title, String description) {
+        if (title != null) {
+            this.title = title;
+        }
+        this.description = description;
+    }
 }

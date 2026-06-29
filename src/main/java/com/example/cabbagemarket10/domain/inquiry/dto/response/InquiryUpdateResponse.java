@@ -3,19 +3,19 @@ package com.example.cabbagemarket10.domain.inquiry.dto.response;
 import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
 import java.time.LocalDateTime;
 
-public record InquiryListItemResponse(
-        Long inquiryId,
+public record InquiryUpdateResponse(
+        Long id,
         String authorName,
         String contents,
         LocalDateTime date
 ) {
 
-    public static InquiryListItemResponse from(InquiryLog inquiryLog) {
-        return new InquiryListItemResponse(
+    public static InquiryUpdateResponse from(InquiryLog inquiryLog) {
+        return new InquiryUpdateResponse(
                 inquiryLog.getId(),
                 inquiryLog.getAuthor().getName(),
                 inquiryLog.getDescription(),
-                inquiryLog.getCreatedAt()
+                inquiryLog.getUpdatedAt()
         );
     }
 }
