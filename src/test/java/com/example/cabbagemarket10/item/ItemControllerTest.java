@@ -945,6 +945,203 @@ class ItemControllerTest {
         assertThat(notUpdatedItem.getTradeStatus()).isEqualTo(TradeStatus.ON_SALE);
     }
 
+    @DisplayName("판매자는 임시저장 상품을 게시할 수 있다")
+    @Test
+    void 판매자는_임시저장_상품을_게시할_수_있다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "publish-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "publishSeller",
+                "publishSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("publish-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("publish item")
+                .description("publish description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+
+        String responseBody = mockMvc.perform(post("/api/items/{itemId}/publish", item.getId())
+                        .with(authentication(authenticationOf(seller))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.updatedAt").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Item publishedItem = itemRepository.findById(item.getId()).orElseThrow();
+        LocalDateTime responseUpdatedAt = LocalDateTime.parse(
+                objectMapper.readTree(responseBody).path("data").path("updatedAt").asText());
+        long updatedAtDiffNanos = Math.abs(Duration.between(responseUpdatedAt, publishedItem.getUpdatedAt()).toNanos());
+
+        assertThat(publishedItem.getIsDraft()).isFalse();
+        assertThat(updatedAtDiffNanos).isLessThan(1_000_000L);
+    }
+
+    @DisplayName("상품 판매자가 아니면 임시저장 상품을 게시할 수 없다")
+    @Test
+    void 상품_판매자가_아니면_임시저장_상품을_게시할_수_없다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "publish-forbidden-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "publishForbidSeller",
+                "publishForbidSeller",
+                "010-1234-5678"));
+        Client otherClient = clientRepository.save(Client.create(
+                "publish-forbidden-other@example.com",
+                passwordEncoder.encode("password123!"),
+                "publishForbidOther",
+                "publishForbidOther",
+                "010-9876-5432"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("publish-forbidden-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("publish forbidden item")
+                .description("publish forbidden description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+
+        mockMvc.perform(post("/api/items/{itemId}/publish", item.getId())
+                        .with(authentication(authenticationOf(otherClient))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        Item notPublishedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notPublishedItem.getIsDraft()).isTrue();
+    }
+
+    @DisplayName("이미 게시된 상품을 다시 게시할 수 없다")
+    @Test
+    void 이미_게시된_상품을_다시_게시할_수_없다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "publish-already-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "publishAlreadySeller",
+                "publishAlreadySeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("publish-already-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("already published item")
+                .description("already published description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(post("/api/items/{itemId}/publish", item.getId())
+                        .with(authentication(authenticationOf(seller))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("ITEM_PUBLISH_NOT_ALLOWED"));
+    }
+
+    @DisplayName("경매 상태가 없는 임시저장 경매 상품은 게시할 수 없다")
+    @Test
+    void 경매_상태가_없는_임시저장_경매_상품은_게시할_수_없다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "publish-auction-missing-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "pubAuctionMissing",
+                "pubAuctionMissing",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("publish-auction-missing-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("auction missing status item")
+                .description("auction missing status description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.AUCTION)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+
+        mockMvc.perform(post("/api/items/{itemId}/publish", item.getId())
+                        .with(authentication(authenticationOf(seller))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("AUCTION_STATUS_NOT_FOUND"));
+
+        Item notPublishedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notPublishedItem.getIsDraft()).isTrue();
+    }
+
+    @DisplayName("경매 종료일이 지난 임시저장 경매 상품은 게시할 수 없다")
+    @Test
+    void 경매_종료일이_지난_임시저장_경매_상품은_게시할_수_없다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "publish-auction-closed-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "publishAuctionClosed",
+                "publishAuctionClosed",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("publish-auction-closed-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("auction closed item")
+                .description("auction closed description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.AUCTION)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+        auctionStatusRepository.save(AuctionStatus.builder()
+                .item(item)
+                .currentBid(10000L)
+                .closeDate(LocalDateTime.of(2020, 1, 1, 10, 0, 0))
+                .build());
+
+        mockMvc.perform(post("/api/items/{itemId}/publish", item.getId())
+                        .with(authentication(authenticationOf(seller))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("AUCTION_ALREADY_CLOSED"));
+
+        Item notPublishedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notPublishedItem.getIsDraft()).isTrue();
+    }
+
     @DisplayName("판매자는 임시저장 상품을 하드 삭제할 수 있다")
     @Test
     void 판매자는_임시저장_상품을_하드_삭제할_수_있다() throws Exception {
