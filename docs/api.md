@@ -302,6 +302,40 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 404 | `CATEGORY_NOT_FOUND` | 존재하지 않는 카테고리 |
 | 404 | `AUCTION_STATUS_NOT_FOUND` | 경매 상품의 경매 상태 정보 없음 |
 
+판매 상태 변경 요청 예시:
+
+```json
+{
+  "tradeStatus": "RESERVED"
+}
+```
+
+판매 상태 변경은 판매자 본인의 등록된 상품에만 가능하다. 임시저장 상품의 판매 상태는 변경할 수 없다.
+
+판매 상태 변경 성공 응답:
+
+```json
+{
+  "status": 200,
+  "data": {
+    "itemId": 1,
+    "tradeStatus": "RESERVED",
+    "updatedAt": "2026-06-29T13:30:00"
+  }
+}
+```
+
+판매 상태 변경 오류:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 400 | `VALIDATION_ERROR` | 요청값 누락 또는 형식 오류 |
+| 400 | `INVALID_INPUT` | 정의되지 않은 `tradeStatus` 요청 |
+| 400 | `ITEM_STATUS_UPDATE_NOT_ALLOWED` | 임시저장 상품 판매 상태 변경 요청 |
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
+
 상품 임시저장 게시는 판매자 본인의 `isDraft = true` 상품을 등록 상태(`isDraft = false`)로 전환한다. 요청 본문은 없다. 직거래 상품은 임시저장된 상품 필수 정보가 유효해야 하며, 경매 상품은 현재 시각 이후의 `closeDate`를 가진 `auction_status`가 준비되어 있어야 한다.
 
 상품 임시저장 게시 성공 응답:
