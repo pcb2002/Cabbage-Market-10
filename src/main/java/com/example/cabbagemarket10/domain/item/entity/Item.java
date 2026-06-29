@@ -61,6 +61,15 @@ public class Item extends BaseEntity {
     @Column(nullable = false)
     private Boolean isDeleted = false; // Soft Delete 플래그
 
+    @Column(name = "view_count", nullable = false)
+    private Long viewCount = 0L;
+
+    @Column(name = "like_count", nullable = false)
+    private Long likeCount = 0L;
+
+    @Column(name = "inquiry_count", nullable = false)
+    private Long inquiryCount = 0L;
+
     @Builder
     public Item(Category category, Client seller, TradeType tradeType, String title, String description,
                 Long initialPrice, ConditionType conditionType, TradeStatus tradeStatus, Boolean isDraft) {
@@ -74,5 +83,16 @@ public class Item extends BaseEntity {
         this.tradeStatus = tradeStatus;
         this.isDraft = (isDraft != null) ? isDraft : false;
         this.isDeleted = false;
+    }
+
+    /**
+     * 상품 조회수 1 증가
+     */
+    public void incrementViewCount() {
+        // 기존 데이터가 null일 경우를 대비한 안전 장치
+        if (this.viewCount == null) {
+            this.viewCount = 0L;
+        }
+        this.viewCount++;
     }
 }

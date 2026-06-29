@@ -3,6 +3,7 @@ package com.example.cabbagemarket10.domain.item.controller;
 import com.example.cabbagemarket10.application.facade.ItemFacade;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
@@ -59,6 +60,12 @@ public class ItemController {
         // Page 정보를 PageResponse로 변환 (기존 공통 응답 구조 활용)
         PageResponse<ItemListItemResponse> response = PageResponse.from(items);
 
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
+    @GetMapping("/{itemId}")
+    public ResponseEntity<CommonResponse<ItemDetailResponse>> getItemDetail(@PathVariable Long itemId) {
+        ItemDetailResponse response = itemService.getItemDetail(itemId);
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 }
