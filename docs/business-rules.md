@@ -26,6 +26,7 @@
 - 임시저장 상품 삭제는 Hard Delete로 처리하고, 게시된 상품 삭제는 `is_deleted = true`로 Soft Delete 처리한다.
 - `view_count`, `like_count`, `inquiry_count`는 조회 성능을 위한 카운트 컬럼이다.
 - 상품 정보 수정은 임시저장 상품과 등록된 직거래 상품만 가능하며, 등록된 경매 상품은 수정할 수 없다.
+- 판매 상태 변경은 등록된 상품에만 가능하며, 임시저장 상품의 판매 상태는 변경할 수 없다.
 
 ## 이미지
 
@@ -67,7 +68,7 @@
 - Review는 작성자 `reviewer_id`와 대상자 `reviewee_id`를 가진다.
 - `rating`은 점수, `content`는 후기 내용이다.
 - 리뷰 수정은 작성자만 가능하다.
-- 리뷰 삭제는 `deleted_at`으로 처리한다.
+- 리뷰 삭제는 `is_deleted = true`로 처리한다.
 
 ## 경매
 
