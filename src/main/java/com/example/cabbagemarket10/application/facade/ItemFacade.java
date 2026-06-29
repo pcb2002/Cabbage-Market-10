@@ -61,16 +61,14 @@ public class ItemFacade {
 
     @Transactional
     public ItemPublishResponse publishItem(Long itemId, Long clientId) {
-        // 1. 상품 조회 및 판매자 검증
         Item item = itemService.getItemValidatingAuthor(itemId, clientId);
 
-        // 2. 경매 상품일 경우 추가 검증
         if (item.isAuction()) {
             auctionStatusService.validateForPublish(itemId);
         }
 
-        // 3. 게시 상태 전환
         item.publish();
+        itemService.flush();
 
         return new ItemPublishResponse(item.getId(), item.getUpdatedAt());
     }

@@ -32,7 +32,7 @@ public class AuctionStatusService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_STATUS_NOT_FOUND));
 
         if (!auctionStatus.getCloseDate().isAfter(LocalDateTime.now())) {
-            throw new BusinessException(ErrorCode.INVALID_AUCTION_CLOSE_DATE);
+            throw new BusinessException(ErrorCode.AUCTION_ALREADY_CLOSED);
         }
     }
 
