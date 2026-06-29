@@ -5,6 +5,10 @@ import com.example.cabbagemarket10.domain.client.dto.response.ClientMyInfoRespon
 import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileResponse;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.domain.follow.repository.FollowRepository;
+import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
+import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.review.repository.ReviewRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final ItemRepository itemRepository;
+    private final FollowRepository followRepository;
+    private final ReviewRepository reviewRepository;
 
     @Transactional(readOnly = true)
     public ClientMyInfoResponse getMyInfo(Long clientId) {
@@ -27,10 +34,7 @@ public class ClientService {
 
     @Transactional(readOnly = true)
     public ClientProfileResponse getClientProfile(Long clientId) {
-        Client client = clientRepository.findById(clientId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CLIENT_NOT_FOUND));
-
-        return ClientProfileResponse.from(client);
+        return getClientProfile(clientId, null);
     }
 
     @Transactional
@@ -47,6 +51,34 @@ public class ClientService {
 
         return ClientMyInfoResponse.from(client);
 
+    }
+
+    @Transactional(readOnly = true)
+    public ClientProfileResponse getClientProfile(Long clientId, Long viewerClientId) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CLIENT_NOT_FOUND));
+        double averageRating = reviewRepository.findAverageRatingByRevieweeId(clientId);
+        long reviewCount = reviewRepository.countByReviewee_Id(clientId);
+        long followerCount = followRepository.countByFollowing_Id(clientId);
+        boolean isFollowing = viewerClientId != null
+                && !viewerClientId.equals(clientId)
+                && followRepository.existsByFollower_IdAndFollowing_Id(viewerClientId, clientId);
+        long sellingItemCount = itemRepository.countBySellerIdAndTradeStatusAndIsDraftFalse(
+                clientId,
+                TradeStatus.ON_SALE);
+        long soldItemCount = itemRepository.countBySellerIdAndTradeStatusAndIsDraftFalse(
+                clientId,
+                TradeStatus.SOLD_OUT);
+
+        return ClientProfileResponse.from(
+                client,
+                averageRating,
+                reviewCount,
+                followerCount,
+                isFollowing,
+                sellingItemCount,
+                soldItemCount
+        );
     }
 
     public Client getClient(Long clientId) {

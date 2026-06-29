@@ -31,8 +31,12 @@ public class ClientController {
     }
 
     @GetMapping("/{clientId}")
-    public ResponseEntity<CommonResponse<ClientProfileResponse>> getClientProfile(@PathVariable Long clientId) {
-        ClientProfileResponse response = clientService.getClientProfile(clientId);
+    public ResponseEntity<CommonResponse<ClientProfileResponse>> getClientProfile(
+            @PathVariable Long clientId,
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient
+    ) {
+        Long viewerClientId = authenticatedClient == null ? null : authenticatedClient.clientId();
+        ClientProfileResponse response = clientService.getClientProfile(clientId, viewerClientId);
 
         return CommonResponse.success(HttpStatus.OK, response)
                 .toResponseEntity();
