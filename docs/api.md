@@ -99,7 +99,7 @@
 | 상품 좋아요 토글 | 좋아요 | POST | `/api/items/{itemId}/likes` |
 | 상품 문의 작성 | 문의 | POST | `/api/items/{itemId}/inquiries` |
 | 상품 문의 목록 조회 | 문의 | GET | `/api/items/{itemId}/inquiries` |
-| 상품 문의 수정 | 문의 | PUT | `/api/inquiries/{inquiryId}` |
+| 상품 문의 수정 | 문의 | PATCH | `/api/inquiries/{inquiryId}` |
 | 상품 문의 삭제 | 문의 | DELETE | `/api/inquiries/{inquiryId}` |
 | 상품 문의 답변 등록 | 문의 | POST | `/api/inquiries/{inquiryId}/answer` |
 | 상품 문의 답변 수정 | 문의 | PATCH | `/api/inquiries/{inquiryId}/answer` |
@@ -180,6 +180,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 문의 작성 | contents | 필수, 1~2000자 |
 | 상품 문의 수정 | title | 선택, 전달 시 1~200자 |
 | 상품 문의 수정 | contents | 필수, 1~2000자 |
+| 상품 문의 답변 등록 | title | 필수, 1~200자 |
 | 상품 문의 답변 등록·수정 | contents | 필수, 1~2000자 |
 | 채팅 메시지 전송 | content | 필수, 1~1000자 |
 | 리뷰 작성 | rating | 필수, 1~5 정수 |
@@ -271,7 +272,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 문의 목록 조회 | GET | `/api/items/{itemId}/inquiries` | 불필요 | Path `itemId`, Query `page`, `size` 선택 | `200 OK` |
 | 상품 문의 수정 | PUT | `/api/inquiries/{inquiryId}` | 필요 | `title` 선택, `contents` | `200 OK` |
 | 상품 문의 삭제 | DELETE | `/api/inquiries/{inquiryId}` | 필요 | Path `inquiryId` | `204 No Content` |
-| 상품 문의 답변 등록 | POST | `/api/inquiries/{inquiryId}/answer` | 필요 | `contents` | `201 Created` |
+| 상품 문의 답변 등록 | POST | `/api/inquiries/{inquiryId}/answer` | 필요 | `title`, `contents` | `201 Created` |
 | 상품 문의 답변 수정 | PATCH | `/api/inquiries/{inquiryId}/answer` | 필요 | `contents` | `200 OK` |
 | 상품 문의 답변 삭제 | DELETE | `/api/inquiries/{inquiryId}/answer` | 필요 | Path `inquiryId` | `204 No Content` |
 
@@ -285,7 +286,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 404 | `ITEM_NOT_FOUND`, `INQUIRY_NOT_FOUND` | 대상 상품 또는 문의 없음 |
 | 409 | `ANSWER_ALREADY_EXISTS` | 이미 답변이 존재함 |
 
-상품 문의 목록 조회 응답은 `data.itemList`에 문의 항목을 담고, 각 항목은 `inquiryId`, `authorName`, `contents`, `date`를 포함한다.
+상품 문의 목록 조회 응답은 `data.itemList`에 문의 항목을 담고, 각 항목은 `inquiryID`, `authorName`, `contents`, `date`를 포함한다.
 페이지 메타데이터는 `page`, `size`, `totalElements`, `totalPages`로 응답한다.
 `page` 기본값은 0, `size` 기본값은 20이며 잘못된 쿼리 값은 `400 Bad Request`로 응답한다.
 상품 문의 삭제 성공 응답은 `data: null`을 반환하며, 삭제는 soft delete로 처리한다.
