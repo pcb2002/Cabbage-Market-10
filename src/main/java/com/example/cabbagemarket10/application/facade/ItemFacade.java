@@ -9,10 +9,12 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
+import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ public class ItemFacade {
     private final CategoryService categoryService;
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
+    private final ItemImageRepository itemImageRepository;
 
     @Transactional
     public Long createItem(Long sellerId, ItemCreateRequest request) {
@@ -57,6 +60,20 @@ public class ItemFacade {
     }
 
     @Transactional
+    public ItemPublishResponse publishItem(Long itemId, Long clientId) {
+        Item item = itemService.getItemValidatingAuthor(itemId, clientId);
+
+        if (item.isAuction()) {
+            auctionStatusService.validateForPublish(itemId);
+        }
+
+        item.publish();
+        itemService.flush();
+
+        return new ItemPublishResponse(item.getId(), item.getUpdatedAt());
+    }
+
+    @Transactional
     public ItemUpdateResponse updateItem(Long itemId, Long clientId, ItemUpdateRequest request) {
         Item item = itemService.getItemValidatingAuthor(itemId, clientId);
         item.validateUpdatable();
@@ -71,5 +88,19 @@ public class ItemFacade {
         itemService.flush();
 
         return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
+    }
+
+    @Transactional
+    public void deleteItem(Long itemId, Long clientId) {
+        Item item = itemService.getItemValidatingAuthor(itemId, clientId);
+
+        if (Boolean.TRUE.equals(item.getIsDraft())) {
+            auctionStatusService.deleteByItemId(itemId);
+            itemImageRepository.deleteByItemId(itemId);
+            itemService.hardDeleteById(itemId);
+            return;
+        }
+
+        itemService.softDelete(item);
     }
 }

@@ -17,13 +17,23 @@ public class AuctionStatusService {
 
     private final AuctionStatusRepository auctionStatusRepository;
 
-    public AuctionStatus createAuctionStatus(Item item, Long initialPrice, LocalDateTime closeDate) {
+    public void createAuctionStatus(Item item, Long initialPrice, LocalDateTime closeDate) {
         AuctionStatus auctionStatus = AuctionStatus.builder()
                 .item(item)
                 .currentBid(initialPrice)
                 .closeDate(closeDate)
                 .build();
-        return auctionStatusRepository.save(auctionStatus);
+        auctionStatusRepository.save(auctionStatus);
+    }
+
+    @Transactional(readOnly = true)
+    public void validateForPublish(Long itemId) {
+        AuctionStatus auctionStatus = auctionStatusRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_STATUS_NOT_FOUND));
+
+        if (!auctionStatus.getCloseDate().isAfter(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.AUCTION_ALREADY_CLOSED);
+        }
     }
 
     public void syncDraftAuctionStatus(Item item, Long initialPrice, LocalDateTime closeDate) {
@@ -40,5 +50,9 @@ public class AuctionStatusService {
                                 createAuctionStatus(item, initialPrice, closeDate);
                             }
                         });
+    }
+
+    public void deleteByItemId(Long itemId) {
+        auctionStatusRepository.deleteByItemId(itemId);
     }
 }

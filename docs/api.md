@@ -381,6 +381,20 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
 | 404 | `AUCTION_STATUS_NOT_FOUND` | 경매 상품의 경매 상태 정보 없음 |
 
+상품 삭제는 판매자 본인만 요청할 수 있다. 임시저장 상품은 Hard Delete로 실제 row를 삭제하고, 게시된 상품은 `is_deleted = true`로 Soft Delete 처리한다. 삭제된 상품은 목록 조회와 상세 조회에 노출하지 않는다.
+
+상품 삭제 성공 응답:
+
+`204 No Content`
+
+상품 삭제 오류:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제된 상품 |
+
 ### 상품 이미지·좋아요·경매
 
 | 기능 | Method | Path | 인증 | 요청 | 성공 |

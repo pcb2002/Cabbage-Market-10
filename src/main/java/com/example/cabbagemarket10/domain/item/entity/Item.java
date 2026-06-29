@@ -22,7 +22,7 @@ import org.hibernate.annotations.SQLRestriction;
 @DynamicUpdate
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "item")
-@SQLDelete(sql = "UPDATE item SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
+@SQLDelete(sql = "UPDATE item SET is_deleted = true WHERE id = ?")
 @SQLRestriction("is_deleted = false")
 public class Item extends BaseEntity {
 
@@ -87,6 +87,14 @@ public class Item extends BaseEntity {
         this.tradeStatus = tradeStatus;
         this.isDraft = (isDraft != null) ? isDraft : false;
         this.isDeleted = false;
+    }
+
+    public void publish() {
+        if (!this.isDraft) {
+            throw new BusinessException(ErrorCode.ITEM_PUBLISH_NOT_ALLOWED);
+        }
+        this.isDraft = false;
+        // this.updatedAt은 BaseTimeEntity에 의해 자동 갱신
     }
 
     /**

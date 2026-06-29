@@ -82,6 +82,14 @@ public class ItemService {
         return item;
     }
 
+    public void softDelete(Item item) {
+        itemRepository.delete(item);
+    }
+
+    public void hardDeleteById(Long itemId) {
+        itemRepository.hardDeleteById(itemId);
+    }
+
     @Transactional
     public ItemStatusUpdateResponse updateItemStatus(Long itemId, Long clientId, ItemStatusUpdateRequest request) {
         Item item = itemRepository.findById(itemId)
