@@ -60,15 +60,12 @@ public class ItemService {
 
     @Transactional
     public ItemDetailResponse getItemDetail(Long itemId) {
-        // 1. 데이터 존재 여부 확인 및 DTO 조회
-        ItemDetailResponse detail = itemRepository.findItemDetail(itemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+        int updatedRows = itemRepository.incrementViewCount(itemId);
+        if (updatedRows == 0) {
+            throw new BusinessException(ErrorCode.ITEM_NOT_FOUND);
+        }
 
-        // 2. 조회수 증가 (엔티티 조회 후 변경 감지 활용)
-        Item itemEntity = itemRepository.findById(itemId)
+        return itemRepository.findItemDetail(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
-        itemEntity.incrementViewCount();
-
-        return detail;
     }
 }

@@ -11,4 +11,6 @@ public interface ItemRepositoryCustom {
     Page<ItemListItemResponse> searchItems(Long categoryId, String tradeStatus, Pageable pageable);
 
     Optional<ItemDetailResponse> findItemDetail(Long itemId);
+
+    int incrementViewCount(Long itemId);
 }

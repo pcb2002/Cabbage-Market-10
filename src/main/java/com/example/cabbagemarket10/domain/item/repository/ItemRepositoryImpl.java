@@ -145,6 +145,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                 left join AuctionStatus a on a.item = i
                 where i.id = :itemId
                   and i.isDeleted = false
+                  and i.isDraft = false
                 """;
 
         try {
@@ -157,5 +158,18 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
             // 결과가 없을 경우 예외 대신 빈 Optional 반환 (Service에서 ITEM_NOT_FOUND 처리)
             return Optional.empty();
         }
+    }
+
+    @Override
+    public int incrementViewCount(Long itemId) {
+        return entityManager.createQuery("""
+                        update Item i
+                        set i.viewCount = coalesce(i.viewCount, 0) + 1
+                        where i.id = :itemId
+                          and i.isDeleted = false
+                          and i.isDraft = false
+                        """)
+                .setParameter("itemId", itemId)
+                .executeUpdate();
     }
 }
