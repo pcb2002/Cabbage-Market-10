@@ -9,6 +9,7 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
@@ -56,6 +57,20 @@ public class ItemFacade {
         return request.tradeType() == TradeType.AUCTION
                 && request.initialPrice() != null
                 && request.closeDate() != null;
+    }
+
+    @Transactional
+    public ItemPublishResponse publishItem(Long itemId, Long clientId) {
+        Item item = itemService.getItemValidatingAuthor(itemId, clientId);
+
+        if (item.isAuction()) {
+            auctionStatusService.validateForPublish(itemId);
+        }
+
+        item.publish();
+        itemService.flush();
+
+        return new ItemPublishResponse(item.getId(), item.getUpdatedAt());
     }
 
     @Transactional

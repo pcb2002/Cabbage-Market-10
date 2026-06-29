@@ -8,6 +8,7 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
@@ -53,6 +54,15 @@ public class ItemController {
         return CommonResponse.success(HttpStatus.CREATED, response).toResponseEntity();
     }
 
+    @PostMapping("/{itemId}/publish")
+    public ResponseEntity<CommonResponse<ItemPublishResponse>> publishItem(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal AuthenticatedClient userDetails
+    ) {
+        ItemPublishResponse response = itemFacade.publishItem(itemId, userDetails.clientId());
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
     @GetMapping
     public ResponseEntity<CommonResponse<PageResponse<ItemListItemResponse>>> getItemList(
             @RequestParam(required = false) Long categoryId,
@@ -81,7 +91,6 @@ public class ItemController {
     ) {
         Long clientId = userDetails.clientId();
 
-        // Facade로 흐름 위임
         ItemUpdateResponse response = itemFacade.updateItem(itemId, clientId, request);
 
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
