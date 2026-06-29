@@ -46,12 +46,19 @@ public enum ErrorCode {
             "ACCESS_TOKEN_EXPIRED",
             "Access Token이 만료되었습니다."),
 
+
+    // category
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "CATEGORY_NOT_FOUND", "카테고리를 찾을 수 없습니다."),
+
     // item
-    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품 찾을 수 없습니다."),
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품을 찾을 수 없습니다."),
+    ITEM_UPDATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ITEM_UPDATE_NOT_ALLOWED", "등록된 경매 상품은 수정할 수 없습니다."),
 
     // Auction
+    AUCTION_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION_STATUS_NOT_FOUND","경매 상태 정보를 찾을 수 없습니다."),
     AUCTION_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "AUCTION_ALREADY_CLOSED", "이미 마감된 경매입니다."),
     INVALID_BID_PRICE(HttpStatus.BAD_REQUEST, "INVALID_BID_PRICE", "입찰가는 현재 최고 입찰가보다 높아야 합니다."),
+    AUCTION_ALREADY_IN_PROGRESS(HttpStatus.BAD_REQUEST, "AUCTION_ALREADY_IN_PROGRESS","이미 입찰자가 존재하여 수정할 수 없습니다."),
 
     // Inquiry
     // 존재하지 않는 문의 조회 또는 수정 요청

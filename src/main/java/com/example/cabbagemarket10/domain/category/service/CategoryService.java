@@ -27,6 +27,6 @@ public class CategoryService {
 
     public Category getCategory(Long categoryId) {
         return categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
     }
 }
