@@ -22,7 +22,7 @@ import org.hibernate.annotations.SQLRestriction;
 @DynamicUpdate
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "item")
-@SQLDelete(sql = "UPDATE item SET is_deleted = true, deleted_at = NOW() WHERE id = ?")
+@SQLDelete(sql = "UPDATE item SET is_deleted = true WHERE id = ?")
 @SQLRestriction("is_deleted = false")
 public class Item extends BaseEntity {
 

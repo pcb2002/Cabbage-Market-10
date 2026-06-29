@@ -13,6 +13,7 @@ import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
+import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class ItemFacade {
     private final CategoryService categoryService;
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
+    private final ItemImageRepository itemImageRepository;
 
     @Transactional
     public Long createItem(Long sellerId, ItemCreateRequest request) {
@@ -71,5 +73,19 @@ public class ItemFacade {
         itemService.flush();
 
         return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
+    }
+
+    @Transactional
+    public void deleteItem(Long itemId, Long clientId) {
+        Item item = itemService.getItemValidatingAuthor(itemId, clientId);
+
+        if (Boolean.TRUE.equals(item.getIsDraft())) {
+            auctionStatusService.deleteByItemId(itemId);
+            itemImageRepository.deleteByItemId(itemId);
+            itemService.hardDeleteById(itemId);
+            return;
+        }
+
+        itemService.softDelete(item);
     }
 }

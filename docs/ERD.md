@@ -193,7 +193,7 @@ erDiagram
 | Entity        | Policies                   |
 |---------------|----------------------------|
 | Client        | Soft Delete, `is_deleted`  |
-| Item          | Soft Delete, `is_deleted`  |
+| Item          | Draft: Hard Delete / Published: Soft Delete, `is_deleted` |
 | InquiryLog    | Soft Delete, `is_deleted`  |
 | ChatMessage   | Soft Delete, `deleted_at`  |
 | Review        | Soft Delete, `is_deleted`  |
