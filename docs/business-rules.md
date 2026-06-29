@@ -67,7 +67,7 @@
 - Review는 작성자 `reviewer_id`와 대상자 `reviewee_id`를 가진다.
 - `rating`은 점수, `content`는 후기 내용이다.
 - 리뷰 수정은 작성자만 가능하다.
-- 리뷰 삭제는 `deleted_at`으로 처리한다.
+- 리뷰 삭제는 `is_deleted = true`로 처리한다.
 
 ## 경매
 
