@@ -595,9 +595,9 @@ class ItemControllerTest {
         assertThat(auctionStatusRepository.findById(item.getId())).isEmpty();
     }
 
-    @DisplayName("입찰자가 없는 경매 상품의 시작가를 수정하면 현재 입찰가도 함께 수정된다")
+    @DisplayName("등록된 경매 상품은 상품 정보를 수정할 수 없다")
     @Test
-    void updateAuctionItemWithoutBidderSynchronizesCurrentBid() throws Exception {
+    void updatePublishedAuctionItemReturnsBadRequest() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "auction-update-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -639,6 +639,60 @@ class ItemControllerTest {
                                   "closeDate": "2026-08-05T15:30:00"
                                 }
                                 """.formatted(category.getId())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("ITEM_UPDATE_NOT_ALLOWED"));
+
+        Item notUpdatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        AuctionStatus auctionStatus = auctionStatusRepository.findById(item.getId()).orElseThrow();
+        assertThat(notUpdatedItem.getInitialPrice()).isEqualTo(10000L);
+        assertThat(auctionStatus.getCurrentBid()).isEqualTo(10000L);
+        assertThat(auctionStatus.getCloseDate()).isEqualTo(originalCloseDate);
+    }
+
+    @DisplayName("임시저장 경매 상품은 상품 정보와 경매 상태를 함께 수정할 수 있다")
+    @Test
+    void updateDraftAuctionItemSynchronizesCurrentBid() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "draft-auction-update-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "draftAuctionSeller",
+                "draftAuctionSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("draft-auction-update-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("draft auction item")
+                .description("draft auction description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.AUCTION)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+        auctionStatusRepository.save(AuctionStatus.builder()
+                .item(item)
+                .currentBid(10000L)
+                .closeDate(LocalDateTime.of(2026, 8, 1, 10, 0, 0))
+                .build());
+
+        mockMvc.perform(put("/api/items/{itemId}", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": %d,
+                                  "title": "updated draft auction item",
+                                  "description": "updated draft auction description",
+                                  "initialPrice": 20000,
+                                  "closeDate": "2026-08-05T15:30:00"
+                                }
+                                """.formatted(category.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.itemId").value(item.getId()))
@@ -647,6 +701,7 @@ class ItemControllerTest {
         Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
         AuctionStatus auctionStatus = auctionStatusRepository.findById(item.getId()).orElseThrow();
         assertThat(updatedItem.getInitialPrice()).isEqualTo(20000L);
+        assertThat(updatedItem.getTitle()).isEqualTo("updated draft auction item");
         assertThat(auctionStatus.getCurrentBid()).isEqualTo(20000L);
         assertThat(auctionStatus.getCloseDate()).isEqualTo(LocalDateTime.of(2026, 8, 5, 15, 30, 0));
     }
