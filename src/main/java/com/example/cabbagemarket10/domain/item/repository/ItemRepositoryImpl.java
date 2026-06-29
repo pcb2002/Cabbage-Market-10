@@ -1,15 +1,16 @@
 package com.example.cabbagemarket10.domain.item.repository;
 
+import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.TypedQuery;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -121,6 +122,40 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         }
         if (tradeStatus != null) {
             query.setParameter("tradeStatus", tradeStatus);
+        }
+    }
+
+    @Override
+    public Optional<ItemDetailResponse> findItemDetail(Long itemId) {
+        // 보여주신 형식대로 Text Block과 DTO 직접 생성을 활용한 순수 JPQL 작성
+        String jpql = """
+                select new com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse(
+                    i.id,
+                    i.title,
+                    i.description,
+                    i.initialPrice,
+                    a.currentBid,
+                    i.tradeStatus,
+                    a.closeDate,
+                    i.viewCount,
+                    i.likeCount,
+                    i.inquiryCount
+                )
+                from Item i
+                left join AuctionStatus a on a.item = i
+                where i.id = :itemId
+                  and i.isDeleted = false
+                """;
+
+        try {
+            ItemDetailResponse result = entityManager.createQuery(jpql, ItemDetailResponse.class)
+                    .setParameter("itemId", itemId)
+                    .getSingleResult();
+
+            return Optional.of(result);
+        } catch (NoResultException e) {
+            // 결과가 없을 경우 예외 대신 빈 Optional 반환 (Service에서 ITEM_NOT_FOUND 처리)
+            return Optional.empty();
         }
     }
 }
