@@ -46,7 +46,7 @@ class ClientServiceTest {
 
         assertThat(response.clientId()).isEqualTo(1L);
         assertThat(response.nickname()).isEqualTo("배추프로필");
-        assertThat(response.profileImageUrl()).isEmpty();
+        assertThat(response.profileImageUrl()).isEqualTo(Client.defaultProfileImageUrl());
     }
 
     @DisplayName("회원이 없으면 공개 프로필 조회 시 CLIENT_NOT_FOUND 예외가 발생한다")
