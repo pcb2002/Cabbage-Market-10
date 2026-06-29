@@ -53,6 +53,10 @@ public enum ErrorCode {
     // item
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM_NOT_FOUND", "요청한 ID의 상품을 찾을 수 없습니다."),
     ITEM_UPDATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ITEM_UPDATE_NOT_ALLOWED", "등록된 경매 상품은 수정할 수 없습니다."),
+    ITEM_STATUS_UPDATE_NOT_ALLOWED(
+            HttpStatus.BAD_REQUEST,
+            "ITEM_STATUS_UPDATE_NOT_ALLOWED",
+            "임시저장 상품의 판매 상태는 변경할 수 없습니다."),
 
     // Auction
     AUCTION_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION_STATUS_NOT_FOUND","경매 상태 정보를 찾을 수 없습니다."),
