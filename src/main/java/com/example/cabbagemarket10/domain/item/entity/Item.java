@@ -6,6 +6,8 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -94,5 +96,20 @@ public class Item extends BaseEntity {
             this.viewCount = 0L;
         }
         this.viewCount++;
+    }
+
+    // 작성자 검증 로직
+    public void verifySeller(Long clientId) {
+        if (!this.seller.getId().equals(clientId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    // 상품 정보 수정 로직
+    public void updateInfo(Category category, String title, String description, Long initialPrice) {
+        this.category = category;
+        this.title = title;
+        this.description = description;
+        this.initialPrice = initialPrice;
     }
 }
