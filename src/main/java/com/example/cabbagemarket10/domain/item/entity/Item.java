@@ -109,6 +109,12 @@ public class Item extends BaseEntity {
         return this.tradeType == TradeType.AUCTION;
     }
 
+    public void validateUpdatable() {
+        if (!this.isDraft && isAuction()) {
+            throw new BusinessException(ErrorCode.ITEM_UPDATE_NOT_ALLOWED);
+        }
+    }
+
     // 상품 정보 수정 로직
     public void updateInfo(Category category, String title, String description, Long initialPrice) {
         this.category = category;

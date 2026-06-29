@@ -26,6 +26,22 @@ public class AuctionStatusService {
         return auctionStatusRepository.save(auctionStatus);
     }
 
+    public void syncDraftAuctionStatus(Item item, Long initialPrice, LocalDateTime closeDate) {
+        auctionStatusRepository.findById(item.getId())
+                .ifPresentOrElse(
+                        auctionStatus -> {
+                            auctionStatus.updateCurrentBid(initialPrice);
+                            if (closeDate != null) {
+                                auctionStatus.updateCloseDate(closeDate);
+                            }
+                        },
+                        () -> {
+                            if (closeDate != null) {
+                                createAuctionStatus(item, initialPrice, closeDate);
+                            }
+                        });
+    }
+
     @Transactional
     public void validateAndUpdateRules(Long itemId, Long originalPrice, Long newPrice, LocalDateTime newCloseDate) {
         if (newCloseDate == null) {
