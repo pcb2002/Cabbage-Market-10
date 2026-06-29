@@ -395,6 +395,150 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
     }
 
+    @DisplayName("상품 상세 조회는 조회수를 증가시킨 뒤 증가된 카운트를 응답한다")
+    @Test
+    void getItemDetailIncrementsViewCountAndReturnsUpdatedCount() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "detail-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "detailSeller",
+                "detailSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("detail-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("visible detail item")
+                .description("visible detail description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(get("/api/items/{itemId}", item.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.title").value("visible detail item"))
+                .andExpect(jsonPath("$.data.viewCount").value(1))
+                .andExpect(jsonPath("$.data.inquiryCount").value(0));
+
+        Long firstViewCount = jdbcTemplate.queryForObject(
+                "select view_count from item where id = ?",
+                Long.class,
+                item.getId());
+        assertThat(firstViewCount).isEqualTo(1L);
+
+        mockMvc.perform(get("/api/items/{itemId}", item.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.viewCount").value(2));
+
+        Long secondViewCount = jdbcTemplate.queryForObject(
+                "select view_count from item where id = ?",
+                Long.class,
+                item.getId());
+        assertThat(secondViewCount).isEqualTo(2L);
+    }
+
+    @DisplayName("상품 상세 조회는 임시저장 상품을 노출하지 않는다")
+    @Test
+    void getItemDetailDoesNotExposeDraftItems() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "draft-detail-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "draftDetailSeller",
+                "draftDetailSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("draft-detail-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item draftItem = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("draft detail item")
+                .description("draft detail description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+
+        mockMvc.perform(get("/api/items/{itemId}", draftItem.getId()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+
+        Long viewCount = jdbcTemplate.queryForObject(
+                "select view_count from item where id = ?",
+                Long.class,
+                draftItem.getId());
+        assertThat(viewCount).isEqualTo(0L);
+    }
+
+    @DisplayName("Item detail returns auction fields when auction status exists")
+    @Test
+    void getItemDetailReturnsAuctionFields() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "auction-detail-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "auctionDetailSeller",
+                "auctionDetailSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("auction-detail-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("auction detail item")
+                .description("auction detail description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.AUCTION)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+        LocalDateTime closeDate = LocalDateTime.of(2026, 8, 5, 15, 30, 0);
+        auctionStatusRepository.save(AuctionStatus.builder()
+                .item(item)
+                .currentBid(15000L)
+                .closeDate(closeDate)
+                .build());
+
+        mockMvc.perform(get("/api/items/{itemId}", item.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.title").value("auction detail item"))
+                .andExpect(jsonPath("$.data.initialPrice").value(10000))
+                .andExpect(jsonPath("$.data.currentBid").value(15000))
+                .andExpect(jsonPath("$.data.tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.closeDate").value("2026-08-05T15:30:00"))
+                .andExpect(jsonPath("$.data.viewCount").value(1))
+                .andExpect(jsonPath("$.data.likeCount").value(0))
+                .andExpect(jsonPath("$.data.inquiryCount").value(0));
+    }
+
+    @DisplayName("Item detail returns ITEM_NOT_FOUND for unknown item")
+    @Test
+    void getItemDetailReturnsNotFoundForUnknownItem() throws Exception {
+        mockMvc.perform(get("/api/items/{itemId}", Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+    }
+
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {
         return new UsernamePasswordAuthenticationToken(
                 new AuthenticatedClient(seller.getId(), seller.getEmail()),

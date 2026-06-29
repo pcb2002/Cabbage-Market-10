@@ -1,6 +1,7 @@
 package com.example.cabbagemarket10.domain.inquiry.repository;
 
 import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,4 +32,25 @@ public interface InquiryLogRepository extends JpaRepository<InquiryLog, Long> {
             @Param("itemId") Long itemId,
             Pageable pageable
     );
+
+    @Query("""
+            select inquiryLog
+            from InquiryLog inquiryLog
+            join fetch inquiryLog.author
+            where inquiryLog.id = :inquiryId
+              and inquiryLog.targetInquiry is null
+            """)
+    Optional<InquiryLog> findRootInquiryByIdWithAuthor(@Param("inquiryId") Long inquiryId);
+
+    @Query("""
+            select inquiryLog
+            from InquiryLog inquiryLog
+            join fetch inquiryLog.item item
+            join fetch item.seller
+            where inquiryLog.id = :inquiryId
+              and inquiryLog.targetInquiry is null
+            """)
+    Optional<InquiryLog> findQuestionByIdWithItemSeller(@Param("inquiryId") Long inquiryId);
+
+    boolean existsByTargetInquiryId(Long inquiryId);
 }
