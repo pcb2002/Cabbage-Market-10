@@ -183,6 +183,7 @@ erDiagram
 - The `title` request field of the inquiry API is stored in `inquiry_log.title`.
 - The `contents` request field of the inquiry API is stored in `inquiry_log.description`.
 - The Primary Key of `follow` is `(follower_id, following_id)`.
+- `follow.follower_id` and `follow.following_id` must be different.
 - The Primary Key of `chat_member` is `(chat_room_id, client_id)`.
 - `auction_status.item_id` is both the PK and FK to `item.id`.
 - `auction_status.current_bidder_id` is a `client.id` that refers to the current highest bidder and can be nullable before any bids are placed.
