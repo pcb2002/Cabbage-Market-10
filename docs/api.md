@@ -178,7 +178,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 정보 수정 | title | 필수, 공백 불가 |
 | 상품 정보 수정 | description | 필수, 공백 불가 |
 | 상품 정보 수정 | initialPrice | 필수, 0 이상 정수 |
-| 상품 정보 수정 | closeDate | 경매 상품이면 필수, 현재 시각 이후. 직거래 상품이면 생략 가능 |
+| 상품 정보 수정 | closeDate | 임시저장 경매 상품이면 선택, 전달 시 현재 시각 이후. 직거래 상품이면 생략 가능 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
 | 상품 문의 작성 | title | 필수, 1~200자 |
@@ -272,7 +272,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 }
 ```
 
-직거래 상품은 `closeDate`를 생략할 수 있다. 경매 상품은 `closeDate`가 필수이며, 입찰자가 없는 경우 `initialPrice` 변경 시 `auction_status.current_bid`도 함께 변경된다.
+임시저장 상품과 등록된 직거래 상품만 수정할 수 있다. 등록된 경매 상품은 수정할 수 없다. 직거래 상품은 `closeDate`를 생략할 수 있고, 임시저장 경매 상품은 `closeDate` 전달 시 경매 종료일을 함께 수정한다. 임시저장 경매 상품의 `initialPrice` 변경 시 `auction_status.current_bid`도 함께 변경된다.
 
 상품 정보 수정 성공 응답:
 
@@ -291,8 +291,8 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | Status | Code | 설명 |
 |---:|---|---|
 | 400 | `VALIDATION_ERROR` | 요청값 누락 또는 형식 오류 |
-| 400 | `INVALID_INPUT` | 경매 상품 수정 시 `closeDate` 누락 |
-| 400 | `AUCTION_ALREADY_IN_PROGRESS` | 입찰자가 있는 경매 상품의 시작가 또는 종료일 변경 요청 |
+| 400 | `ITEM_UPDATE_NOT_ALLOWED` | 등록된 경매 상품 수정 요청 |
+| 400 | `AUCTION_ALREADY_IN_PROGRESS` | 입찰자가 있는 임시저장 경매 상품의 시작가 또는 종료일 변경 요청 |
 | 401 | `UNAUTHORIZED` | 미인증 사용자 |
 | 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
 | 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |

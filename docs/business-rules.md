@@ -25,6 +25,7 @@
 - `is_draft = true`인 상품은 임시저장 상태다.
 - 삭제는 `is_deleted = true`로 처리한다.
 - `view_count`, `like_count`, `inquiry_count`는 조회 성능을 위한 카운트 컬럼이다.
+- 상품 정보 수정은 임시저장 상품과 등록된 직거래 상품만 가능하며, 등록된 경매 상품은 수정할 수 없다.
 
 ## 이미지
 
