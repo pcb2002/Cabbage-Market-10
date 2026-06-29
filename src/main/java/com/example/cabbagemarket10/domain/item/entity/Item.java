@@ -87,6 +87,14 @@ public class Item extends BaseEntity {
         this.isDeleted = false;
     }
 
+    public void publish() {
+        if (!this.isDraft) {
+            throw new BusinessException(ErrorCode.ITEM_PUBLISH_NOT_ALLOWED);
+        }
+        this.isDraft = false;
+        // this.updatedAt은 BaseTimeEntity에 의해 자동 갱신
+    }
+
     /**
      * 상품 조회수 1 증가
      */
