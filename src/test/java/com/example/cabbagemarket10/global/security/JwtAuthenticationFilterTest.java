@@ -107,6 +107,16 @@ class JwtAuthenticationFilterTest {
                 .andExpect(jsonPath("$.code").value("ACCESS_TOKEN_INVALID"));
     }
 
+    @DisplayName("Bearer 형식이 아닌 Authorization 헤더는 인증하지 않는다")
+    @Test
+    void Bearer_형식이_아닌_Authorization_헤더는_인증하지_않는다() throws Exception {
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Basic invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
     @DisplayName("만료된 토큰은 인증 실패 공통 오류 응답으로 처리된다")
     @Test
     void 만료된_토큰은_인증_실패_공통_오류_응답으로_처리된다() throws Exception {
