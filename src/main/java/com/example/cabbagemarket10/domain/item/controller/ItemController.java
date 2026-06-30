@@ -102,7 +102,7 @@ public class ItemController {
             @AuthenticationPrincipal AuthenticatedClient userDetails,
             @Valid @RequestBody ItemStatusUpdateRequest request
     ) {
-        ItemStatusUpdateResponse response = itemService.updateItemStatus(itemId, userDetails.clientId(), request);
+        ItemStatusUpdateResponse response = itemFacade.updateItemStatus(itemId, userDetails.clientId(), request);
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 
