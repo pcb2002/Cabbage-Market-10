@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 
 import com.example.cabbagemarket10.domain.auction.service.AuctionStatusService;
 import com.example.cabbagemarket10.domain.client.entity.Client;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
@@ -15,6 +16,7 @@ import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,13 +56,16 @@ class AuctionFacadeTest {
     @Test
     void bidItemUsesRedissonLockAndUnlocks() throws InterruptedException {
         Item item = itemWithSellerId(3L);
+        ItemBidResponse expectedResponse = new ItemBidResponse(1L, 12000L, LocalDateTime.now().plusDays(1));
         given(redissonClient.getLock("auction:bid:1")).willReturn(lock);
         given(lock.tryLock(5, 10, TimeUnit.SECONDS)).willReturn(true);
         given(lock.isHeldByCurrentThread()).willReturn(true);
         given(itemService.getItem(1L)).willReturn(item);
+        given(auctionStatusService.bid(1L, 2L, 3L, 12000L)).willReturn(expectedResponse);
 
-        auctionFacade.bidItem(1L, 2L, 12000L);
+        ItemBidResponse response = auctionFacade.bidItem(1L, 2L, 12000L);
 
+        assertThat(response).isEqualTo(expectedResponse);
         verify(auctionStatusService).bid(1L, 2L, 3L, 12000L);
         verify(lock).unlock();
     }

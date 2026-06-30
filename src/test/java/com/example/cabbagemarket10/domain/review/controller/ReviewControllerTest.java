@@ -307,7 +307,7 @@ class ReviewControllerTest {
                 .currentBid(100_000L)
                 .closeDate(LocalDateTime.now().plusDays(1))
                 .build();
-        auctionStatus.updateBid(110_000L, buyer, LocalDateTime.now());
+        auctionStatus.updateBid(110_000L, buyer.getId(), LocalDateTime.now());
         return auctionStatusRepository.saveAndFlush(auctionStatus);
     }
 
