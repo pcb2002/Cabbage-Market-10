@@ -25,8 +25,8 @@ import lombok.NoArgsConstructor;
 public class ChatRoom extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", nullable = false)
@@ -36,16 +36,11 @@ public class ChatRoom extends BaseEntity {
     @JoinColumn(name = "created_by", nullable = false)
     private Client createdBy;
 
-    @Column(nullable = false)
-    private String status;
-
     private LocalDateTime lastMessageAt;
 
     @Builder
-    public ChatRoom(Item item, Client createdBy, String status, LocalDateTime lastMessageAt) {
+    public ChatRoom(Item item, Client createdBy) {
         this.item = item;
         this.createdBy = createdBy;
-        this.status = status;
-        this.lastMessageAt = lastMessageAt;
     }
 }
