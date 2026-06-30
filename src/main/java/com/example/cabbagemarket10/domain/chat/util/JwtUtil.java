@@ -1,35 +1,17 @@
 package com.example.cabbagemarket10.domain.chat.util;
 
-import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
+import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
-
 @Component
+@RequiredArgsConstructor
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
     public static final String BEARER_PREFIX = "Bearer ";
-    private SecretKey key;
-    private JwtParser parser;
-
-    @PostConstruct
-    public void init() {
-        byte[] bytes = Decoders.BASE64.decode(secretKey);
-        this.key = Keys.hmacShaKeyFor(bytes);
-        this.parser = Jwts.parser().verifyWith(this.key).build();
-    }
+    private final JwtTokenProvider jwtTokenProvider;
 
     public Long getUserId(String token) {
-        return parser.parseSignedClaims(token).getPayload
-                ().get("userId", Long.class);
+        return jwtTokenProvider.validateAccessToken(token).clientId();
     }
-
-
 }
