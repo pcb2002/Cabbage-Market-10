@@ -7,14 +7,19 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.request.ItemStatusUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
+import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,6 +93,32 @@ public class ItemFacade {
         itemService.flush();
 
         return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
+    }
+
+    @Transactional
+    public ItemStatusUpdateResponse updateItemStatus(Long itemId, Long clientId, ItemStatusUpdateRequest request) {
+        Item item = itemService.getItemValidatingAuthor(itemId, clientId);
+        item.validateStatusUpdatable();
+
+        Client buyer = resolveBuyer(item, request);
+
+        return itemService.updateItemStatus(item, request.tradeStatus(), buyer);
+    }
+
+    private Client resolveBuyer(Item item, ItemStatusUpdateRequest request) {
+        if (!isDirectSoldOut(item, request)) {
+            return item.getBuyer();
+        }
+
+        if (request.buyerId() == null || item.getSeller().getId().equals(request.buyerId())) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        return clientService.getClient(request.buyerId());
+    }
+
+    private boolean isDirectSoldOut(Item item, ItemStatusUpdateRequest request) {
+        return !item.isAuction() && request.tradeStatus() == TradeStatus.SOLD_OUT;
     }
 
     @Transactional

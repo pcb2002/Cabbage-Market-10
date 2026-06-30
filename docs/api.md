@@ -182,6 +182,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 정보 수정 | initialPrice | 필수, 0 이상 정수 |
 | 상품 정보 수정 | closeDate | 임시저장 경매 상품이면 선택, 전달 시 현재 시각 이후. 직거래 상품이면 생략 가능 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
+| 판매 상태 변경 | buyerId | 직거래 상품을 `SOLD_OUT`으로 변경할 때 필수 |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
 | 상품 문의 작성 | title | 필수, 1~200자 |
 | 상품 문의 작성 | contents | 필수, 1~2000자 |
@@ -273,7 +274,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 검색 | GET | `/api/items?keyword={keyword}` | 불필요 | Query `keyword` | `200 OK` |
 | 상품 정보 수정 | PUT | `/api/items/{itemId}` | 필요 | 수정할 상품 필드 | `200 OK` |
-| 판매 상태 변경 | PATCH | `/api/items/{itemId}/status` | 필요 | `tradeStatus` | `200 OK` |
+| 판매 상태 변경 | PATCH | `/api/items/{itemId}/status` | 필요 | `tradeStatus`, 직거래 완료 시 `buyerId` | `200 OK` |
 | 상품 삭제 | DELETE | `/api/items/{itemId}` | 필요 | Path `itemId` | `204 No Content` |
 
 상품 등록 요청 예시:
@@ -337,7 +338,16 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 }
 ```
 
-판매 상태 변경은 판매자 본인의 등록된 상품에만 가능하다. 임시저장 상품의 판매 상태는 변경할 수 없다.
+직거래 판매완료 요청 예시:
+
+```json
+{
+  "tradeStatus": "SOLD_OUT",
+  "buyerId": 2
+}
+```
+
+판매 상태 변경은 판매자 본인의 등록된 상품에만 가능하다. 임시저장 상품의 판매 상태는 변경할 수 없다. 직거래 상품을 `SOLD_OUT`으로 변경할 때는 실제 구매자 `buyerId`를 함께 저장한다.
 
 판매 상태 변경 성공 응답:
 
@@ -347,6 +357,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
   "data": {
     "itemId": 1,
     "tradeStatus": "RESERVED",
+    "buyerId": null,
     "updatedAt": "2026-06-29T13:30:00"
   }
 }
@@ -357,11 +368,12 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | Status | Code | 설명 |
 |---:|---|---|
 | 400 | `VALIDATION_ERROR` | 요청값 누락 또는 형식 오류 |
-| 400 | `INVALID_INPUT` | 정의되지 않은 `tradeStatus` 요청 |
+| 400 | `INVALID_INPUT` | 정의되지 않은 `tradeStatus` 요청 또는 직거래 판매완료 구매자 누락 |
 | 400 | `ITEM_STATUS_UPDATE_NOT_ALLOWED` | 임시저장 상품 판매 상태 변경 요청 |
 | 401 | `UNAUTHORIZED` | 미인증 사용자 |
 | 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
 | 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
+| 404 | `CLIENT_NOT_FOUND` | 구매자 회원 없음 |
 
 상품 임시저장 게시는 판매자 본인의 `isDraft = true` 상품을 등록 상태(`isDraft = false`)로 전환한다. 요청 본문은 없다. 직거래 상품은 임시저장된 상품 필수 정보가 유효해야 하며, 경매 상품은 현재 시각 이후의 `closeDate`를 가진 `auction_status`가 준비되어 있어야 한다.
 

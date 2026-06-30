@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public record ItemStatusUpdateResponse(
         Long itemId,
         TradeStatus tradeStatus,
+        Long buyerId,
         LocalDateTime updatedAt
 ) {
 }

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 
 public record ItemStatusUpdateRequest(
         @NotNull(message = "판매 상태는 필수입니다.")
-        TradeStatus tradeStatus
+        TradeStatus tradeStatus,
+
+        Long buyerId
 ) {
 }
