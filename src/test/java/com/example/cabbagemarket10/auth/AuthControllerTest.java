@@ -208,12 +208,7 @@ class AuthControllerTest {
                 "client",
                 "010-1234-5678"));
 
-        MvcResult result = login("client@example.com", "password123!");
-
-        assertThat(result.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME)).isNotNull();
-        assertThat(requireCookie(result, "XSRF-TOKEN")).isNotNull();
-
-        mockMvc.perform(post("/api/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -224,7 +219,11 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(header().string(HttpHeaders.AUTHORIZATION, Matchers.startsWith("Bearer ")))
-                .andExpect(jsonPath("$.data").value(Matchers.nullValue()));
+                .andExpect(jsonPath("$.data").value(Matchers.nullValue()))
+                .andReturn();
+
+        assertThat(result.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME)).isNotNull();
+        assertThat(requireCookie(result, "XSRF-TOKEN")).isNotNull();
     }
 
     @DisplayName("Refresh Token 재발급 성공 시 새 Access Token과 새 Refresh Token을 반환한다")
