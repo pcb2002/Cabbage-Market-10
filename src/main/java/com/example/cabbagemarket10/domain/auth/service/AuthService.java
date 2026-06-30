@@ -41,7 +41,6 @@ public class AuthService {
         return SignupResponse.from(clientRepository.save(client));
     }
 
-
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         Client client = getActiveClientByEmail(request.email());
@@ -62,6 +61,7 @@ public class AuthService {
         return issueTokens(client);
     }
 
+    @Transactional
     public void logout(String accessToken, String refreshToken) {
         JwtClaims accessClaims = jwtTokenProvider.validateAccessToken(accessToken);
         validateNotBlacklisted(accessClaims.jti());

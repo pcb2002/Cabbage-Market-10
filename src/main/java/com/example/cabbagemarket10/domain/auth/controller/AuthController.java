@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
 public class AuthController {
+
+    private static final String BEARER_PREFIX = "Bearer ";
 
     private final AuthService authService;
     private final AuthCookieManager authCookieManager;
@@ -40,53 +43,43 @@ public class AuthController {
     public ResponseEntity<CommonResponse<Void>> login(
             @Valid @RequestBody LoginRequest request) {
         LoginResponse tokens = authService.login(request);
-        return CommonResponse.success(HttpStatus.OK).toResponseEntity(createAuthHeaders(tokens));
+        HttpHeaders headers = authCookieManager.createRefreshTokenHeaders(tokens.refreshToken());
+        headers.add(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + tokens.accessToken());
+        return CommonResponse.success(HttpStatus.OK)
+                .toResponseEntity(headers);
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<CommonResponse<Void>> refresh(
             @CookieValue(name = AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
-        LoginResponse tokens = authService.refresh(requireRefreshToken(refreshToken));
-        return CommonResponse.success(HttpStatus.OK).toResponseEntity(createAuthHeaders(tokens));
+        LoginResponse tokens = authService.refresh(authCookieManager.requireRefreshToken(refreshToken));
+        HttpHeaders headers = authCookieManager.createRefreshTokenHeaders(tokens.refreshToken());
+        headers.add(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + tokens.accessToken());
+        return CommonResponse.success(HttpStatus.OK)
+                .toResponseEntity(headers);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<CommonResponse<Void>> logout(
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
             @CookieValue(name = AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
-        HttpHeaders expireCookieHeaders = new HttpHeaders();
-        expireCookieHeaders.add(HttpHeaders.SET_COOKIE, authCookieManager.expireRefreshTokenCookie().toString());
-
-        try {
-            authService.logout(extractAccessToken(authorizationHeader), refreshToken);
-            return CommonResponse.success(HttpStatus.OK).toResponseEntity(expireCookieHeaders);
-        } catch (BusinessException e) {
-            return CommonResponse.fail(e.getErrorCode(), e.getMessage())
-                    .toResponseEntity(expireCookieHeaders);
-        }
-    }
-
-    private HttpHeaders createAuthHeaders(LoginResponse tokens) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken());
-        headers.add(HttpHeaders.SET_COOKIE, authCookieManager.createRefreshTokenCookie(tokens.refreshToken()).toString());
-        return headers;
-    }
-
-    private String requireRefreshToken(String refreshToken) {
-        if (refreshToken == null || refreshToken.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
-        }
-        return refreshToken;
+        authService.logout(extractAccessToken(authorizationHeader), refreshToken);
+        return CommonResponse.success(HttpStatus.OK)
+                .toResponseEntity(authCookieManager.createExpiredRefreshTokenHeaders());
     }
 
     private String extractAccessToken(String authorizationHeader) {
-        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+        if (!StringUtils.hasText(authorizationHeader)) {
             throw new BusinessException(ErrorCode.ACCESS_TOKEN_MISSING);
         }
-        if (!authorizationHeader.startsWith("Bearer ")) {
+        if (!authorizationHeader.startsWith(BEARER_PREFIX)) {
             throw new BusinessException(ErrorCode.ACCESS_TOKEN_INVALID);
         }
-        return authorizationHeader.substring("Bearer ".length());
+
+        String accessToken = authorizationHeader.substring(BEARER_PREFIX.length());
+        if (!StringUtils.hasText(accessToken)) {
+            throw new BusinessException(ErrorCode.ACCESS_TOKEN_INVALID);
+        }
+        return accessToken;
     }
 }

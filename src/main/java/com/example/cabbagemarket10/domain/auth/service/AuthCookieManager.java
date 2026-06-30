@@ -1,9 +1,13 @@
 package com.example.cabbagemarket10.domain.auth.service;
 
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.jwt.JwtProperties;
 import java.time.Duration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 public class AuthCookieManager {
@@ -36,5 +40,24 @@ public class AuthCookieManager {
                 .path("/")
                 .maxAge(Duration.ZERO)
                 .build();
+    }
+
+    public String requireRefreshToken(String refreshToken) {
+        if (!StringUtils.hasText(refreshToken)) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+        return refreshToken;
+    }
+
+    public HttpHeaders createRefreshTokenHeaders(String refreshToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE, createRefreshTokenCookie(refreshToken).toString());
+        return headers;
+    }
+
+    public HttpHeaders createExpiredRefreshTokenHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.SET_COOKIE, expireRefreshTokenCookie().toString());
+        return headers;
     }
 }

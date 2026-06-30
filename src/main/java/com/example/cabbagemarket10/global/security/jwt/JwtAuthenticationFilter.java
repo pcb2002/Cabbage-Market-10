@@ -36,14 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
         String authorizationHeader = request.getHeader(AUTHORIZATION_HEADER);
 
-        if (!StringUtils.hasText(authorizationHeader) || !authorizationHeader.startsWith(BEARER_PREFIX)) {
+        if (!hasBearerToken(authorizationHeader)) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            JwtClaims claims = jwtTokenProvider.validateAccessToken(
-                    authorizationHeader.substring(BEARER_PREFIX.length()));
+            JwtClaims claims = jwtTokenProvider.validateAccessToken(extractAccessToken(authorizationHeader));
             validateNotBlacklisted(claims.jti());
             validateNotSuspendedClient(claims);
             AuthenticatedClient principal = new AuthenticatedClient(claims.clientId(), claims.email());
@@ -58,6 +57,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
             securityErrorResponseWriter.write(response, exception.getErrorCode());
         }
+    }
+
+    private boolean hasBearerToken(String authorizationHeader) {
+        return StringUtils.hasText(authorizationHeader)
+                && authorizationHeader.startsWith(BEARER_PREFIX);
+    }
+
+    private String extractAccessToken(String authorizationHeader) {
+        return authorizationHeader.substring(BEARER_PREFIX.length());
     }
 
     private void validateNotBlacklisted(String jti) {
