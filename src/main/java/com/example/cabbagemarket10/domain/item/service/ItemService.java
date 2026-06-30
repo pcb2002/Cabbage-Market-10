@@ -72,9 +72,14 @@ public class ItemService {
     }
 
     @Transactional(readOnly = true)
-    public Item getItemValidatingAuthor(Long itemId, Long clientId) {
-        Item item = itemRepository.findById(itemId)
+    public Item getItem(Long itemId) {
+        return itemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public Item getItemValidatingAuthor(Long itemId, Long clientId) {
+        Item item = getItem(itemId);
 
         // 작성자 권한 검증
         item.verifySeller(clientId);
