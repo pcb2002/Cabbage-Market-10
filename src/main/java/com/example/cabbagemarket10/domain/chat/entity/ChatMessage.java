@@ -4,6 +4,8 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -42,8 +44,9 @@ public class ChatMessage {
     @JoinColumn(name = "sender_id", nullable = false)
     private Client sender;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String messageType;
+    private MessageType messageType;
 
     @Column(columnDefinition = "TEXT")
     private String content;
@@ -60,7 +63,7 @@ public class ChatMessage {
     public ChatMessage(
             ChatRoom chatRoom,
             Client sender,
-            String messageType,
+            MessageType messageType,
             String content,
             String imageUrl
     ) {
@@ -69,5 +72,9 @@ public class ChatMessage {
         this.messageType = messageType;
         this.content = content;
         this.imageUrl = imageUrl;
+    }
+
+    public boolean isNotPublisher(long clientId) {
+        return this.sender.getId() != clientId;
     }
 }
