@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/api/clients/\\d+$", "GET")).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/clients/{clientId}/reviews").permitAll()
+                        .requestMatchers("/ws/chat ","/ws/chat/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
