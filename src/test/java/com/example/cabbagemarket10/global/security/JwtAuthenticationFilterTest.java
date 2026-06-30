@@ -66,6 +66,7 @@ class JwtAuthenticationFilterTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("delete from review");
         jdbcTemplate.update("delete from client");
         clock.setInstant(BASE_TIME);
     }

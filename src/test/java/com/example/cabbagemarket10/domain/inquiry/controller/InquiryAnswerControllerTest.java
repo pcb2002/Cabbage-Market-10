@@ -61,6 +61,7 @@ class InquiryAnswerControllerTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("delete from review");
         jdbcTemplate.update("delete from inquiry_log");
         jdbcTemplate.update("delete from item");
         jdbcTemplate.update("delete from category");
