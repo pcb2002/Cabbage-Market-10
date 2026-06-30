@@ -209,8 +209,10 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 - 토큰 재발급은 `refresh_token` Cookie를 사용하며 요청 본문에 Refresh Token을 받지 않는다.
 - 로그아웃 성공 시 서버는 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 만료 쿠키를 응답한다.
 - 정지 계정은 로그인과 토큰 재발급이 차단된다.
+- 이 PR은 관리자 백오피스의 회원 상태 변경 API를 포함하지 않는다.
+- 기존 Access Token까지 즉시 차단해야 하면 DB 상태를 `SUSPENDED`로 변경한 뒤 Redis에 `auth:suspended-client:{clientId}` 회원 PK 차단 마커를 직접 등록한다.
 - 정지 계정의 기존 Access Token으로 인증을 시도하면 서버는 회원 PK 기반 차단 마커를 확인해 요청을 거부하고, 해당 토큰의 `jti`를 Redis 블랙리스트에 등록한다.
-- 정지 계정 PK 마커는 Access Token 만료 시간까지 유지하고, 계정 활성화 시 명시적으로 삭제한다.
+- 정지 계정 PK 마커는 Access Token 만료 시간까지 유지하고, 계정 활성화 시 운영 명령으로 명시적으로 삭제한다.
 - Redis의 블랙리스트 토큰과 회원 PK 차단 마커는 TTL 만료 시 자동 삭제된다.
 - Refresh Token Cookie를 사용하는 요청은 `XSRF-TOKEN` Cookie 값을 `X-XSRF-TOKEN` Header로 전달한다.
 
@@ -561,9 +563,11 @@ Cookie: refresh_token={jwt}
 
 ### 정지 계정 토큰 차단
 
-관리자에 의해 정지된 계정은 기존 Access Token의 `jti`를 서버가 미리 알 수 없으므로 회원 상태를 `SUSPENDED`로 변경한 뒤 회원 PK를 Redis에 임시 차단 마커로 저장한다.
+이 PR은 관리자 백오피스의 회원 상태 변경 API를 포함하지 않는다.
+운영·테스트에서 회원 상태를 `SUSPENDED`로 직접 변경하면 로그인과 Refresh Token 재발급은 DB 상태 조회로 차단된다.
+기존 Access Token까지 즉시 차단해야 하면 Redis에 `auth:suspended-client:{clientId}` 회원 PK 차단 마커를 직접 등록한다.
 해당 회원의 기존 Access Token으로 인증 요청이 들어오면 서버는 요청을 `SUSPENDED_ACCOUNT`로 거부하고, 그 토큰의 `jti`를 Redis 블랙리스트에 등록한다.
-회원 PK 마커는 Access Token 만료 시간까지 유지하며, 계정 활성화 시 명시적으로 삭제한다.
+회원 PK 마커는 Access Token 만료 시간까지 유지하며, 계정 활성화 시 운영 명령으로 명시적으로 삭제한다.
 Redis 데이터는 TTL 만료 시 자동 삭제된다.
 
 ## 상품 게시글
