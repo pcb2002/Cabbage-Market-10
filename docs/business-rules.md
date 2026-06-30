@@ -67,8 +67,11 @@
 
 ## 리뷰
 
-- Review는 작성자 `reviewer_id`와 대상자 `reviewee_id`를 가진다.
+- Review는 상품 `item_id`, 작성자 `reviewer_id`, 대상자 `reviewee_id`를 가진다.
 - `rating`은 점수, `content`는 후기 내용이다.
+- 리뷰 작성은 거래 완료(`SOLD_OUT`) 상품의 구매자만 가능하다.
+- 직거래 구매자는 `item.buyer_id`, 경매 구매자는 `AuctionStatus.current_bidder_id` 기준으로 검증한다.
+- 동일 상품에 같은 작성자는 리뷰를 중복 작성할 수 없다.
 - 리뷰 수정은 작성자만 가능하다.
 - 리뷰 삭제는 `is_deleted = true`로 처리한다.
 

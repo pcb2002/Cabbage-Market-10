@@ -105,6 +105,7 @@
 | 상품 문의 답변 등록 | 문의 | POST | `/api/inquiries/{inquiryId}/answer` |
 | 상품 문의 답변 수정 | 문의 | PATCH | `/api/inquiries/{inquiryId}/answer` |
 | 상품 문의 답변 삭제 | 문의 | DELETE | `/api/inquiries/{inquiryId}/answer` |
+| 상품 리뷰 작성 | 리뷰 | POST | `/api/items/{itemId}/reviews` |
 | 회원 팔로우 | 팔로우 | POST | `/api/clients/{clientId}/follows` |
 | 회원 팔로우 취소 | 팔로우 | DELETE | `/api/clients/{clientId}/follows` |
 | 내가 팔로우한 회원 목록 | 팔로우 | GET | `/api/clients/me/followings` |
@@ -116,7 +117,6 @@
 | 메시지 전송 | 채팅 | WS | `/api/chat-rooms/{chatRoomId}/messages` |
 | 메시지 삭제 | 채팅 | DELETE | `/api/chat-messages/{messageId}` |
 | 메시지 읽음 처리 | 채팅 | POST | `/api/chat-rooms/{chatRoomId}/read` |
-| 회원 리뷰 작성 | 리뷰 | POST | `/api/clients/{clientId}/reviews` |
 | 받은 리뷰 목록 조회 | 리뷰 | GET | `/api/clients/{clientId}/reviews` |
 | 내가 작성한 리뷰 목록 | 리뷰 | GET | `/api/clients/me/reviews/written` |
 | 리뷰 수정 | 리뷰 | PATCH | `/api/reviews/{reviewId}` |
@@ -452,7 +452,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 회원 팔로우 취소 | DELETE | `/api/clients/{clientId}/follows` | 필요 | Path `clientId` | `204 No Content` |
 | 내가 팔로우한 회원 목록 | GET | `/api/clients/me/followings` | 필요 | 페이징 | `200 OK` |
 | 나를 팔로우한 회원 목록 | GET | `/api/clients/me/followers` | 필요 | 페이징 | `200 OK` |
-| 회원 리뷰 작성 | POST | `/api/clients/{clientId}/reviews` | 필요 | `rating`, `content` | `201 Created` |
+| 상품 리뷰 작성 | POST | `/api/items/{itemId}/reviews` | 필요 | Path `itemId`, `rating`, `content` | `201 Created` |
 | 받은 리뷰 목록 조회 | GET | `/api/clients/{clientId}/reviews` | 불필요 | Path `clientId` | `200 OK` |
 | 내가 작성한 리뷰 목록 | GET | `/api/clients/me/reviews/written` | 필요 | 페이징 | `200 OK` |
 | 리뷰 수정 | PATCH | `/api/reviews/{reviewId}` | 필요 | `rating`, `content` 선택 | `200 OK` |
@@ -462,10 +462,11 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 | Status | Code | 설명 |
 |---:|---|---|
-| 400 | `VALIDATION_ERROR` | 요청값 검증 실패 |
+| 400 | `VALIDATION_ERROR`, `REVIEW_ITEM_NOT_COMPLETED` | 요청값 검증 실패 또는 거래완료 전 리뷰 작성 |
 | 401 | `UNAUTHORIZED` | 인증 실패 |
-| 403 | `FORBIDDEN` | 작성자가 아님 |
-| 404 | `CLIENT_NOT_FOUND`, `REVIEW_NOT_FOUND` | 대상 회원 또는 리뷰 없음 |
+| 403 | `FORBIDDEN`, `REVIEW_NOT_ALLOWED`, `SELF_REVIEW_NOT_ALLOWED` | 작성자가 아니거나 구매자가 아니거나 본인 상품 리뷰 작성 |
+| 404 | `ITEM_NOT_FOUND`, `CLIENT_NOT_FOUND`, `REVIEW_NOT_FOUND` | 상품, 대상 회원 또는 리뷰 없음 |
+| 409 | `REVIEW_ALREADY_EXISTS` | 동일 상품 중복 리뷰 |
 
 ### 채팅
 
