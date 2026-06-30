@@ -55,4 +55,16 @@ public class AuctionStatusService {
     public void deleteByItemId(Long itemId) {
         auctionStatusRepository.deleteByItemId(itemId);
     }
+
+    @Transactional
+    public void bid(Long itemId, Long clientId, Long sellerId, Long bidPrice) {
+        if (sellerId.equals(clientId)) {
+            throw new BusinessException(ErrorCode.INVALID_BID_REQUEST);
+        }
+
+        AuctionStatus auctionStatus = auctionStatusRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_STATUS_NOT_FOUND));
+
+        auctionStatus.updateBid(bidPrice, clientId, LocalDateTime.now());
+    }
 }

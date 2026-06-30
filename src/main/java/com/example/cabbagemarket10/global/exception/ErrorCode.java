@@ -62,6 +62,8 @@ public enum ErrorCode {
     INVALID_AUCTION_CLOSE_DATE(HttpStatus.BAD_REQUEST, "INVALID_AUCTION_CLOSE_DATE", "경매 종료일은 현재 시각 이후로 설정해야 합니다."),
     INVALID_BID_PRICE(HttpStatus.BAD_REQUEST, "INVALID_BID_PRICE", "입찰가는 현재 최고 입찰가보다 높아야 합니다."),
     AUCTION_ALREADY_IN_PROGRESS(HttpStatus.BAD_REQUEST, "AUCTION_ALREADY_IN_PROGRESS","이미 입찰자가 존재하여 수정할 수 없습니다."),
+    INVALID_BID_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_BID_REQUEST", "본인의 상품에는 입찰할 수 없습니다."),
+    AUCTION_BID_LOCK_FAILED(HttpStatus.CONFLICT, "AUCTION_BID_LOCK_FAILED", "입찰 요청이 많아 잠시 후 다시 시도해야 합니다."),
 
     // Inquiry
     // 존재하지 않는 문의 조회 또는 수정 요청

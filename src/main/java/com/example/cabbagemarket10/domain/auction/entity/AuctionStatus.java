@@ -1,6 +1,5 @@
 package com.example.cabbagemarket10.domain.auction.entity;
 
-import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -30,9 +29,8 @@ public class AuctionStatus {
     @Column(nullable = false)
     private Long currentBid;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "current_bidder_id")
-    private Client currentBidder;
+    @Column(name = "current_bidder_id")
+    private Long currentBidderId;
 
     @Column(nullable = false)
     private LocalDateTime closeDate;
@@ -44,7 +42,7 @@ public class AuctionStatus {
         this.closeDate = closeDate;
     }
 
-    public void updateBid(Long bidPrice, Client bidder, LocalDateTime currentTime) {
+    public void updateBid(Long bidPrice, Long bidderId, LocalDateTime currentTime) {
         if (!currentTime.isBefore(this.closeDate)) {
             throw new BusinessException(ErrorCode.AUCTION_ALREADY_CLOSED);
         }
@@ -54,7 +52,7 @@ public class AuctionStatus {
         }
 
         this.currentBid = bidPrice;
-        this.currentBidder = bidder;
+        this.currentBidderId = bidderId;
     }
 
     // 경매 종료일 수정 로직
@@ -67,6 +65,6 @@ public class AuctionStatus {
     }
 
     public boolean hasBidder() {
-        return this.currentBidder != null;
+        return this.currentBidderId != null;
     }
 }

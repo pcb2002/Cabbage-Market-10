@@ -28,8 +28,6 @@ erDiagram
     client ||--o{ review : receives
 
     item |o--|| auctionStatus : open
-    client ||--o{ auctionStatus : current_high_bidder
-
     inquiry |o--|| inquiry : answers
 
     client["CLIENT"] {
@@ -154,7 +152,7 @@ erDiagram
     auctionStatus["AUCTION_STATUS"] {
         bigint item_id PK,FK
         bigint current_bid
-        bigint current_bidder_id FK
+        bigint current_bidder_id
         datetime close_date
     }
 ```
@@ -186,7 +184,7 @@ erDiagram
 - `follow.follower_id` and `follow.following_id` must be different.
 - The Primary Key of `chat_member` is `(chat_room_id, client_id)`.
 - `auction_status.item_id` is both the PK and FK to `item.id`.
-- `auction_status.current_bidder_id` is a `client.id` that refers to the current highest bidder and can be nullable before any bids are placed.
+- `auction_status.current_bidder_id` stores the current highest bidder's `client.id` and can be nullable before any bids are placed.
 
 ## Deletion policies
 
