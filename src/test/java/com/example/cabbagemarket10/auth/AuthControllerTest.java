@@ -13,7 +13,6 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
-import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import jakarta.servlet.http.Cookie;
 import java.time.Clock;
 import java.time.Instant;
@@ -59,9 +58,6 @@ class AuthControllerTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
     private MutableClock clock;
@@ -286,15 +282,15 @@ class AuthControllerTest {
     @DisplayName("만료된 Refresh Token이면 재발급에 실패한다")
     @Test
     void 만료된_Refresh_Token이면_재발급에_실패한다() throws Exception {
-        Client client = saveClient("expired-refresh@example.com");
-        String refreshToken = jwtTokenProvider.createRefreshToken(client);
+        saveClient("expired-refresh@example.com");
         MvcResult loginResult = login("expired-refresh@example.com", "password123!");
+        Cookie refreshCookie = loginResult.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME);
         Cookie xsrfCookie = requireCookie(loginResult, "XSRF-TOKEN");
 
         clock.setInstant(BASE_TIME.plusSeconds(1209601));
 
         mockMvc.perform(post("/api/auth/refresh")
-                        .cookie(new Cookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, refreshToken), xsrfCookie)
+                        .cookie(refreshCookie, xsrfCookie)
                         .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_EXPIRED"));
