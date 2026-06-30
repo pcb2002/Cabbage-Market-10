@@ -19,7 +19,7 @@ public record ChatMessageResponse(
                 message.getId(),
                 message.getContent(),
                 sender.getId(),
-                sender.getName(),
+                sender.getNickname(),
                 message.getCreatedAt()
         );
     }
