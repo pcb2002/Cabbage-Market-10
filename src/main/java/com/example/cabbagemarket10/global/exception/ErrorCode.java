@@ -28,6 +28,10 @@ public enum ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "REFRESH_TOKEN_EXPIRED",
             "Refresh Token이 만료되었습니다."),
+    BLACKLISTED_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "BLACKLISTED_TOKEN",
+            "로그아웃되었거나 폐기된 토큰입니다."),
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND,
             "REFRESH_TOKEN_NOT_FOUND",
             "저장된 Refresh Token을 찾을 수 없습니다."),
