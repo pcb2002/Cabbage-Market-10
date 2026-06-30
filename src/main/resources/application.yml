@@ -1,3 +1,7 @@
 spring:
   application:
     name: Cabbage-Market-10
+
+auth:
+  cookie:
+    secure: true
