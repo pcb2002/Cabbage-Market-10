@@ -13,6 +13,7 @@ erDiagram
     inquiry }o--|| item : belongs_to
     inquiry }o--|| client : written_by
     item }o--|| client : sold_by
+    item }o--o| client : bought_by
 
     client ||--o{ follow : follows
     client ||--o{ follow : followed_by
@@ -61,6 +62,7 @@ erDiagram
     item["ITEM"] {
         bigint id PK
         bigint seller_id FK
+        bigint buyer_id FK
         bigint category_id FK
         varchar trade_type
         varchar title

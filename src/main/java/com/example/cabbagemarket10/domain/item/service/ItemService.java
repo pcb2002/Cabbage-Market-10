@@ -4,7 +4,6 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
-import com.example.cabbagemarket10.domain.item.dto.request.ItemStatusUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
@@ -90,17 +89,12 @@ public class ItemService {
         itemRepository.hardDeleteById(itemId);
     }
 
-    @Transactional
-    public ItemStatusUpdateResponse updateItemStatus(Long itemId, Long clientId, ItemStatusUpdateRequest request) {
-        Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
-        item.verifySeller(clientId);
-        item.validateStatusUpdatable();
-
-        item.updateStatus(request.tradeStatus());
+    public ItemStatusUpdateResponse updateItemStatus(Item item, TradeStatus tradeStatus, Client buyer) {
+        item.updateStatus(tradeStatus, buyer);
         itemRepository.flush();
 
-        return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), item.getUpdatedAt());
+        Long buyerId = item.getBuyer() == null ? null : item.getBuyer().getId();
+        return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), buyerId, item.getUpdatedAt());
     }
 
     public void flush() {

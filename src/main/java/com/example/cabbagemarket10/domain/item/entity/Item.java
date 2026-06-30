@@ -38,6 +38,10 @@ public class Item extends BaseEntity {
     @JoinColumn(name = "seller_id", nullable = false)
     private Client seller;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "buyer_id")
+    private Client buyer;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TradeType tradeType;
@@ -139,7 +143,8 @@ public class Item extends BaseEntity {
         this.initialPrice = initialPrice;
     }
 
-    public void updateStatus(TradeStatus tradeStatus) {
+    public void updateStatus(TradeStatus tradeStatus, Client buyer) {
         this.tradeStatus = tradeStatus;
+        this.buyer = buyer;
     }
 }
