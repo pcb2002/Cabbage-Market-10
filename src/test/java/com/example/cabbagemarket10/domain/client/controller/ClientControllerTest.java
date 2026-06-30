@@ -8,6 +8,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.domain.follow.entity.Follow;
+import com.example.cabbagemarket10.domain.follow.repository.FollowRepository;
+import com.example.cabbagemarket10.domain.item.entity.Item;
+import com.example.cabbagemarket10.domain.item.enums.ConditionType;
+import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
+import com.example.cabbagemarket10.domain.item.enums.TradeType;
+import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.category.entity.Category;
+import com.example.cabbagemarket10.domain.category.repository.CategoryRepository;
+import com.example.cabbagemarket10.domain.review.entity.Review;
+import com.example.cabbagemarket10.domain.review.repository.ReviewRepository;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +43,18 @@ class ClientControllerTest {
     private ClientRepository clientRepository;
 
     @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private ItemRepository itemRepository;
+
+    @Autowired
+    private FollowRepository followRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -42,6 +65,7 @@ class ClientControllerTest {
 
     @BeforeEach
     void setUp() {
+        deleteIfExists("follow");
         deleteIfExists("review");
         deleteIfExists("auction_status");
         deleteIfExists("item");
@@ -94,6 +118,109 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
+
+    @DisplayName("비회원도 회원 공개 프로필을 조회할 수 있다")
+    @Test
+    void 비회원도_회원_공개_프로필을_조회할_수_있다() throws Exception {
+        Client client = saveClient(
+                "public@example.com",
+                "공개배추",
+                "공개이름",
+                "010-2222-3333");
+
+        mockMvc.perform(get("/api/clients/{clientId}", client.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.clientId").value(client.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("공개배추"))
+                .andExpect(jsonPath("$.data.profileImageUrl").value(Client.defaultProfileImageUrl()))
+                .andExpect(jsonPath("$.data.averageRating").value(0.0))
+                .andExpect(jsonPath("$.data.reviewCount").value(0))
+                .andExpect(jsonPath("$.data.followerCount").value(0))
+                .andExpect(jsonPath("$.data.isFollowing").value(false))
+                .andExpect(jsonPath("$.data.sellingItemCount").value(0))
+                .andExpect(jsonPath("$.data.soldItemCount").value(0))
+                .andExpect(jsonPath("$.data.email").doesNotExist())
+                .andExpect(jsonPath("$.data.password").doesNotExist())
+                .andExpect(jsonPath("$.data.status").doesNotExist())
+                .andExpect(jsonPath("$.data.phone").doesNotExist());
+    }
+
+    @DisplayName("회원도 회원 공개 프로필을 조회할 수 있다")
+    @Test
+    void 회원도_회원_공개_프로필을_조회할_수_있다() throws Exception {
+        Client client = saveClient(
+                "target@example.com",
+                "대상회원",
+                "대상",
+                "010-3333-4444");
+        Client viewer = saveClient(
+                "viewer@example.com",
+                "조회회원",
+                "조회",
+                "010-4444-5555");
+        Category category = saveCategory();
+        saveItem(category, client, "판매중 상품", TradeStatus.ON_SALE, false);
+        saveItem(category, client, "판매완료 상품", TradeStatus.SOLD_OUT, false);
+        saveItem(category, client, "임시저장 상품", TradeStatus.ON_SALE, true);
+        followRepository.save(new Follow(viewer, client));
+        reviewRepository.save(Review.builder()
+                .reviewer(viewer)
+                .reviewee(client)
+                .rating(4)
+                .content("좋습니다")
+                .build());
+        Review deletedReview = reviewRepository.save(Review.builder()
+                .reviewer(viewer)
+                .reviewee(client)
+                .rating(2)
+                .content("삭제된 리뷰")
+                .build());
+        reviewRepository.delete(deletedReview);
+        reviewRepository.flush();
+        String accessToken = jwtTokenProvider.createAccessToken(viewer);
+
+        mockMvc.perform(get("/api/clients/{clientId}", client.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.clientId").value(client.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("대상회원"))
+                .andExpect(jsonPath("$.data.averageRating").value(4.0))
+                .andExpect(jsonPath("$.data.reviewCount").value(1))
+                .andExpect(jsonPath("$.data.followerCount").value(1))
+                .andExpect(jsonPath("$.data.isFollowing").value(true))
+                .andExpect(jsonPath("$.data.sellingItemCount").value(1))
+                .andExpect(jsonPath("$.data.soldItemCount").value(1));
+    }
+
+    @DisplayName("존재하지 않는 회원 공개 프로필 조회 시 404를 반환한다")
+    @Test
+    void 존재하지_않는_회원_공개_프로필_조회_시_404를_반환한다() throws Exception {
+        mockMvc.perform(get("/api/clients/{clientId}", 9999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("CLIENT_NOT_FOUND"));
+    }
+
+    @DisplayName("삭제된 회원 공개 프로필 조회 시 404를 반환한다")
+    @Test
+    void 삭제된_회원_공개_프로필_조회_시_404를_반환한다() throws Exception {
+        Client client = saveClient(
+                "deleted@example.com",
+                "삭제회원",
+                "삭제",
+                "010-5555-6666");
+        Long clientId = client.getId();
+        clientRepository.delete(client);
+        clientRepository.flush();
+
+        mockMvc.perform(get("/api/clients/{clientId}", clientId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("CLIENT_NOT_FOUND"));
+    }
+
     @DisplayName("인증된 회원은 내 정보를 부분 수정할 수 있다")
     @Test
     void 인증된_회원은_내_정보를_부분_수정할_수_있다() throws Exception {
@@ -136,6 +263,7 @@ class ClientControllerTest {
                 "keepNickname",
                 "기존이름",
                 "010-2222-3333");
+
         String accessToken = jwtTokenProvider.createAccessToken(client);
 
         mockMvc.perform(patch("/api/clients/me")
@@ -147,10 +275,12 @@ class ClientControllerTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
+
                 .andExpect(jsonPath("$.data.nickname").value("keepNickname"))
                 .andExpect(jsonPath("$.data.name").value("새이름"))
                 .andExpect(jsonPath("$.data.phone").value("010-2222-3333"))
                 .andExpect(jsonPath("$.data.profileImageUrl").value(Client.defaultProfileImageUrl()));
+
     }
 
     @DisplayName("내 정보 수정 시 프로필 이미지 URL 형식이 잘못되면 400을 반환한다")
@@ -162,7 +292,6 @@ class ClientControllerTest {
                 "홍길동",
                 "010-1234-5678");
         String accessToken = jwtTokenProvider.createAccessToken(client);
-
         mockMvc.perform(patch("/api/clients/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -174,6 +303,7 @@ class ClientControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
     }
 
     @DisplayName("토큰 없이 내 정보 수정을 요청하면 401을 반환한다")
@@ -198,6 +328,28 @@ class ClientControllerTest {
                 nickname,
                 name,
                 phone));
+    }
+
+    private Category saveCategory() {
+        return categoryRepository.save(Category.builder()
+                .name("디지털/가전-" + System.nanoTime())
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+    }
+
+    private Item saveItem(Category category, Client seller, String title, TradeStatus tradeStatus, boolean isDraft) {
+        return itemRepository.save(Item.builder()
+                .category(category)
+                .seller(seller)
+                .tradeType(TradeType.DIRECT)
+                .title(title)
+                .description("설명")
+                .initialPrice(1000L)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(tradeStatus)
+                .isDraft(isDraft)
+                .build());
     }
 
     private void deleteIfExists(String tableName) {
