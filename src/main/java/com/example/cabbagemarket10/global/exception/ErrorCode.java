@@ -76,6 +76,10 @@ public enum ErrorCode {
     // Review
     // 리뷰 대상 회원 또는 조회 회원 없음
     CLIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CLIENT_NOT_FOUND", "회원을 찾을 수 없습니다."),
+    REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "REVIEW_NOT_ALLOWED", "리뷰를 작성할 수 없는 사용자입니다."),
+    REVIEW_ITEM_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "REVIEW_ITEM_NOT_COMPLETED", "거래 완료된 상품에만 리뷰를 작성할 수 있습니다."),
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "REVIEW_ALREADY_EXISTS", "이미 작성한 리뷰가 있습니다."),
+    SELF_REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "SELF_REVIEW_NOT_ALLOWED", "본인이 판매한 상품에는 리뷰를 작성할 수 없습니다."),
     // 존재하지 않는 리뷰 조회 또는 수정 요청
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "REVIEW_NOT_FOUND", "리뷰를 찾을 수 없습니다.");
 

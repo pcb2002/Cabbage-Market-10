@@ -161,16 +161,19 @@ class ClientControllerTest {
                 "010-4444-5555");
         Category category = saveCategory();
         saveItem(category, client, "판매중 상품", TradeStatus.ON_SALE, false);
-        saveItem(category, client, "판매완료 상품", TradeStatus.SOLD_OUT, false);
+        Item soldItem = saveItem(category, client, "판매완료 상품", TradeStatus.SOLD_OUT, false);
+        Item deletedReviewItem = saveItem(category, client, "삭제 리뷰 상품", TradeStatus.SOLD_OUT, false);
         saveItem(category, client, "임시저장 상품", TradeStatus.ON_SALE, true);
         followRepository.save(new Follow(viewer, client));
         reviewRepository.save(Review.builder()
+                .item(soldItem)
                 .reviewer(viewer)
                 .reviewee(client)
                 .rating(4)
                 .content("좋습니다")
                 .build());
         Review deletedReview = reviewRepository.save(Review.builder()
+                .item(deletedReviewItem)
                 .reviewer(viewer)
                 .reviewee(client)
                 .rating(2)
@@ -191,7 +194,7 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.data.followerCount").value(1))
                 .andExpect(jsonPath("$.data.isFollowing").value(true))
                 .andExpect(jsonPath("$.data.sellingItemCount").value(1))
-                .andExpect(jsonPath("$.data.soldItemCount").value(1));
+                .andExpect(jsonPath("$.data.soldItemCount").value(2));
     }
 
     @DisplayName("존재하지 않는 회원 공개 프로필 조회 시 404를 반환한다")

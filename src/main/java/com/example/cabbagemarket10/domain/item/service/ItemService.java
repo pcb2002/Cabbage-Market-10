@@ -71,6 +71,12 @@ public class ItemService {
     }
 
     @Transactional(readOnly = true)
+    public Item getItem(Long itemId) {
+        return itemRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
     public Item getItemValidatingAuthor(Long itemId, Long clientId) {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
@@ -81,13 +87,6 @@ public class ItemService {
         return item;
     }
 
-    public void softDelete(Item item) {
-        itemRepository.delete(item);
-    }
-
-    public void hardDeleteById(Long itemId) {
-        itemRepository.hardDeleteById(itemId);
-    }
 
     public ItemStatusUpdateResponse updateItemStatus(Item item, TradeStatus tradeStatus, Client buyer) {
         item.updateStatus(tradeStatus, buyer);
@@ -95,6 +94,16 @@ public class ItemService {
 
         Long buyerId = item.getBuyer() == null ? null : item.getBuyer().getId();
         return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), buyerId, item.getUpdatedAt());
+    }
+
+
+
+    public void softDelete(Item item) {
+        itemRepository.delete(item);
+    }
+
+    public void hardDeleteById(Long itemId) {
+        itemRepository.hardDeleteById(itemId);
     }
 
     public void flush() {
