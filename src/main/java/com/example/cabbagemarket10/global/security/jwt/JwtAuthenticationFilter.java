@@ -1,6 +1,8 @@
 package com.example.cabbagemarket10.global.security.jwt;
 
 import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.domain.auth.service.TokenBlacklistStore;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.SecurityErrorResponseWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistStore tokenBlacklistStore;
     private final SecurityErrorResponseWriter securityErrorResponseWriter;
 
     @Override
@@ -41,6 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             JwtClaims claims = jwtTokenProvider.validateAccessToken(
                     authorizationHeader.substring(BEARER_PREFIX.length()));
+            validateNotBlacklisted(claims.jti());
             AuthenticatedClient principal = new AuthenticatedClient(claims.clientId(), claims.email());
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -52,6 +56,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (BusinessException exception) {
             SecurityContextHolder.clearContext();
             securityErrorResponseWriter.write(response, exception.getErrorCode());
+        }
+    }
+
+    private void validateNotBlacklisted(String jti) {
+        if (tokenBlacklistStore.isBlacklisted(jti)) {
+            throw new BusinessException(ErrorCode.BLACKLISTED_TOKEN);
         }
     }
 }
