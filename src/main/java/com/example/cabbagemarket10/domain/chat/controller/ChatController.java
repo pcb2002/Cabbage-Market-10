@@ -14,13 +14,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/chat-rooms")
+@RequestMapping("/api/items/{itemId}/chat-rooms")
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
 
-    @PostMapping("/{itemId}")
+    @PostMapping
     public ResponseEntity<CommonResponse<RoomCreate>> createChatRoom(
             @PathVariable Long itemId,
             @AuthenticationPrincipal AuthenticatedClient authenticatedClient
@@ -28,6 +28,5 @@ public class ChatController {
         RoomCreate resBody = chatService.createRoom(authenticatedClient.clientId(), itemId);
         return CommonResponse.success(HttpStatus.CREATED, resBody).toResponseEntity();
     }
-
 
 }
