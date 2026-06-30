@@ -1,5 +1,6 @@
 package com.example.cabbagemarket10.global.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -127,6 +128,30 @@ class JwtAuthenticationFilterTest {
         String accessToken = jwtTokenProvider.createAccessToken(client);
         JwtClaims claims = jwtTokenProvider.validateAccessToken(accessToken);
         tokenBlacklistStore.blacklist(claims.jti(), claims.expiresAt());
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
+    }
+
+    @DisplayName("정지 회원 마커가 있으면 기존 Access Token을 거부하고 토큰을 블랙리스트 처리한다")
+    @Test
+    void 정지_회원_마커가_있으면_기존_Access_Token을_거부하고_토큰을_블랙리스트_처리한다() throws Exception {
+        Client client = saveClient("suspended-token@example.com");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+        JwtClaims claims = jwtTokenProvider.validateAccessToken(accessToken);
+        tokenBlacklistStore.markSuspendedClient(client.getId(), claims.expiresAt());
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
+
+        assertThat(tokenBlacklistStore.isBlacklisted(claims.jti())).isTrue();
+        assertThat(tokenBlacklistStore.isSuspendedClientMarked(client.getId())).isFalse();
 
         mockMvc.perform(get("/api/test/protected")
                         .header("Authorization", "Bearer " + accessToken))

@@ -69,6 +69,23 @@ class RedisTokenBlacklistStoreIntegrationTest {
         assertThat(stringRedisTemplate.hasKey("auth:blacklist:" + jti)).isFalse();
     }
 
+    @DisplayName("embedded Redis에 정지 회원 마커를 TTL과 함께 저장하고 만료 후 자동 삭제한다")
+    @Test
+    void embedded_Redis에_정지_회원_마커를_TTL과_함께_저장하고_만료_후_자동_삭제한다() throws Exception {
+        assertThat(tokenBlacklistStore).isInstanceOf(RedisTokenBlacklistStore.class);
+
+        Long clientId = 1L;
+        tokenBlacklistStore.markSuspendedClient(clientId, Instant.now().plusSeconds(1));
+
+        assertThat(tokenBlacklistStore.isSuspendedClientMarked(clientId)).isTrue();
+        assertThat(stringRedisTemplate.hasKey("auth:suspended-client:" + clientId)).isTrue();
+
+        Thread.sleep(1500L);
+
+        assertThat(tokenBlacklistStore.isSuspendedClientMarked(clientId)).isFalse();
+        assertThat(stringRedisTemplate.hasKey("auth:suspended-client:" + clientId)).isFalse();
+    }
+
     private static void startEmbeddedRedis() throws IOException {
         if (redisServer != null && redisServer.isActive()) {
             return;

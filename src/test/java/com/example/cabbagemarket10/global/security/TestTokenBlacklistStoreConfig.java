@@ -22,6 +22,7 @@ public class TestTokenBlacklistStoreConfig {
     static class InMemoryTokenBlacklistStore implements TokenBlacklistStore {
 
         private final Map<String, Instant> storage = new ConcurrentHashMap<>();
+        private final Map<Long, Instant> suspendedClients = new ConcurrentHashMap<>();
 
         @Override
         public void blacklist(String jti, Instant expiresAt) {
@@ -31,6 +32,21 @@ public class TestTokenBlacklistStoreConfig {
         @Override
         public boolean isBlacklisted(String jti) {
             return storage.containsKey(jti);
+        }
+
+        @Override
+        public void markSuspendedClient(Long clientId, Instant expiresAt) {
+            suspendedClients.put(clientId, expiresAt);
+        }
+
+        @Override
+        public boolean isSuspendedClientMarked(Long clientId) {
+            return suspendedClients.containsKey(clientId);
+        }
+
+        @Override
+        public void removeSuspendedClient(Long clientId) {
+            suspendedClients.remove(clientId);
         }
     }
 }
