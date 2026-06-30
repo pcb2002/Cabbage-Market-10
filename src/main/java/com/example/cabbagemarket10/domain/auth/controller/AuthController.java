@@ -54,11 +54,16 @@ public class AuthController {
     public ResponseEntity<CommonResponse<Void>> logout(
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
             @CookieValue(name = AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
-        authService.logout(extractAccessToken(authorizationHeader), refreshToken);
+        HttpHeaders expireCookieHeaders = new HttpHeaders();
+        expireCookieHeaders.add(HttpHeaders.SET_COOKIE, authCookieManager.expireRefreshTokenCookie().toString());
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.SET_COOKIE, authCookieManager.expireRefreshTokenCookie().toString());
-        return CommonResponse.success(HttpStatus.OK).toResponseEntity(headers);
+        try {
+            authService.logout(extractAccessToken(authorizationHeader), refreshToken);
+            return CommonResponse.success(HttpStatus.OK).toResponseEntity(expireCookieHeaders);
+        } catch (BusinessException e) {
+            return CommonResponse.fail(e.getErrorCode(), e.getMessage())
+                    .toResponseEntity(expireCookieHeaders);
+        }
     }
 
     private HttpHeaders createAuthHeaders(LoginResponse tokens) {

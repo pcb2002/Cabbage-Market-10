@@ -41,6 +41,7 @@ public class AuthService {
         return SignupResponse.from(clientRepository.save(client));
     }
 
+
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         Client client = getActiveClientByEmail(request.email());
@@ -61,7 +62,6 @@ public class AuthService {
         return issueTokens(client);
     }
 
-    @Transactional
     public void logout(String accessToken, String refreshToken) {
         JwtClaims accessClaims = jwtTokenProvider.validateAccessToken(accessToken);
         validateNotBlacklisted(accessClaims.jti());
@@ -69,13 +69,18 @@ public class AuthService {
 
         Optional.ofNullable(refreshToken)
                 .filter(token -> !token.isBlank())
-                .ifPresent(this::blacklistRefreshToken);
+                .ifPresent(this::tryBlacklistRefreshToken);
     }
 
-    private void blacklistRefreshToken(String refreshToken) {
-        JwtClaims refreshClaims = jwtTokenProvider.validateRefreshToken(refreshToken);
-        validateNotBlacklisted(refreshClaims.jti());
-        tokenBlacklistStore.blacklist(refreshClaims.jti(), refreshClaims.expiresAt());
+    // RefreshToken이 이미 만료됐거나 유효하지 않으면 무시한다.
+    // AccessToken이 이미 블랙리스트에 등록된 시점에서 RefreshToken 처리 실패는 로그아웃을 실패로 만들 이유가 없다.
+    private void tryBlacklistRefreshToken(String refreshToken) {
+        try {
+            JwtClaims refreshClaims = jwtTokenProvider.validateRefreshToken(refreshToken);
+            validateNotBlacklisted(refreshClaims.jti());
+            tokenBlacklistStore.blacklist(refreshClaims.jti(), refreshClaims.expiresAt());
+        } catch (BusinessException ignored) {
+        }
     }
 
     private void validateNotBlacklisted(String jti) {
