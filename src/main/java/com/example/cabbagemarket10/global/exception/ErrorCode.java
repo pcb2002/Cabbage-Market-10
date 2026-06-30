@@ -28,6 +28,10 @@ public enum ErrorCode {
             HttpStatus.UNAUTHORIZED,
             "REFRESH_TOKEN_EXPIRED",
             "Refresh Token이 만료되었습니다."),
+    BLACKLISTED_TOKEN(
+            HttpStatus.UNAUTHORIZED,
+            "BLACKLISTED_TOKEN",
+            "로그아웃되었거나 폐기된 토큰입니다."),
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND,
             "REFRESH_TOKEN_NOT_FOUND",
             "저장된 Refresh Token을 찾을 수 없습니다."),
@@ -74,8 +78,17 @@ public enum ErrorCode {
     // Review
     // 리뷰 대상 회원 또는 조회 회원 없음
     CLIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CLIENT_NOT_FOUND", "회원을 찾을 수 없습니다."),
+    REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "REVIEW_NOT_ALLOWED", "리뷰를 작성할 수 없는 사용자입니다."),
+    REVIEW_ITEM_NOT_COMPLETED(HttpStatus.BAD_REQUEST, "REVIEW_ITEM_NOT_COMPLETED", "거래 완료된 상품에만 리뷰를 작성할 수 있습니다."),
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "REVIEW_ALREADY_EXISTS", "이미 작성한 리뷰가 있습니다."),
+    SELF_REVIEW_NOT_ALLOWED(HttpStatus.FORBIDDEN, "SELF_REVIEW_NOT_ALLOWED", "본인이 판매한 상품에는 리뷰를 작성할 수 없습니다."),
     // 존재하지 않는 리뷰 조회 또는 수정 요청
-    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "REVIEW_NOT_FOUND", "리뷰를 찾을 수 없습니다.");
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "REVIEW_NOT_FOUND", "리뷰를 찾을 수 없습니다."),
+
+    // chat
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다."),
+    CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_NOT_FOUND", "메시지를 찾을 수 없습니다."),
+    CHAT_MESSAGE_NOT_PUBLISHER(HttpStatus.FORBIDDEN, "CHAT_MESSAGE_NOT_PUBLISHER", "사용자가 작성한 메시지가 아니므로 삭제할 수 없습니다."),;
 
     private final HttpStatus httpStatus;
     private final String code;

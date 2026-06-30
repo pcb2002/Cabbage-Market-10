@@ -25,3 +25,8 @@ spring:
 jwt:
   secret: test-secret-key-for-cabbage-market-authentication
   access-token-expire-seconds: 3600
+  refresh-token-expire-seconds: 1209600
+
+auth:
+  cookie:
+    secure: false

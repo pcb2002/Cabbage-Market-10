@@ -7,7 +7,6 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
-import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,6 @@ public class AuthService {
 
     private final ClientRepository clientRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
     public SignupResponse signup(SignupRequest request) {
@@ -38,18 +36,27 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public String login(LoginRequest request) {
+    public Client authenticate(LoginRequest request) {
         Client client = clientRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
-
-        if (!client.isCorrectPassword(passwordEncoder, request.password())) {
+        validateActiveClient(client);
+        if (!passwordEncoder.matches(request.password(), client.getPassword())) {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
+        return client;
+    }
 
+    @Transactional(readOnly = true)
+    public Client getActiveClient(Long clientId) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+        validateActiveClient(client);
+        return client;
+    }
+
+    private void validateActiveClient(Client client) {
         if (!client.isActive()) {
             throw new BusinessException(ErrorCode.SUSPENDED_ACCOUNT);
         }
-
-        return jwtTokenProvider.createAccessToken(client);
     }
 }

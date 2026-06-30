@@ -105,6 +105,7 @@
 | 상품 문의 답변 등록 | 문의 | POST | `/api/inquiries/{inquiryId}/answer` |
 | 상품 문의 답변 수정 | 문의 | PATCH | `/api/inquiries/{inquiryId}/answer` |
 | 상품 문의 답변 삭제 | 문의 | DELETE | `/api/inquiries/{inquiryId}/answer` |
+| 상품 리뷰 작성 | 리뷰 | POST | `/api/items/{itemId}/reviews` |
 | 회원 팔로우 | 팔로우 | POST | `/api/clients/{clientId}/follows` |
 | 회원 팔로우 취소 | 팔로우 | DELETE | `/api/clients/{clientId}/follows` |
 | 내가 팔로우한 회원 목록 | 팔로우 | GET | `/api/clients/me/followings` |
@@ -116,7 +117,6 @@
 | 메시지 전송 | 채팅 | WS | `/api/chat-rooms/{chatRoomId}/messages` |
 | 메시지 삭제 | 채팅 | DELETE | `/api/chat-messages/{messageId}` |
 | 메시지 읽음 처리 | 채팅 | POST | `/api/chat-rooms/{chatRoomId}/read` |
-| 회원 리뷰 작성 | 리뷰 | POST | `/api/clients/{clientId}/reviews` |
 | 받은 리뷰 목록 조회 | 리뷰 | GET | `/api/clients/{clientId}/reviews` |
 | 내가 작성한 리뷰 목록 | 리뷰 | GET | `/api/clients/me/reviews/written` |
 | 리뷰 수정 | 리뷰 | PATCH | `/api/reviews/{reviewId}` |
@@ -182,6 +182,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 정보 수정 | initialPrice | 필수, 0 이상 정수 |
 | 상품 정보 수정 | closeDate | 임시저장 경매 상품이면 선택, 전달 시 현재 시각 이후. 직거래 상품이면 생략 가능 |
 | 판매 상태 변경 | tradeStatus | 필수, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
+| 판매 상태 변경 | buyerId | 직거래 상품을 `SOLD_OUT`으로 변경할 때 필수 |
 | 입찰하기 | bidPrice | 필수, 0 이상 정수, 현재 입찰가 초과 |
 | 상품 문의 작성 | title | 필수, 1~200자 |
 | 상품 문의 작성 | contents | 필수, 1~2000자 |
@@ -207,7 +208,14 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 - 로그인 성공 시 Access Token은 응답 헤더로 전달하고 Refresh Token은 `Set-Cookie`로 전달한다.
 - 인증 API는 `Authorization: Bearer {accessToken}` 헤더를 사용한다.
 - 토큰 재발급은 `refresh_token` Cookie를 사용하며 요청 본문에 Refresh Token을 받지 않는다.
-- 로그아웃 성공 시 서버는 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 만료 쿠키를 응답한다.
+- 로그아웃 성공 시 서버는 Access Token을 Redis 블랙리스트에 등록하고 Refresh Token 만료 쿠키를 응답한다.
+- 정지 계정은 로그인과 토큰 재발급이 차단된다.
+- 이 PR은 관리자 백오피스의 회원 상태 변경 API를 포함하지 않는다.
+- 기존 Access Token까지 즉시 차단해야 하면 DB 상태를 `SUSPENDED`로 변경한 뒤 Redis에 `auth:suspended-client:{clientId}` 회원 PK 차단 마커를 직접 등록한다.
+- 정지 계정의 기존 Access Token으로 인증을 시도하면 서버는 회원 PK 기반 차단 마커를 확인해 요청을 거부하고, 해당 토큰의 `jti`를 Redis 블랙리스트에 등록한다.
+- 정지 계정 PK 마커는 Access Token 만료 시간까지 유지하고, 계정 활성화 시 운영 명령으로 명시적으로 삭제한다.
+- Redis의 블랙리스트 토큰과 회원 PK 차단 마커는 TTL 만료 시 자동 삭제된다.
+- Refresh Token은 서버 저장소나 블랙리스트로 별도 관리하지 않으므로, 로그아웃은 현재 클라이언트 기준으로 처리된다.
 - Refresh Token Cookie를 사용하는 요청은 `XSRF-TOKEN` Cookie 값을 `X-XSRF-TOKEN` Header로 전달한다.
 
 주요 오류:
@@ -221,7 +229,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 로그인 | 403 | `SUSPENDED_ACCOUNT`            | 정지 회원 로그인 차단          |
 | 토큰 재발급 | 401 | `INVALID_REFRESH_TOKEN` | Refresh Token 유효하지 않음 |
 | 토큰 재발급 | 401 | `REFRESH_TOKEN_EXPIRED` | Refresh Token 만료      |
-| 토큰 재발급 | 401 | `BLACKLISTED_TOKEN`     | 로그아웃 또는 강제 만료된 토큰     |
+| 인증 필요 API | 403 | `SUSPENDED_ACCOUNT`     | 정지 회원의 기존 Access Token 인증 차단 |
 | 로그아웃 | 401 | `UNAUTHORIZED`          | 인증 토큰 없음·만료           |
 
 ### 마이 페이지
@@ -233,6 +241,26 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 회원 프로필 조회 | GET | `/api/clients/{clientId}` | 불필요 | Path `clientId` | `200 OK` |
 | 내 판매글 목록 | GET | `/api/clients/me/items` | 필요 | 페이징 | `200 OK` |
 | 내 관심목록 조회 | GET | `/api/clients/me/likes` | 필요 | 페이징 | `200 OK` |
+
+### 회원 프로필 조회
+
+`GET /api/clients/{clientId}`는 비회원과 회원 모두 특정 회원의 공개 프로필을 조회한다.
+
+응답 `data` 필드:
+
+| 필드 | 설명 |
+|---|---|
+| clientId | 회원 ID |
+| nickname | 공개 닉네임 |
+| profileImageUrl | 프로필 이미지 URL |
+| averageRating | 받은 리뷰 평균 평점 |
+| reviewCount | 삭제되지 않은 받은 리뷰 수 |
+| followerCount | 팔로워 수 |
+| isFollowing | 현재 로그인 사용자의 팔로우 여부, 비회원이면 `false` |
+| sellingItemCount | 공개 판매중 상품 수 (`ON_SALE`, 임시저장 제외) |
+| soldItemCount | 거래완료 상품 수 (`SOLD_OUT`, 임시저장 제외) |
+
+민감정보인 `email`, `password`, `phone`과 내부 상태값은 공개 프로필 응답에 포함하지 않는다.
 
 ### 상품 게시글
 
@@ -246,7 +274,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 검색 | GET | `/api/items?keyword={keyword}` | 불필요 | Query `keyword` | `200 OK` |
 | 상품 정보 수정 | PUT | `/api/items/{itemId}` | 필요 | 수정할 상품 필드 | `200 OK` |
-| 판매 상태 변경 | PATCH | `/api/items/{itemId}/status` | 필요 | `tradeStatus` | `200 OK` |
+| 판매 상태 변경 | PATCH | `/api/items/{itemId}/status` | 필요 | `tradeStatus`, 직거래 완료 시 `buyerId` | `200 OK` |
 | 상품 삭제 | DELETE | `/api/items/{itemId}` | 필요 | Path `itemId` | `204 No Content` |
 
 상품 등록 요청 예시:
@@ -310,7 +338,16 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 }
 ```
 
-판매 상태 변경은 판매자 본인의 등록된 상품에만 가능하다. 임시저장 상품의 판매 상태는 변경할 수 없다.
+직거래 판매완료 요청 예시:
+
+```json
+{
+  "tradeStatus": "SOLD_OUT",
+  "buyerId": 2
+}
+```
+
+판매 상태 변경은 판매자 본인의 등록된 상품에만 가능하다. 임시저장 상품의 판매 상태는 변경할 수 없다. 직거래 상품을 `SOLD_OUT`으로 변경할 때는 실제 구매자 `buyerId`를 함께 저장한다.
 
 판매 상태 변경 성공 응답:
 
@@ -320,6 +357,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
   "data": {
     "itemId": 1,
     "tradeStatus": "RESERVED",
+    "buyerId": null,
     "updatedAt": "2026-06-29T13:30:00"
   }
 }
@@ -330,11 +368,12 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | Status | Code | 설명 |
 |---:|---|---|
 | 400 | `VALIDATION_ERROR` | 요청값 누락 또는 형식 오류 |
-| 400 | `INVALID_INPUT` | 정의되지 않은 `tradeStatus` 요청 |
+| 400 | `INVALID_INPUT` | 정의되지 않은 `tradeStatus` 요청 또는 직거래 판매완료 구매자 누락 |
 | 400 | `ITEM_STATUS_UPDATE_NOT_ALLOWED` | 임시저장 상품 판매 상태 변경 요청 |
 | 401 | `UNAUTHORIZED` | 미인증 사용자 |
 | 403 | `FORBIDDEN` | 상품 판매자가 아닌 사용자 |
 | 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 삭제된 상품 |
+| 404 | `CLIENT_NOT_FOUND` | 구매자 회원 없음 |
 
 상품 임시저장 게시는 판매자 본인의 `isDraft = true` 상품을 등록 상태(`isDraft = false`)로 전환한다. 요청 본문은 없다. 직거래 상품은 임시저장된 상품 필수 정보가 유효해야 하며, 경매 상품은 현재 시각 이후의 `closeDate`를 가진 `auction_status`가 준비되어 있어야 한다.
 
@@ -430,7 +469,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 회원 팔로우 취소 | DELETE | `/api/clients/{clientId}/follows` | 필요 | Path `clientId` | `204 No Content` |
 | 내가 팔로우한 회원 목록 | GET | `/api/clients/me/followings` | 필요 | 페이징 | `200 OK` |
 | 나를 팔로우한 회원 목록 | GET | `/api/clients/me/followers` | 필요 | 페이징 | `200 OK` |
-| 회원 리뷰 작성 | POST | `/api/clients/{clientId}/reviews` | 필요 | `rating`, `content` | `201 Created` |
+| 상품 리뷰 작성 | POST | `/api/items/{itemId}/reviews` | 필요 | Path `itemId`, `rating`, `content` | `201 Created` |
 | 받은 리뷰 목록 조회 | GET | `/api/clients/{clientId}/reviews` | 불필요 | Path `clientId` | `200 OK` |
 | 내가 작성한 리뷰 목록 | GET | `/api/clients/me/reviews/written` | 필요 | 페이징 | `200 OK` |
 | 리뷰 수정 | PATCH | `/api/reviews/{reviewId}` | 필요 | `rating`, `content` 선택 | `200 OK` |
@@ -440,10 +479,11 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 | Status | Code | 설명 |
 |---:|---|---|
-| 400 | `VALIDATION_ERROR` | 요청값 검증 실패 |
+| 400 | `VALIDATION_ERROR`, `REVIEW_ITEM_NOT_COMPLETED` | 요청값 검증 실패 또는 거래완료 전 리뷰 작성 |
 | 401 | `UNAUTHORIZED` | 인증 실패 |
-| 403 | `FORBIDDEN` | 작성자가 아님 |
-| 404 | `CLIENT_NOT_FOUND`, `REVIEW_NOT_FOUND` | 대상 회원 또는 리뷰 없음 |
+| 403 | `FORBIDDEN`, `REVIEW_NOT_ALLOWED`, `SELF_REVIEW_NOT_ALLOWED` | 작성자가 아니거나 구매자가 아니거나 본인 상품 리뷰 작성 |
+| 404 | `ITEM_NOT_FOUND`, `CLIENT_NOT_FOUND`, `REVIEW_NOT_FOUND` | 상품, 대상 회원 또는 리뷰 없음 |
+| 409 | `REVIEW_ALREADY_EXISTS` | 동일 상품 중복 리뷰 |
 
 ### 채팅
 
@@ -524,6 +564,9 @@ Authorization: Bearer {accessToken}
 Set-Cookie: refresh_token={jwt}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1209600
 ```
 
+운영 환경은 `Secure` 속성을 `true`로 사용하고, 로컬 환경(`local`)은 HTTP 테스트를 위해 `false`로 사용한다.
+Redis 연동 테스트는 로컬 Redis가 아니라 테스트 프로세스가 띄우는 embedded Redis를 사용한다.
+
 ### 토큰 재발급
 
 `POST /api/auth/refresh`는 `refresh_token` Cookie를 검증하고 새 Access Token은 응답 헤더로, 새 Refresh Token은 `Set-Cookie`로 재발급한다.
@@ -539,7 +582,16 @@ Cookie: refresh_token={jwt}
 
 ### 로그아웃
 
-`POST /api/auth/logout`은 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 Refresh Token 만료 쿠키를 응답한다.
+`POST /api/auth/logout`은 Access Token을 Redis 블랙리스트에 등록하고 Refresh Token 만료 쿠키를 응답한다.
+
+### 정지 계정 토큰 차단
+
+이 PR은 관리자 백오피스의 회원 상태 변경 API를 포함하지 않는다.
+운영·테스트에서 회원 상태를 `SUSPENDED`로 직접 변경하면 로그인과 Refresh Token 재발급은 DB 상태 조회로 차단된다.
+기존 Access Token까지 즉시 차단해야 하면 Redis에 `auth:suspended-client:{clientId}` 회원 PK 차단 마커를 직접 등록한다.
+해당 회원의 기존 Access Token으로 인증 요청이 들어오면 서버는 요청을 `SUSPENDED_ACCOUNT`로 거부하고, 그 토큰의 `jti`를 Redis 블랙리스트에 등록한다.
+회원 PK 마커는 Access Token 만료 시간까지 유지하며, 계정 활성화 시 운영 명령으로 명시적으로 삭제한다.
+Redis 데이터는 TTL 만료 시 자동 삭제된다.
 
 ## 상품 게시글
 

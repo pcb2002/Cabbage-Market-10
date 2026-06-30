@@ -1,13 +1,16 @@
 package com.example.cabbagemarket10.global.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cabbagemarket10.domain.auth.service.TokenBlacklistStore;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
+import com.example.cabbagemarket10.global.security.jwt.JwtClaims;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import java.time.Clock;
 import java.time.Instant;
@@ -53,6 +56,9 @@ class JwtAuthenticationFilterTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
+    private TokenBlacklistStore tokenBlacklistStore;
+
+    @Autowired
     private MutableClock clock;
 
     @Autowired
@@ -60,6 +66,7 @@ class JwtAuthenticationFilterTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("delete from review");
         jdbcTemplate.update("delete from client");
         clock.setInstant(BASE_TIME);
     }
@@ -101,6 +108,16 @@ class JwtAuthenticationFilterTest {
                 .andExpect(jsonPath("$.code").value("ACCESS_TOKEN_INVALID"));
     }
 
+    @DisplayName("Bearer 형식이 아닌 Authorization 헤더는 인증하지 않는다")
+    @Test
+    void Bearer_형식이_아닌_Authorization_헤더는_인증하지_않는다() throws Exception {
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Basic invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
     @DisplayName("만료된 토큰은 인증 실패 공통 오류 응답으로 처리된다")
     @Test
     void 만료된_토큰은_인증_실패_공통_오류_응답으로_처리된다() throws Exception {
@@ -113,6 +130,70 @@ class JwtAuthenticationFilterTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code").value("ACCESS_TOKEN_EXPIRED"));
+    }
+
+    @DisplayName("블랙리스트 토큰은 인증 실패 공통 오류 응답으로 처리된다")
+    @Test
+    void 블랙리스트_토큰은_인증_실패_공통_오류_응답으로_처리된다() throws Exception {
+        Client client = saveClient("blacklisted@example.com");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+        JwtClaims claims = jwtTokenProvider.validateAccessToken(accessToken);
+        tokenBlacklistStore.blacklist(claims.jti(), claims.expiresAt());
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
+    }
+
+    @DisplayName("정지 회원 마커가 있으면 기존 Access Token을 거부하고 토큰을 블랙리스트 처리한다")
+    @Test
+    void 정지_회원_마커가_있으면_기존_Access_Token을_거부하고_토큰을_블랙리스트_처리한다() throws Exception {
+        Client client = saveClient("suspended-token@example.com");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+        JwtClaims claims = jwtTokenProvider.validateAccessToken(accessToken);
+        putSuspendedClientMarker(client.getId(), claims.expiresAt());
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
+
+        assertThat(tokenBlacklistStore.isBlacklisted(claims.jti())).isTrue();
+        assertThat(tokenBlacklistStore.isSuspendedClientMarked(client.getId())).isTrue();
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
+    }
+
+    @DisplayName("정지 회원 마커는 유지되어 같은 회원의 다른 Access Token도 차단한다")
+    @Test
+    void 정지_회원_마커는_유지되어_같은_회원의_다른_Access_Token도_차단한다() throws Exception {
+        Client client = saveClient("multi-token-suspended@example.com");
+        String firstAccessToken = jwtTokenProvider.createAccessToken(client);
+        String secondAccessToken = jwtTokenProvider.createAccessToken(client);
+        JwtClaims firstClaims = jwtTokenProvider.validateAccessToken(firstAccessToken);
+        JwtClaims secondClaims = jwtTokenProvider.validateAccessToken(secondAccessToken);
+        putSuspendedClientMarker(client.getId(), firstClaims.expiresAt());
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + firstAccessToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + secondAccessToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
+
+        assertThat(tokenBlacklistStore.isBlacklisted(firstClaims.jti())).isTrue();
+        assertThat(tokenBlacklistStore.isBlacklisted(secondClaims.jti())).isTrue();
+        assertThat(tokenBlacklistStore.isSuspendedClientMarked(client.getId())).isTrue();
     }
 
     @DisplayName("인증이 필요한 API는 토큰 없이 접근할 수 없다")
@@ -131,6 +212,12 @@ class JwtAuthenticationFilterTest {
                 "배추판매자",
                 "홍길동",
                 "010-1234-5678"));
+    }
+
+    private void putSuspendedClientMarker(Long clientId, Instant expiresAt) {
+        TestTokenBlacklistStoreConfig.InMemoryTokenBlacklistStore store =
+                (TestTokenBlacklistStoreConfig.InMemoryTokenBlacklistStore) tokenBlacklistStore;
+        store.putSuspendedClientMarker(clientId, expiresAt);
     }
 
     @RestController
