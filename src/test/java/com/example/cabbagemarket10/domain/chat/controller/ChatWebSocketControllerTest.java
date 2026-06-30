@@ -35,6 +35,6 @@ class ChatWebSocketControllerTest {
         chatWebSocketController.sendMessage("room-1", request, principal);
 
         verify(chatService).sendMessage("room-1", request, principal);
-        verify(simpMessagingTemplate).convertAndSend("/subroom-1/messages", request);
+        verify(simpMessagingTemplate).convertAndSend("/sub/room-1/messages", request);
     }
 }
