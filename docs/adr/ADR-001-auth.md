@@ -19,7 +19,8 @@ Refresh Token을 클라이언트 저장소에 직접 보관하면 XSS 노출 위
 - **JWT 검증**: `JwtAuthenticationFilter`는 DB 조회 없이 Access Token의 JWT Claim, Redis 블랙리스트, 정지 계정 PK 마커를 검증한다.
 - **Redis 역할**: Redis는 유효 토큰 저장소가 아니라 폐기된 토큰의 블랙리스트와 정지 계정 PK 마커 저장소로만 사용한다.
 - **토큰 폐기**: 로그아웃과 Refresh Token 재발급 시 폐기 대상 토큰의 `jti`를 Redis 블랙리스트에 TTL과 함께 저장한다.
-- **정지 계정 처리**: 관리자에 의해 정지된 계정은 현재 발급된 토큰 `jti`를 서버가 알 수 없으므로 회원 상태를 `SUSPENDED`로 변경한 뒤 회원 PK를 Redis에 임시 저장한다. 해당 계정이 기존 Access Token으로 인증을 시도하면 요청을 거부하고, 그 토큰의 `jti`를 블랙리스트에 등록한 뒤 회원 PK 마커를 삭제한다.
+- **정지 계정 처리**: 관리자에 의해 정지된 계정은 현재 발급된 토큰 `jti`를 서버가 알 수 없으므로 회원 상태를 `SUSPENDED`로 변경한 뒤 회원 PK를 Redis에 임시 저장한다. 
+  해당 계정이 기존 Access Token으로 인증을 시도하면 요청을 거부하고, 그 토큰의 `jti`를 블랙리스트에 등록한다. 회원 PK 마커는 Access Token 만료 시간까지 유지하고, 계정 활성화 시 명시적으로 삭제한다.
 - **CSRF 보호**: Refresh Token을 Cookie로 전달하므로 Spring Security CSRF 보호를 활성화한다.
 
 ## 결과
