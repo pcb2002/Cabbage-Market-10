@@ -18,4 +18,8 @@ public class SuspendedClientTokenService {
         Instant expiresAt = Instant.now(clock).plusSeconds(jwtProperties.accessTokenExpireSeconds());
         tokenBlacklistStore.markSuspendedClient(clientId, expiresAt);
     }
+
+    public void clearSuspendedClient(Long clientId) {
+        tokenBlacklistStore.removeSuspendedClient(clientId);
+    }
 }

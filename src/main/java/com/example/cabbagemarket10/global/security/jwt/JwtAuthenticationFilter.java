@@ -71,7 +71,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         tokenBlacklistStore.blacklist(claims.jti(), claims.expiresAt());
-        tokenBlacklistStore.removeSuspendedClient(claims.clientId());
         throw new BusinessException(ErrorCode.SUSPENDED_ACCOUNT);
     }
 }
