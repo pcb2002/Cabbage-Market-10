@@ -8,9 +8,5 @@ public interface TokenBlacklistStore {
 
     boolean isBlacklisted(String jti);
 
-    void markSuspendedClient(Long clientId, Instant expiresAt);
-
     boolean isSuspendedClientMarked(Long clientId);
-
-    void removeSuspendedClient(Long clientId);
 }

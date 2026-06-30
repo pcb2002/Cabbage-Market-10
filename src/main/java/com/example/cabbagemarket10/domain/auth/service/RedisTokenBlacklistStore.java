@@ -16,7 +16,6 @@ public class RedisTokenBlacklistStore implements TokenBlacklistStore {
     private static final String BLACKLIST_KEY_PREFIX = "auth:blacklist:";
     private static final String SUSPENDED_CLIENT_KEY_PREFIX = "auth:suspended-client:";
     private static final String BLACKLIST_VALUE = "1";
-    private static final String SUSPENDED_CLIENT_VALUE = "1";
 
     private final StringRedisTemplate stringRedisTemplate;
     private final Clock clock;
@@ -37,23 +36,9 @@ public class RedisTokenBlacklistStore implements TokenBlacklistStore {
     }
 
     @Override
-    public void markSuspendedClient(Long clientId, Instant expiresAt) {
-        Duration ttl = Duration.between(Instant.now(clock), expiresAt);
-        if (ttl.isNegative() || ttl.isZero()) {
-            return;
-        }
-        stringRedisTemplate.opsForValue().set(suspendedClientKey(clientId), SUSPENDED_CLIENT_VALUE, ttl);
-    }
-
-    @Override
     public boolean isSuspendedClientMarked(Long clientId) {
         Boolean exists = stringRedisTemplate.hasKey(suspendedClientKey(clientId));
         return Boolean.TRUE.equals(exists);
-    }
-
-    @Override
-    public void removeSuspendedClient(Long clientId) {
-        stringRedisTemplate.delete(suspendedClientKey(clientId));
     }
 
     private String suspendedClientKey(Long clientId) {
