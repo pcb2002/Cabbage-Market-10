@@ -151,13 +151,38 @@ class JwtAuthenticationFilterTest {
                 .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
 
         assertThat(tokenBlacklistStore.isBlacklisted(claims.jti())).isTrue();
-        assertThat(tokenBlacklistStore.isSuspendedClientMarked(client.getId())).isFalse();
+        assertThat(tokenBlacklistStore.isSuspendedClientMarked(client.getId())).isTrue();
 
         mockMvc.perform(get("/api/test/protected")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
+    }
+
+    @DisplayName("정지 회원 마커는 유지되어 같은 회원의 다른 Access Token도 차단한다")
+    @Test
+    void 정지_회원_마커는_유지되어_같은_회원의_다른_Access_Token도_차단한다() throws Exception {
+        Client client = saveClient("multi-token-suspended@example.com");
+        String firstAccessToken = jwtTokenProvider.createAccessToken(client);
+        String secondAccessToken = jwtTokenProvider.createAccessToken(client);
+        JwtClaims firstClaims = jwtTokenProvider.validateAccessToken(firstAccessToken);
+        JwtClaims secondClaims = jwtTokenProvider.validateAccessToken(secondAccessToken);
+        tokenBlacklistStore.markSuspendedClient(client.getId(), firstClaims.expiresAt());
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + firstAccessToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + secondAccessToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
+
+        assertThat(tokenBlacklistStore.isBlacklisted(firstClaims.jti())).isTrue();
+        assertThat(tokenBlacklistStore.isBlacklisted(secondClaims.jti())).isTrue();
+        assertThat(tokenBlacklistStore.isSuspendedClientMarked(client.getId())).isTrue();
     }
 
     @DisplayName("인증이 필요한 API는 토큰 없이 접근할 수 없다")

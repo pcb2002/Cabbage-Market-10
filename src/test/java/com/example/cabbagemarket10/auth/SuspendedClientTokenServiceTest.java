@@ -41,4 +41,14 @@ class SuspendedClientTokenServiceTest {
 
         verify(tokenBlacklistStore).markSuspendedClient(clientId, BASE_TIME.plusSeconds(3600L));
     }
+
+    @DisplayName("정지 해제 시 회원 PK 마커를 삭제한다")
+    @Test
+    void 정지_해제_시_회원_PK_마커를_삭제한다() {
+        Long clientId = 1L;
+
+        suspendedClientTokenService.clearSuspendedClient(clientId);
+
+        verify(tokenBlacklistStore).removeSuspendedClient(clientId);
+    }
 }
