@@ -1,31 +1,55 @@
 package com.example.cabbagemarket10.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cabbagemarket10.domain.auth.service.AuthCookieManager;
 import com.example.cabbagemarket10.domain.client.entity.AccountStatus;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
+import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
+import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
+import jakarta.servlet.http.Cookie;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import({AuthControllerTest.ClockTestConfig.class, AuthControllerTest.TestController.class})
 class AuthControllerTest {
+
+    private static final Instant BASE_TIME = Instant.parse("2026-06-30T00:00:00Z");
 
     @Autowired
     private MockMvc mockMvc;
@@ -37,6 +61,12 @@ class AuthControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private MutableClock clock;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -45,6 +75,7 @@ class AuthControllerTest {
         jdbcTemplate.update("delete from item");
         jdbcTemplate.update("delete from category");
         jdbcTemplate.update("delete from client");
+        clock.setInstant(BASE_TIME);
     }
 
     @DisplayName("회원가입 성공 시 비밀번호와 전화번호를 제외한 회원 정보를 반환한다")
@@ -167,15 +198,20 @@ class AuthControllerTest {
         assertThat(passwordEncoder.matches("password123!", client.getPassword())).isTrue();
     }
 
-    @DisplayName("로그인 성공 시 Access Token을 응답 헤더로 반환한다")
+    @DisplayName("로그인 성공 시 Access Token 헤더와 Refresh Token 쿠키를 반환한다")
     @Test
-    void 로그인_성공_시_Access_Token을_응답_헤더로_반환한다() throws Exception {
+    void 로그인_성공_시_Access_Token_헤더와_Refresh_Token_쿠키를_반환한다() throws Exception {
         clientRepository.save(Client.create(
                 "client@example.com",
                 passwordEncoder.encode("password123!"),
                 "cabbage",
                 "client",
                 "010-1234-5678"));
+
+        MvcResult result = login("client@example.com", "password123!");
+
+        assertThat(result.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME)).isNotNull();
+        assertThat(requireCookie(result, "XSRF-TOKEN")).isNotNull();
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -189,6 +225,124 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(header().string(HttpHeaders.AUTHORIZATION, Matchers.startsWith("Bearer ")))
                 .andExpect(jsonPath("$.data").value(Matchers.nullValue()));
+    }
+
+    @DisplayName("Refresh Token 재발급 성공 시 새 Access Token과 새 Refresh Token을 반환한다")
+    @Test
+    void Refresh_Token_재발급_성공_시_새_Access_Token과_새_Refresh_Token을_반환한다() throws Exception {
+        saveClient("refresh@example.com");
+
+        MvcResult loginResult = login("refresh@example.com", "password123!");
+        Cookie refreshCookie = loginResult.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME);
+        Cookie xsrfCookie = requireCookie(loginResult, "XSRF-TOKEN");
+
+        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshCookie, xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.AUTHORIZATION, Matchers.startsWith("Bearer ")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, Matchers.containsString("refresh_token=")))
+                .andReturn();
+
+        Cookie newRefreshCookie = refreshResult.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME);
+        assertThat(newRefreshCookie).isNotNull();
+        assertThat(newRefreshCookie.getValue()).isNotEqualTo(refreshCookie.getValue());
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshCookie, xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
+    }
+
+    @DisplayName("Refresh Token 쿠키가 없으면 재발급에 실패한다")
+    @Test
+    void Refresh_Token_쿠키가_없으면_재발급에_실패한다() throws Exception {
+        saveClient("missing-refresh@example.com");
+        MvcResult loginResult = login("missing-refresh@example.com", "password123!");
+        Cookie xsrfCookie = requireCookie(loginResult, "XSRF-TOKEN");
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @DisplayName("유효하지 않은 Refresh Token이면 재발급에 실패한다")
+    @Test
+    void 유효하지_않은_Refresh_Token이면_재발급에_실패한다() throws Exception {
+        saveClient("invalid-refresh@example.com");
+        MvcResult loginResult = login("invalid-refresh@example.com", "password123!");
+        Cookie xsrfCookie = requireCookie(loginResult, "XSRF-TOKEN");
+        Cookie invalidRefreshCookie = new Cookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, "invalid-refresh-token");
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(invalidRefreshCookie, xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"));
+    }
+
+    @DisplayName("만료된 Refresh Token이면 재발급에 실패한다")
+    @Test
+    void 만료된_Refresh_Token이면_재발급에_실패한다() throws Exception {
+        Client client = saveClient("expired-refresh@example.com");
+        String refreshToken = jwtTokenProvider.createRefreshToken(client);
+        MvcResult loginResult = login("expired-refresh@example.com", "password123!");
+        Cookie xsrfCookie = requireCookie(loginResult, "XSRF-TOKEN");
+
+        clock.setInstant(BASE_TIME.plusSeconds(1209601));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(new Cookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, refreshToken), xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_EXPIRED"));
+    }
+
+    @DisplayName("로그아웃 성공 시 Access Token과 Refresh Token이 모두 블랙리스트 처리된다")
+    @Test
+    void 로그아웃_성공_시_Access_Token과_Refresh_Token이_모두_블랙리스트_처리된다() throws Exception {
+        saveClient("logout@example.com");
+
+        MvcResult loginResult = login("logout@example.com", "password123!");
+        String authorizationHeader = loginResult.getResponse().getHeader(HttpHeaders.AUTHORIZATION);
+        Cookie refreshCookie = loginResult.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME);
+        Cookie xsrfCookie = requireCookie(loginResult, "XSRF-TOKEN");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .header(HttpHeaders.AUTHORIZATION, authorizationHeader)
+                        .cookie(refreshCookie, xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, Matchers.containsString("Max-Age=0")));
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header(HttpHeaders.AUTHORIZATION, authorizationHeader))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .cookie(refreshCookie, xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
+    }
+
+    @DisplayName("비인증 로그아웃 요청은 401을 반환한다")
+    @Test
+    void 비인증_로그아웃_요청은_401을_반환한다() throws Exception {
+        saveClient("unauthorized-logout@example.com");
+        MvcResult loginResult = login("unauthorized-logout@example.com", "password123!");
+        Cookie refreshCookie = loginResult.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME);
+        Cookie xsrfCookie = requireCookie(loginResult, "XSRF-TOKEN");
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .cookie(refreshCookie, xsrfCookie)
+                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @DisplayName("로그인 실패 시 공통 오류 응답을 반환한다")
@@ -261,5 +415,84 @@ class AuthControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.code").value("SUSPENDED_ACCOUNT"));
+    }
+
+    private Client saveClient(String email) {
+        return clientRepository.save(Client.create(
+                email,
+                passwordEncoder.encode("password123!"),
+                "cabbage",
+                "client",
+                "010-1234-5678"));
+    }
+
+    private MvcResult login(String email, String password) throws Exception {
+        return mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "%s",
+                                  "password": "%s"
+                                }
+                                """.formatted(email, password)))
+                .andExpect(status().isOk())
+                .andReturn();
+    }
+
+    private Cookie requireCookie(MvcResult result, String name) {
+        Cookie cookie = result.getResponse().getCookie(name);
+        assertThat(cookie).isNotNull();
+        return cookie;
+    }
+
+    @RestController
+    @RequestMapping("/api/test")
+    static class TestController {
+
+        @GetMapping("/protected")
+        ResponseEntity<CommonResponse<AuthenticatedClient>> protectedApi(
+                @AuthenticationPrincipal AuthenticatedClient client) {
+            return CommonResponse.success(HttpStatus.OK, client).toResponseEntity();
+        }
+    }
+
+    @TestConfiguration
+    static class ClockTestConfig {
+
+        @Bean
+        @Primary
+        MutableClock testClock() {
+            return new MutableClock(BASE_TIME, ZoneOffset.UTC);
+        }
+    }
+
+    static class MutableClock extends Clock {
+
+        private Instant instant;
+        private final ZoneId zone;
+
+        MutableClock(Instant instant, ZoneId zone) {
+            this.instant = instant;
+            this.zone = zone;
+        }
+
+        void setInstant(Instant instant) {
+            this.instant = instant;
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return zone;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return new MutableClock(instant, zone);
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
     }
 }

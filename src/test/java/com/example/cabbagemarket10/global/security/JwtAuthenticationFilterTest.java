@@ -4,10 +4,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.cabbagemarket10.domain.auth.service.TokenBlacklistStore;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
+import com.example.cabbagemarket10.global.security.jwt.JwtClaims;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import java.time.Clock;
 import java.time.Instant;
@@ -51,6 +53,9 @@ class JwtAuthenticationFilterTest {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private TokenBlacklistStore tokenBlacklistStore;
 
     @Autowired
     private MutableClock clock;
@@ -113,6 +118,21 @@ class JwtAuthenticationFilterTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code").value("ACCESS_TOKEN_EXPIRED"));
+    }
+
+    @DisplayName("블랙리스트 토큰은 인증 실패 공통 오류 응답으로 처리된다")
+    @Test
+    void 블랙리스트_토큰은_인증_실패_공통_오류_응답으로_처리된다() throws Exception {
+        Client client = saveClient("blacklisted@example.com");
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+        JwtClaims claims = jwtTokenProvider.validateAccessToken(accessToken);
+        tokenBlacklistStore.blacklist(claims.jti(), claims.expiresAt());
+
+        mockMvc.perform(get("/api/test/protected")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
     }
 
     @DisplayName("인증이 필요한 API는 토큰 없이 접근할 수 없다")
