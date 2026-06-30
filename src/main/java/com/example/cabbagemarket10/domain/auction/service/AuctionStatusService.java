@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.auction.service;
 
 import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
 import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
+import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -50,6 +51,16 @@ public class AuctionStatusService {
                                 createAuctionStatus(item, initialPrice, closeDate);
                             }
                         });
+    }
+
+    public Client getCurrentBidder(Long itemId) {
+        AuctionStatus auctionStatus = auctionStatusRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED));
+        Client currentBidder = auctionStatus.getCurrentBidder();
+        if (currentBidder == null) {
+            throw new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED);
+        }
+        return currentBidder;
     }
 
     public void deleteByItemId(Long itemId) {

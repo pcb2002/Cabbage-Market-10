@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.review.entity;
 
 import com.example.cabbagemarket10.common.entity.BaseEntity;
 import com.example.cabbagemarket10.domain.client.entity.Client;
+import com.example.cabbagemarket10.domain.item.entity.Item;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -11,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,7 +23,13 @@ import org.hibernate.annotations.SQLRestriction;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "review")
+@Table(
+        name = "review",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_review_item_reviewer",
+                columnNames = {"item_id", "reviewer_id"}
+        )
+)
 @SQLDelete(sql = "UPDATE review SET is_deleted = true WHERE id = ?")
 @SQLRestriction("is_deleted = false")
 public class Review extends BaseEntity {
@@ -29,6 +37,10 @@ public class Review extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "item_id", nullable = false)
+    private Item item;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewer_id", nullable = false)
@@ -48,7 +60,8 @@ public class Review extends BaseEntity {
     private boolean isDeleted;
 
     @Builder
-    public Review(Client reviewer, Client reviewee, Integer rating, String content, boolean isDeleted) {
+    public Review(Item item, Client reviewer, Client reviewee, Integer rating, String content, boolean isDeleted) {
+        this.item = item;
         this.reviewer = reviewer;
         this.reviewee = reviewee;
         this.rating = rating;

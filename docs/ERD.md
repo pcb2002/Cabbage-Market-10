@@ -27,6 +27,7 @@ erDiagram
 
     client ||--o{ review : writes
     client ||--o{ review : receives
+    item ||--o{ review : reviewed_by
 
     item |o--|| auctionStatus : open
     client ||--o{ auctionStatus : current_high_bidder
@@ -144,6 +145,7 @@ erDiagram
 
     review["REVIEW"] {
         bigint id PK
+        bigint item_id FK
         bigint reviewer_id FK
         bigint reviewee_id FK
         int rating
