@@ -95,16 +95,15 @@ public class ItemService {
     }
 
     @Transactional
-    public ItemStatusUpdateResponse updateItemStatus(Long itemId, Long clientId, ItemStatusUpdateRequest request) {
-        Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
-        item.verifySeller(clientId);
+    public ItemStatusUpdateResponse updateItemStatus(Item item, TradeStatus tradeStatus, Client client) {
+        item.verifySeller(item.getSeller().getId());
         item.validateStatusUpdatable();
 
-        item.updateStatus(request.tradeStatus());
+        item.updateStatus(tradeStatus, client);
         itemRepository.flush();
 
-        return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), item.getUpdatedAt());
+        Long buyerId = item.getBuyer() == null ? null : item.getBuyer().getId();
+        return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), buyerId, item.getUpdatedAt());
     }
 
     public void flush() {

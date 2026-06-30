@@ -1,6 +1,7 @@
 package com.example.cabbagemarket10.application.facade;
 
 import com.example.cabbagemarket10.domain.auction.service.AuctionStatusService;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
@@ -23,7 +24,7 @@ public class AuctionFacade {
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
 
-    public void bidItem(Long itemId, Long clientId, Long bidPrice) {
+    public ItemBidResponse bidItem(Long itemId, Long clientId, Long bidPrice) {
         RLock lock = redissonClient.getLock(BID_LOCK_KEY_PREFIX + itemId);
         boolean locked = false;
         try {
@@ -33,7 +34,7 @@ public class AuctionFacade {
             }
 
             Item item = itemService.getItem(itemId);
-            auctionStatusService.bid(itemId, clientId, item.getSeller().getId(), bidPrice);
+            return auctionStatusService.bid(itemId, clientId, item.getSeller().getId(), bidPrice);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
