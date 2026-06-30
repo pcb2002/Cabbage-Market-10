@@ -4,8 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 
 public record ChatMessageDto(
         long roomId,
-        long senderId,
         @NotBlank
-        String Content
+        String content
 ) {
 }
