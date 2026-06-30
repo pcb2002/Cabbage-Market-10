@@ -10,4 +10,8 @@ public record AuthenticatedClient(
     public String getName() {
         return this.email;  // TODO: This is temporary and should be refactored
     }
+
+    public static long fromPrincipal(Principal principal) {
+        return ((AuthenticatedClient) principal) .clientId();
+    }
 }
