@@ -514,6 +514,9 @@ Authorization: Bearer {accessToken}
 Set-Cookie: refresh_token={jwt}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1209600
 ```
 
+운영 환경은 `Secure` 속성을 `true`로 사용하고, 로컬 환경(`local`)은 HTTP 테스트를 위해 `false`로 사용한다.
+Redis 연동 테스트는 로컬 Redis가 아니라 테스트 프로세스가 띄우는 embedded Redis를 사용한다.
+
 ### 토큰 재발급
 
 `POST /api/auth/refresh`는 `refresh_token` Cookie를 검증하고 새 Access Token은 응답 헤더로, 새 Refresh Token은 `Set-Cookie`로 재발급한다.

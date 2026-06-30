@@ -11,15 +11,17 @@ public class AuthCookieManager {
     public static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
 
     private final JwtProperties jwtProperties;
+    private final CookieProperties cookieProperties;
 
-    public AuthCookieManager(JwtProperties jwtProperties) {
+    public AuthCookieManager(JwtProperties jwtProperties, CookieProperties cookieProperties) {
         this.jwtProperties = jwtProperties;
+        this.cookieProperties = cookieProperties;
     }
 
     public ResponseCookie createRefreshTokenCookie(String refreshToken) {
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, refreshToken)
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieProperties.secure())
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(Duration.ofSeconds(jwtProperties.refreshTokenExpireSeconds()))
@@ -29,7 +31,7 @@ public class AuthCookieManager {
     public ResponseCookie expireRefreshTokenCookie() {
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieProperties.secure())
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(Duration.ZERO)

@@ -1,5 +1,6 @@
 package com.example.cabbagemarket10.global.security.config;
 
+import com.example.cabbagemarket10.domain.auth.service.CookieProperties;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.CsrfCookieResponseFilter;
 import com.example.cabbagemarket10.global.security.SecurityErrorResponseWriter;
@@ -25,12 +26,16 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @RequiredArgsConstructor
-@EnableConfigurationProperties(com.example.cabbagemarket10.global.security.jwt.JwtProperties.class)
+@EnableConfigurationProperties({
+        com.example.cabbagemarket10.global.security.jwt.JwtProperties.class,
+        CookieProperties.class
+})
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CsrfCookieResponseFilter csrfCookieResponseFilter;
     private final SecurityErrorResponseWriter securityErrorResponseWriter;
+    private final CookieProperties cookieProperties;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -65,7 +70,7 @@ public class SecurityConfig {
     public CookieCsrfTokenRepository cookieCsrfTokenRepository() {
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookieCustomizer(builder -> builder
-                .secure(false)
+                .secure(cookieProperties.secure())
                 .sameSite("Lax")
                 .path("/"));
         return repository;

@@ -9,11 +9,13 @@
 - 인증 방식은 Access Token Stateless JWT와 Refresh Token Cookie 인증을 사용한다.
 - Access Token은 응답 헤더로 전달하고 API 요청마다 `Authorization: Bearer` 헤더로 전달한다.
 - Refresh Token은 `HttpOnly`, `Secure`, `SameSite=Lax` Cookie로만 전달한다.
+- Refresh Token Cookie의 `Secure` 속성은 운영 환경에서 `true`, 로컬 환경(`local`)에서 `false`로 설정한다.
 - API 인증은 Access Token으로 처리한다.
 - 토큰 재발급은 `refresh_token` Cookie의 Refresh Token으로 처리한다.
 - JWT에는 `jti`를 포함하고, 로그아웃·강제 만료 토큰의 `jti`는 Redis 블랙리스트에 저장한다.
 - 로그아웃 시 Access Token과 Refresh Token을 Redis 블랙리스트에 등록하고 만료 쿠키를 내려준다.
 - Refresh Token Cookie를 사용하는 요청은 `XSRF-TOKEN` Cookie와 `X-XSRF-TOKEN` Header로 CSRF를 검증한다.
+- Redis 블랙리스트 통합 테스트는 로컬 공유 Redis가 아니라 embedded Redis로 격리한다.
 
 ## 권한
 

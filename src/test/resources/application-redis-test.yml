@@ -16,13 +16,12 @@ spring:
   sql:
     init:
       mode: never
-  data:
-    redis:
-      host: ${LOCAL_REDIS_HOST:127.0.0.1}
-      port: ${LOCAL_REDIS_PORT:6379}
-      password: ${LOCAL_REDIS_PASSWORD:cabbage-local-redis}
 
 jwt:
   secret: test-secret-key-for-cabbage-market-authentication
   access-token-expire-seconds: 3600
   refresh-token-expire-seconds: 1209600
+
+auth:
+  cookie:
+    secure: false

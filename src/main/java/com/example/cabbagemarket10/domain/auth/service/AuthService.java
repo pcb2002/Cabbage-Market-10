@@ -50,7 +50,7 @@ public class AuthService {
         return issueTokens(client);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public LoginResponse refresh(String refreshToken) {
         JwtClaims refreshClaims = jwtTokenProvider.validateRefreshToken(refreshToken);
         validateNotBlacklisted(refreshClaims.jti());
