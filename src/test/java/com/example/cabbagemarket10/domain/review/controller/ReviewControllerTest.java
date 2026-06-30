@@ -209,6 +209,47 @@ class ReviewControllerTest {
                 .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
     }
 
+    @DisplayName("평점이 1점 미만이면 리뷰 생성 시 400을 반환한다")
+    @Test
+    void 평점이_1점_미만이면_리뷰_생성_시_400을_반환한다() throws Exception {
+        Client buyer = saveClient("rating-buyer@example.com", "평점구매자", "박구매");
+        String accessToken = jwtTokenProvider.createAccessToken(buyer);
+
+        mockMvc.perform(post("/api/items/{itemId}/reviews", 9999L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rating": 0,
+                                  "content": "좋은 거래였습니다."
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @DisplayName("리뷰 내용이 500자를 초과하면 리뷰 생성 시 400을 반환한다")
+    @Test
+    void 리뷰_내용이_500자를_초과하면_리뷰_생성_시_400을_반환한다() throws Exception {
+        Client buyer = saveClient("content-buyer@example.com", "내용구매자", "박구매");
+        String accessToken = jwtTokenProvider.createAccessToken(buyer);
+        String content = "a".repeat(501);
+
+        mockMvc.perform(post("/api/items/{itemId}/reviews", 9999L)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rating": 5,
+                                  "content": "%s"
+                                }
+                                """.formatted(content)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
     private Client saveClient(String email, String nickname, String name) {
         return clientRepository.save(Client.create(
                 email,

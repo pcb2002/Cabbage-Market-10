@@ -910,6 +910,94 @@ class ItemControllerTest {
         assertThat(notUpdatedItem.getBuyer()).isNull();
     }
 
+    @DisplayName("직거래 상품을 판매완료로 변경할 때 판매자를 구매자로 지정하면 400을 반환한다")
+    @Test
+    void 직거래_상품을_판매완료로_변경할_때_판매자를_구매자로_지정하면_400을_반환한다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "direct-status-self-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "directSelfSeller",
+                "directSelfSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("direct-status-self-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("direct status self item")
+                .description("direct status self description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tradeStatus": "SOLD_OUT",
+                                  "buyerId": %d
+                                }
+                                """.formatted(seller.getId())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"));
+
+        Item notUpdatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notUpdatedItem.getTradeStatus()).isEqualTo(TradeStatus.ON_SALE);
+        assertThat(notUpdatedItem.getBuyer()).isNull();
+    }
+
+    @DisplayName("직거래 상품을 판매완료로 변경할 때 구매자가 존재하지 않으면 404를 반환한다")
+    @Test
+    void 직거래_상품을_판매완료로_변경할_때_구매자가_존재하지_않으면_404를_반환한다() throws Exception {
+        Client seller = clientRepository.save(Client.create(
+                "direct-status-not-found-seller@example.com",
+                passwordEncoder.encode("password123!"),
+                "directNotFoundSeller",
+                "directNotFoundSeller",
+                "010-1234-5678"));
+        Category category = categoryRepository.save(Category.builder()
+                .name("direct-status-not-found-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item item = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("direct status not found item")
+                .description("direct status not found description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+
+        mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
+                        .with(authentication(authenticationOf(seller)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tradeStatus": "SOLD_OUT",
+                                  "buyerId": 999999
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("CLIENT_NOT_FOUND"));
+
+        Item notUpdatedItem = itemRepository.findById(item.getId()).orElseThrow();
+        assertThat(notUpdatedItem.getTradeStatus()).isEqualTo(TradeStatus.ON_SALE);
+        assertThat(notUpdatedItem.getBuyer()).isNull();
+    }
+
     @DisplayName("상품 판매자가 아니면 판매 상태를 변경할 수 없다")
     @Test
     void 상품_판매자가_아니면_판매_상태를_변경할_수_없다() throws Exception {
