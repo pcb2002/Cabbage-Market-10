@@ -20,8 +20,6 @@ erDiagram
 
     client ||--o{ chatRoom : creates
     item ||--o{ chatRoom : discussed_in
-    chatRoom ||--|{ chatMember : has
-    client ||--o{ chatMember : joins
     chatRoom ||--o{ chatMessage : contains
     client ||--o{ chatMessage : sends
 
@@ -120,14 +118,6 @@ erDiagram
         datetime last_message_at
         datetime created_at
         datetime updated_at
-    }
-
-    chatMember["CHAT_MEMBER"] {
-        varchar chat_room_id PK, FK
-        bigint client_id PK, FK
-        bigint last_read_message_id FK
-        datetime joined_at
-        datetime left_at
     }
 
     chatMessage["CHAT_MESSAGE"] {
