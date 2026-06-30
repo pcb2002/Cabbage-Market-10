@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/api/clients/\\d+$", "GET")).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/clients/{clientId}/reviews").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/items/search").permitAll()
                         .requestMatchers("/ws/chat","/ws/chat/**").permitAll()
                         .anyRequest().authenticated())
                 .addFilterAfter(csrfCookieResponseFilter, CsrfFilter.class)
