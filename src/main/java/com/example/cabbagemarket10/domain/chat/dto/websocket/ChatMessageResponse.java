@@ -13,7 +13,7 @@ public record ChatMessageResponse(
         LocalDateTime createdAt
 ) {
 
-    public static ChatMessageResponse from (ChatMessage message) {
+    public static ChatMessageResponse from(ChatMessage message) {
         Client sender = message.getSender();
         return new ChatMessageResponse(
                 message.getId(),
