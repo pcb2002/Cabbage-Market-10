@@ -13,8 +13,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RedisTokenBlacklistStore implements TokenBlacklistStore {
 
-    private static final String KEY_PREFIX = "auth:blacklist:";
+    private static final String BLACKLIST_KEY_PREFIX = "auth:blacklist:";
+    private static final String SUSPENDED_CLIENT_KEY_PREFIX = "auth:suspended-client:";
     private static final String BLACKLIST_VALUE = "1";
+    private static final String SUSPENDED_CLIENT_VALUE = "1";
 
     private final StringRedisTemplate stringRedisTemplate;
     private final Clock clock;
@@ -25,12 +27,36 @@ public class RedisTokenBlacklistStore implements TokenBlacklistStore {
         if (ttl.isNegative() || ttl.isZero()) {
             return;
         }
-        stringRedisTemplate.opsForValue().set(KEY_PREFIX + jti, BLACKLIST_VALUE, ttl);
+        stringRedisTemplate.opsForValue().set(BLACKLIST_KEY_PREFIX + jti, BLACKLIST_VALUE, ttl);
     }
 
     @Override
     public boolean isBlacklisted(String jti) {
-        Boolean exists = stringRedisTemplate.hasKey(KEY_PREFIX + jti);
+        Boolean exists = stringRedisTemplate.hasKey(BLACKLIST_KEY_PREFIX + jti);
         return Boolean.TRUE.equals(exists);
+    }
+
+    @Override
+    public void markSuspendedClient(Long clientId, Instant expiresAt) {
+        Duration ttl = Duration.between(Instant.now(clock), expiresAt);
+        if (ttl.isNegative() || ttl.isZero()) {
+            return;
+        }
+        stringRedisTemplate.opsForValue().set(suspendedClientKey(clientId), SUSPENDED_CLIENT_VALUE, ttl);
+    }
+
+    @Override
+    public boolean isSuspendedClientMarked(Long clientId) {
+        Boolean exists = stringRedisTemplate.hasKey(suspendedClientKey(clientId));
+        return Boolean.TRUE.equals(exists);
+    }
+
+    @Override
+    public void removeSuspendedClient(Long clientId) {
+        stringRedisTemplate.delete(suspendedClientKey(clientId));
+    }
+
+    private String suspendedClientKey(Long clientId) {
+        return SUSPENDED_CLIENT_KEY_PREFIX + clientId;
     }
 }

@@ -1,7 +1,7 @@
 package com.example.cabbagemarket10.global.security.jwt;
 
-import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.domain.auth.service.TokenBlacklistStore;
+import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.SecurityErrorResponseWriter;
 import jakarta.servlet.FilterChain;
@@ -45,6 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             JwtClaims claims = jwtTokenProvider.validateAccessToken(
                     authorizationHeader.substring(BEARER_PREFIX.length()));
             validateNotBlacklisted(claims.jti());
+            validateNotSuspendedClient(claims);
             AuthenticatedClient principal = new AuthenticatedClient(claims.clientId(), claims.email());
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
@@ -63,5 +64,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (tokenBlacklistStore.isBlacklisted(jti)) {
             throw new BusinessException(ErrorCode.BLACKLISTED_TOKEN);
         }
+    }
+
+    private void validateNotSuspendedClient(JwtClaims claims) {
+        if (!tokenBlacklistStore.isSuspendedClientMarked(claims.clientId())) {
+            return;
+        }
+        tokenBlacklistStore.blacklist(claims.jti(), claims.expiresAt());
+        tokenBlacklistStore.removeSuspendedClient(claims.clientId());
+        throw new BusinessException(ErrorCode.SUSPENDED_ACCOUNT);
     }
 }
