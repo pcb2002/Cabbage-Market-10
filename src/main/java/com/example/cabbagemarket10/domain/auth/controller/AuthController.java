@@ -1,11 +1,11 @@
 package com.example.cabbagemarket10.domain.auth.controller;
 
+import com.example.cabbagemarket10.application.facade.AuthFacade;
 import com.example.cabbagemarket10.domain.auth.dto.request.LoginRequest;
 import com.example.cabbagemarket10.domain.auth.dto.request.SignupRequest;
 import com.example.cabbagemarket10.domain.auth.dto.response.LoginResponse;
 import com.example.cabbagemarket10.domain.auth.dto.response.SignupResponse;
 import com.example.cabbagemarket10.domain.auth.service.AuthCookieManager;
-import com.example.cabbagemarket10.domain.auth.service.AuthService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -29,20 +29,20 @@ public class AuthController {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private final AuthService authService;
+    private final AuthFacade authFacade;
     private final AuthCookieManager authCookieManager;
 
     @PostMapping("/signup")
     public ResponseEntity<CommonResponse<SignupResponse>> signup(
             @Valid @RequestBody SignupRequest request) {
-        return CommonResponse.success(HttpStatus.CREATED, authService.signup(request))
+        return CommonResponse.success(HttpStatus.CREATED, authFacade.signup(request))
                 .toResponseEntity();
     }
 
     @PostMapping("/login")
     public ResponseEntity<CommonResponse<Void>> login(
             @Valid @RequestBody LoginRequest request) {
-        LoginResponse tokens = authService.login(request);
+        LoginResponse tokens = authFacade.login(request);
         HttpHeaders headers = authCookieManager.createRefreshTokenHeaders(tokens.refreshToken());
         headers.add(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + tokens.accessToken());
         return CommonResponse.success(HttpStatus.OK)
@@ -52,7 +52,7 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<CommonResponse<Void>> refresh(
             @CookieValue(name = AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
-        LoginResponse tokens = authService.refresh(authCookieManager.requireRefreshToken(refreshToken));
+        LoginResponse tokens = authFacade.refresh(authCookieManager.requireRefreshToken(refreshToken));
         HttpHeaders headers = authCookieManager.createRefreshTokenHeaders(tokens.refreshToken());
         headers.add(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + tokens.accessToken());
         return CommonResponse.success(HttpStatus.OK)
@@ -63,7 +63,7 @@ public class AuthController {
     public ResponseEntity<CommonResponse<Void>> logout(
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
             @CookieValue(name = AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
-        authService.logout(extractAccessToken(authorizationHeader), refreshToken);
+        authFacade.logout(extractAccessToken(authorizationHeader), refreshToken);
         return CommonResponse.success(HttpStatus.OK)
                 .toResponseEntity(authCookieManager.createExpiredRefreshTokenHeaders());
     }
