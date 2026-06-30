@@ -27,7 +27,7 @@ public class ChatWebSocketController {
     ) {
 
         chatService.sendMessage(roomId, chatMessageDto, principal);
-        simpMessagingTemplate.convertAndSend("/sub" + roomId + "/messages", chatMessageDto);
+        simpMessagingTemplate.convertAndSend("/sub/" + roomId + "/messages", chatMessageDto);
     }
 
 }
