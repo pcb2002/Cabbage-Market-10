@@ -57,4 +57,15 @@ public class ChatService {
         chatMessageRepository.save(chatMessage);
     }
 
+    public void deleteMessage(Long messageId, Long clientId) {
+        ChatMessage chatMessage = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
+
+        if(chatMessage.isNotPublisher(clientId)) {
+            throw new BusinessException(ErrorCode.CHAT_MESSAGE_NOT_PUBLISHER);
+        }
+
+        chatMessageRepository.delete(chatMessage);
+    }
+
 }
