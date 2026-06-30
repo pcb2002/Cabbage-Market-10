@@ -8,9 +8,7 @@ import com.example.cabbagemarket10.domain.auth.service.AuthService;
 import com.example.cabbagemarket10.domain.auth.service.BlackListService;
 import com.example.cabbagemarket10.domain.auth.service.TokenService;
 import com.example.cabbagemarket10.domain.client.entity.Client;
-import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.security.jwt.JwtClaims;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,24 +35,12 @@ public class AuthFacade {
     @Transactional
     public LoginResponse refresh(String refreshToken) {
         JwtClaims claims = tokenService.validateRefreshToken(refreshToken);
-        blackListService.validateAndBlacklist(claims.jti(), claims.expiresAt());
         Client client = authService.getActiveClient(claims.clientId());
         return tokenService.issueTokens(client);
     }
 
     @Transactional
-    public void logout(String accessToken, String refreshToken) {
+    public void logout(String accessToken) {
         blackListService.blacklistAccessToken(accessToken);
-        Optional.ofNullable(refreshToken)
-                .filter(token -> !token.isBlank())
-                .ifPresent(this::tryBlacklistRefreshToken);
-    }
-
-    private void tryBlacklistRefreshToken(String refreshToken) {
-        try {
-            JwtClaims refreshClaims = tokenService.validateRefreshToken(refreshToken);
-            blackListService.validateAndBlacklist(refreshClaims.jti(), refreshClaims.expiresAt());
-        } catch (BusinessException ignored) {
-        }
     }
 }

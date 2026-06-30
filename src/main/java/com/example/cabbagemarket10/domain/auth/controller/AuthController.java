@@ -7,14 +7,12 @@ import com.example.cabbagemarket10.domain.auth.dto.response.LoginResponse;
 import com.example.cabbagemarket10.domain.auth.dto.response.SignupResponse;
 import com.example.cabbagemarket10.domain.auth.service.AuthCookieManager;
 import com.example.cabbagemarket10.global.common.CommonResponse;
-import com.example.cabbagemarket10.global.exception.BusinessException;
-import com.example.cabbagemarket10.global.exception.ErrorCode;
+import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,6 +29,7 @@ public class AuthController {
 
     private final AuthFacade authFacade;
     private final AuthCookieManager authCookieManager;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/signup")
     public ResponseEntity<CommonResponse<SignupResponse>> signup(
@@ -61,25 +60,10 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<CommonResponse<Void>> logout(
-            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
-            @CookieValue(name = AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
-        authFacade.logout(extractAccessToken(authorizationHeader), refreshToken);
+            @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
+        authFacade.logout(jwtTokenProvider.extractAccessTokenFromHeader(authorizationHeader));
         return CommonResponse.success(HttpStatus.OK)
                 .toResponseEntity(authCookieManager.createExpiredRefreshTokenHeaders());
     }
 
-    private String extractAccessToken(String authorizationHeader) {
-        if (!StringUtils.hasText(authorizationHeader)) {
-            throw new BusinessException(ErrorCode.ACCESS_TOKEN_MISSING);
-        }
-        if (!authorizationHeader.startsWith(BEARER_PREFIX)) {
-            throw new BusinessException(ErrorCode.ACCESS_TOKEN_INVALID);
-        }
-
-        String accessToken = authorizationHeader.substring(BEARER_PREFIX.length());
-        if (!StringUtils.hasText(accessToken)) {
-            throw new BusinessException(ErrorCode.ACCESS_TOKEN_INVALID);
-        }
-        return accessToken;
-    }
 }

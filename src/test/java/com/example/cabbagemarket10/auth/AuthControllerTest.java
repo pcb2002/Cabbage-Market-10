@@ -242,12 +242,6 @@ class AuthControllerTest {
         Cookie newRefreshCookie = refreshResult.getResponse().getCookie(AuthCookieManager.REFRESH_TOKEN_COOKIE_NAME);
         assertThat(newRefreshCookie).isNotNull();
         assertThat(newRefreshCookie.getValue()).isNotEqualTo(refreshCookie.getValue());
-
-        mockMvc.perform(post("/api/auth/refresh")
-                        .cookie(refreshCookie, xsrfCookie)
-                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
     }
 
     @DisplayName("Refresh Token 쿠키가 없으면 재발급에 실패한다")
@@ -296,9 +290,9 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_EXPIRED"));
     }
 
-    @DisplayName("로그아웃 성공 시 Access Token과 Refresh Token이 모두 블랙리스트 처리된다")
+    @DisplayName("로그아웃 성공 시 Access Token은 블랙리스트 처리되고 Refresh Token 쿠키는 만료된다")
     @Test
-    void 로그아웃_성공_시_Access_Token과_Refresh_Token이_모두_블랙리스트_처리된다() throws Exception {
+    void 로그아웃_성공_시_Access_Token은_블랙리스트_처리되고_Refresh_Token_쿠키는_만료된다() throws Exception {
         saveClient("logout@example.com");
 
         MvcResult loginResult = login("logout@example.com", "password123!");
@@ -315,12 +309,6 @@ class AuthControllerTest {
 
         mockMvc.perform(get("/api/test/protected")
                         .header(HttpHeaders.AUTHORIZATION, authorizationHeader))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
-
-        mockMvc.perform(post("/api/auth/refresh")
-                        .cookie(refreshCookie, xsrfCookie)
-                        .header("X-XSRF-TOKEN", xsrfCookie.getValue()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("BLACKLISTED_TOKEN"));
     }

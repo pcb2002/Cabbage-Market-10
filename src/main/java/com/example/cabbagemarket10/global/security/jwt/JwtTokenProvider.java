@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtTokenProvider {
 
+    private static final String BEARER_PREFIX = "Bearer ";
     private static final String ROLE_CLIENT = "ROLE_CLIENT";
     private static final String EMAIL_CLAIM = "email";
     private static final String ROLE_CLAIM = "role";
@@ -42,6 +43,20 @@ public class JwtTokenProvider {
 
     public String createRefreshToken(Client client) {
         return createToken(client, REFRESH_TOKEN_TYPE, jwtProperties.refreshTokenExpireSeconds());
+    }
+
+    public String extractAccessTokenFromHeader(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            throw new BusinessException(ErrorCode.ACCESS_TOKEN_MISSING);
+        }
+        if (!authorizationHeader.startsWith(BEARER_PREFIX)) {
+            throw new BusinessException(ErrorCode.ACCESS_TOKEN_INVALID);
+        }
+        String token = authorizationHeader.substring(BEARER_PREFIX.length());
+        if (token.isBlank()) {
+            throw new BusinessException(ErrorCode.ACCESS_TOKEN_INVALID);
+        }
+        return token;
     }
 
     public JwtClaims validateAccessToken(String token) {
