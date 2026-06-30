@@ -10,10 +10,10 @@
 |---|---|---|
 | 이미지 저장소(로컬/S3)와 업로드 API 분리 여부 | Proposed | 상품 이미지 업로드 |
 | 인기 검색어 집계 저장소(Redis 여부) | Proposed | 인기 검색어 조회 |
-| 경매 입찰 동시성 제어 방식 | Proposed | 입찰 |
 
 ## 확정된 결정
 
 | ADR | 내용 |
 |---|---|
 | [docs/adr/ADR-001-auth.md](ADR-001-auth.md) | Access Token Stateless JWT와 Refresh Token Cookie 인증 |
+| [docs/adr/ADR-002-auction-bid-concurrency.md](ADR-002-auction-bid-concurrency.md) | 경매 입찰 동시성 제어는 Redis 기반 Redisson 분산 락 사용 |
