@@ -41,6 +41,7 @@ class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("delete from review");
         jdbcTemplate.update("delete from auction_status");
         jdbcTemplate.update("delete from item");
         jdbcTemplate.update("delete from category");
