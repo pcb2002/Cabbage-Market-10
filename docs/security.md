@@ -14,6 +14,9 @@
 - 토큰 재발급은 `refresh_token` Cookie의 Refresh Token으로 처리한다.
 - JWT에는 `jti`를 포함하고, 로그아웃·강제 만료 토큰의 `jti`는 Redis 블랙리스트에 저장한다.
 - 로그아웃 시 Access Token과 Refresh Token을 Redis 블랙리스트에 등록하고 만료 쿠키를 내려준다.
+- 관리자에 의해 정지된 계정은 현재 발급된 토큰 `jti`를 서버가 알 수 없으므로 회원 상태를 `SUSPENDED`로 변경한 뒤 Redis에 회원 PK를 임시 차단 마커로 저장한다.
+- 정지 계정의 기존 Access Token으로 인증을 시도하면 서버는 회원 PK 마커를 확인해 접근을 거부하고, 해당 토큰의 `jti`를 Redis 블랙리스트에 등록한 뒤 회원 PK 마커를 삭제한다.
+- 블랙리스트 토큰과 정지 계정 PK 마커는 TTL을 설정해 Redis가 만료 후 자동 삭제한다.
 - Refresh Token Cookie를 사용하는 요청은 `XSRF-TOKEN` Cookie와 `X-XSRF-TOKEN` Header로 CSRF를 검증한다.
 - Redis 블랙리스트 통합 테스트는 로컬 공유 Redis가 아니라 embedded Redis로 격리한다.
 

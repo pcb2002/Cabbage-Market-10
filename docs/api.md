@@ -208,6 +208,9 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 - 인증 API는 `Authorization: Bearer {accessToken}` 헤더를 사용한다.
 - 토큰 재발급은 `refresh_token` Cookie를 사용하며 요청 본문에 Refresh Token을 받지 않는다.
 - 로그아웃 성공 시 서버는 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 만료 쿠키를 응답한다.
+- 정지 계정은 로그인과 토큰 재발급이 차단된다.
+- 정지 계정의 기존 Access Token으로 인증을 시도하면 서버는 회원 PK 기반 차단 마커를 확인해 요청을 거부하고, 해당 토큰의 `jti`를 Redis 블랙리스트에 등록한 뒤 회원 PK 마커를 삭제한다.
+- Redis의 블랙리스트 토큰과 회원 PK 차단 마커는 TTL 만료 시 자동 삭제된다.
 - Refresh Token Cookie를 사용하는 요청은 `XSRF-TOKEN` Cookie 값을 `X-XSRF-TOKEN` Header로 전달한다.
 
 주요 오류:
@@ -222,6 +225,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 토큰 재발급 | 401 | `INVALID_REFRESH_TOKEN` | Refresh Token 유효하지 않음 |
 | 토큰 재발급 | 401 | `REFRESH_TOKEN_EXPIRED` | Refresh Token 만료      |
 | 토큰 재발급 | 401 | `BLACKLISTED_TOKEN`     | 로그아웃 또는 강제 만료된 토큰     |
+| 인증 필요 API | 403 | `SUSPENDED_ACCOUNT`     | 정지 회원의 기존 Access Token 인증 차단 |
 | 로그아웃 | 401 | `UNAUTHORIZED`          | 인증 토큰 없음·만료           |
 
 ### 마이 페이지
@@ -533,6 +537,12 @@ Cookie: refresh_token={jwt}
 ### 로그아웃
 
 `POST /api/auth/logout`은 폐기 대상 토큰을 Redis 블랙리스트에 등록하고 Refresh Token 만료 쿠키를 응답한다.
+
+### 정지 계정 토큰 차단
+
+관리자에 의해 정지된 계정은 기존 Access Token의 `jti`를 서버가 미리 알 수 없으므로 회원 상태를 `SUSPENDED`로 변경한 뒤 회원 PK를 Redis에 임시 차단 마커로 저장한다.
+해당 회원의 기존 Access Token으로 인증 요청이 들어오면 서버는 요청을 `SUSPENDED_ACCOUNT`로 거부하고, 그 토큰의 `jti`를 Redis 블랙리스트에 등록한 뒤 회원 PK 마커를 삭제한다.
+Redis 데이터는 TTL 만료 시 자동 삭제된다.
 
 ## 상품 게시글
 
