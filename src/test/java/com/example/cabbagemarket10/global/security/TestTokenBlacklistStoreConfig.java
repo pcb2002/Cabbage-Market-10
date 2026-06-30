@@ -34,19 +34,13 @@ public class TestTokenBlacklistStoreConfig {
             return storage.containsKey(jti);
         }
 
-        @Override
-        public void markSuspendedClient(Long clientId, Instant expiresAt) {
+        public void putSuspendedClientMarker(Long clientId, Instant expiresAt) {
             suspendedClients.put(clientId, expiresAt);
         }
 
         @Override
         public boolean isSuspendedClientMarked(Long clientId) {
             return suspendedClients.containsKey(clientId);
-        }
-
-        @Override
-        public void removeSuspendedClient(Long clientId) {
-            suspendedClients.remove(clientId);
         }
     }
 }

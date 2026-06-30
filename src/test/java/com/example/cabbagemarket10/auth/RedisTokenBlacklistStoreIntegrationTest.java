@@ -6,6 +6,7 @@ import com.example.cabbagemarket10.domain.auth.service.RedisTokenBlacklistStore;
 import com.example.cabbagemarket10.domain.auth.service.TokenBlacklistStore;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,7 +76,8 @@ class RedisTokenBlacklistStoreIntegrationTest {
         assertThat(tokenBlacklistStore).isInstanceOf(RedisTokenBlacklistStore.class);
 
         Long clientId = 1L;
-        tokenBlacklistStore.markSuspendedClient(clientId, Instant.now().plusSeconds(1));
+        stringRedisTemplate.opsForValue()
+                .set("auth:suspended-client:" + clientId, "1", Duration.ofSeconds(1));
 
         assertThat(tokenBlacklistStore.isSuspendedClientMarked(clientId)).isTrue();
         assertThat(stringRedisTemplate.hasKey("auth:suspended-client:" + clientId)).isTrue();

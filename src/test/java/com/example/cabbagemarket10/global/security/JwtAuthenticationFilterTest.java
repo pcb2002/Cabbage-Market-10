@@ -142,7 +142,7 @@ class JwtAuthenticationFilterTest {
         Client client = saveClient("suspended-token@example.com");
         String accessToken = jwtTokenProvider.createAccessToken(client);
         JwtClaims claims = jwtTokenProvider.validateAccessToken(accessToken);
-        tokenBlacklistStore.markSuspendedClient(client.getId(), claims.expiresAt());
+        putSuspendedClientMarker(client.getId(), claims.expiresAt());
 
         mockMvc.perform(get("/api/test/protected")
                         .header("Authorization", "Bearer " + accessToken))
@@ -168,7 +168,7 @@ class JwtAuthenticationFilterTest {
         String secondAccessToken = jwtTokenProvider.createAccessToken(client);
         JwtClaims firstClaims = jwtTokenProvider.validateAccessToken(firstAccessToken);
         JwtClaims secondClaims = jwtTokenProvider.validateAccessToken(secondAccessToken);
-        tokenBlacklistStore.markSuspendedClient(client.getId(), firstClaims.expiresAt());
+        putSuspendedClientMarker(client.getId(), firstClaims.expiresAt());
 
         mockMvc.perform(get("/api/test/protected")
                         .header("Authorization", "Bearer " + firstAccessToken))
@@ -201,6 +201,12 @@ class JwtAuthenticationFilterTest {
                 "배추판매자",
                 "홍길동",
                 "010-1234-5678"));
+    }
+
+    private void putSuspendedClientMarker(Long clientId, Instant expiresAt) {
+        TestTokenBlacklistStoreConfig.InMemoryTokenBlacklistStore store =
+                (TestTokenBlacklistStoreConfig.InMemoryTokenBlacklistStore) tokenBlacklistStore;
+        store.putSuspendedClientMarker(clientId, expiresAt);
     }
 
     @RestController
