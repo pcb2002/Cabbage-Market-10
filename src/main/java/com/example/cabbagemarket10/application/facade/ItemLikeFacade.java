@@ -21,7 +21,7 @@ public class ItemLikeFacade {
 
     @Transactional
     public ItemLikeToggleResponse toggle(Long itemId, Long clientId) {
-        Item item = itemService.getItem(itemId);
+        Item item = itemService.getItemForUpdate(itemId);
         Client client = clientService.getClient(clientId);
 
         return itemLikeService.findByClientIdAndItemId(clientId, itemId)

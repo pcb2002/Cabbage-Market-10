@@ -77,6 +77,12 @@ public class ItemService {
     }
 
     @Transactional
+    public Item getItemForUpdate(Long itemId) {
+        return itemRepository.findByIdForUpdate(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+    }
+
+    @Transactional
     public void incrementLikeCount(Long itemId) {
         itemRepository.incrementLikeCount(itemId);
     }

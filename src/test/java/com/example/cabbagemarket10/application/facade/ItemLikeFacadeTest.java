@@ -47,7 +47,7 @@ class ItemLikeFacadeTest {
         Item item = item(10L);
         Client client = client(1L);
 
-        given(itemService.getItem(10L)).willReturn(item);
+        given(itemService.getItemForUpdate(10L)).willReturn(item);
         given(clientService.getClient(1L)).willReturn(client);
         given(itemLikeService.findByClientIdAndItemId(1L, 10L)).willReturn(Optional.empty());
         given(itemService.getLikeCount(10L)).willReturn(1L);
@@ -71,7 +71,7 @@ class ItemLikeFacadeTest {
                 .item(item)
                 .build();
 
-        given(itemService.getItem(10L)).willReturn(item);
+        given(itemService.getItemForUpdate(10L)).willReturn(item);
         given(clientService.getClient(1L)).willReturn(client);
         given(itemLikeService.findByClientIdAndItemId(1L, 10L)).willReturn(Optional.of(itemLike));
         given(itemService.getLikeCount(10L)).willReturn(1L);
@@ -89,7 +89,7 @@ class ItemLikeFacadeTest {
     void 회원이_없으면_CLIENT_NOT_FOUND_예외가_발생한다() {
         Item item = item(10L);
 
-        given(itemService.getItem(10L)).willReturn(item);
+        given(itemService.getItemForUpdate(10L)).willReturn(item);
         given(clientService.getClient(1L))
                 .willThrow(new BusinessException(ErrorCode.CLIENT_NOT_FOUND));
 
