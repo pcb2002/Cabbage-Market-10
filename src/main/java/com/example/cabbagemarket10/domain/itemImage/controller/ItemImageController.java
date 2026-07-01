@@ -37,7 +37,7 @@ public class ItemImageController {
             @PathVariable Long imageId,
             @AuthenticationPrincipal AuthenticatedClient authenticatedClient
     ) {
-        ItemThumbnailUpdateResponse response = itemThumbnailFacade.updateItemThumbnail(itemId, imageId, authenticatedClient.getId());
-        return CommonResponse.success(response).toResponseEntity();
+        ItemThumbnailUpdateResponse response = itemImageFacade.updateItemThumbnail(itemId, imageId, authenticatedClient.clientId());
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 }
