@@ -3,6 +3,8 @@ package com.example.cabbagemarket10.application.facade;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemImageUploadResponse;
+import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemThumbnailUpdateResponse;
+import com.example.cabbagemarket10.domain.itemImage.entity.ItemImage;
 import com.example.cabbagemarket10.domain.itemImage.service.ItemImageService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -90,5 +92,31 @@ public class ItemImageFacade {
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR);
         }
+    }
+
+    @Transactional
+    public ItemThumbnailUpdateResponse updateItemThumbnail(Long itemId, Long imageId, Long clientId) {
+        // 1. 상품 존재 확인 및 Soft Delete 검증 (존재하지 않거나 삭제된 상품 시 404)
+        Item item = itemService.getItem(itemId);
+        if (item.getIsDeleted()) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
+
+        // 2. 권한 검증: 상품 작성자(seller)와 요청 유저 일치 검증 (불일치 시 403)
+        if (!item.getSeller().getId().equals(clientId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 3. 잘못된 이미지 ID 혹은 타 상품의 이미지 검증 (404)
+        ItemImage targetImage = itemImageService.findByIdAndItemId(imageId, itemId);
+
+        // 4. [핵심 데이터 정합성 보장 로직]
+        // 4-1. 해당 상품에 속한 기존 모든 이미지들의 is_thumbnail 값을 false로 벌크성 다운데이트
+        itemImageService.demoteThumbnailsByItemId(itemId);
+
+        // 4-2. 선택된 타겟 이미지를 대표 이미지(is_thumbnail = true)로 업데이트
+        itemImageService.promoteToThumbnail(targetImage);
+
+        return ItemThumbnailUpdateResponse.of(itemId, targetImage.getId(), targetImage.getImageUrl());
     }
 }
