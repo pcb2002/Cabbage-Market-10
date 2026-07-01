@@ -429,6 +429,18 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 좋아요 토글 | POST | `/api/items/{itemId}/likes` | 필요 | Path `itemId` | `200 OK` |
 | 입찰하기 | POST | `/api/items/{itemId}/auction-status/bid` | 필요 | `bidPrice` | `200 OK` |
 
+입찰하기 성공 응답 `data`: `itemId`, `currentBid`, `closeDate`
+
+입찰하기 오류 응답:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 400 | `INVALID_BID_REQUEST` | 판매자 본인 상품 입찰 요청 |
+| 400 | `INVALID_BID_PRICE` | 현재 최고 입찰가 이하 입찰 요청 |
+| 400 | `AUCTION_ALREADY_CLOSED` | 마감된 경매 입찰 요청 |
+| 404 | `ITEM_NOT_FOUND`, `AUCTION_STATUS_NOT_FOUND` | 상품 또는 경매 상태 정보 없음 |
+| 409 | `AUCTION_BID_LOCK_FAILED` | 같은 상품에 입찰 요청이 몰려 락 획득 실패 |
+
 ### 문의
 
 | 기능 | Method | Path | 인증 | 요청 | 성공 |
@@ -708,4 +720,4 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 
 ## 열린 결정
 
-- 이미지 업로드 API 분리, 인기 검색어 집계 저장소, 경매 입찰 동시성 제어는 [docs/adr/README.md](adr/README.md)에서 관리한다.
+- 이미지 업로드 API 분리, 인기 검색어 집계 저장소는 [docs/adr/README.md](adr/README.md)에서 관리한다.

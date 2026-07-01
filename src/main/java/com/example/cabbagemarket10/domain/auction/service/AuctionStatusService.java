@@ -3,6 +3,8 @@ package com.example.cabbagemarket10.domain.auction.service;
 import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
 import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
 import com.example.cabbagemarket10.domain.client.entity.Client;
+import com.example.cabbagemarket10.domain.client.service.ClientService;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -17,6 +19,7 @@ import java.time.LocalDateTime;
 public class AuctionStatusService {
 
     private final AuctionStatusRepository auctionStatusRepository;
+    private final ClientService clientService;
 
     public void createAuctionStatus(Item item, Long initialPrice, LocalDateTime closeDate) {
         AuctionStatus auctionStatus = AuctionStatus.builder()
@@ -56,14 +59,27 @@ public class AuctionStatusService {
     public Client getCurrentBidder(Long itemId) {
         AuctionStatus auctionStatus = auctionStatusRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED));
-        Client currentBidder = auctionStatus.getCurrentBidder();
-        if (currentBidder == null) {
+        if (auctionStatus.getCurrentBidderId() == null) {
             throw new BusinessException(ErrorCode.REVIEW_NOT_ALLOWED);
         }
-        return currentBidder;
+        return clientService.getClient(auctionStatus.getCurrentBidderId());
     }
 
     public void deleteByItemId(Long itemId) {
         auctionStatusRepository.deleteByItemId(itemId);
+    }
+
+    @Transactional
+    public ItemBidResponse bid(Long itemId, Long clientId, Long sellerId, Long bidPrice) {
+        if (sellerId.equals(clientId)) {
+            throw new BusinessException(ErrorCode.INVALID_BID_REQUEST);
+        }
+
+        AuctionStatus auctionStatus = auctionStatusRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_STATUS_NOT_FOUND));
+
+        auctionStatus.updateBid(bidPrice, clientId, LocalDateTime.now());
+
+        return ItemBidResponse.from(auctionStatus);
     }
 }

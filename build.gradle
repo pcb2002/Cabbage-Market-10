@@ -27,6 +27,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+    implementation 'org.redisson:redisson:4.6.1'
     implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'

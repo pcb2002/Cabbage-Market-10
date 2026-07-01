@@ -135,6 +135,12 @@ public class Item extends BaseEntity {
         }
     }
 
+    public void validateBiddable() {
+        if (!isAuction() || Boolean.TRUE.equals(this.isDraft) || this.tradeStatus != TradeStatus.ON_SALE) {
+            throw new BusinessException(ErrorCode.INVALID_BID_REQUEST);
+        }
+    }
+
     // 상품 정보 수정 로직
     public void updateInfo(Category category, String title, String description, Long initialPrice) {
         this.category = category;

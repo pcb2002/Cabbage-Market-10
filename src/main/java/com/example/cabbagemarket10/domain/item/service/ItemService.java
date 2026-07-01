@@ -78,8 +78,7 @@ public class ItemService {
 
     @Transactional(readOnly = true)
     public Item getItemValidatingAuthor(Long itemId, Long clientId) {
-        Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+        Item item = getItem(itemId);
 
         // 작성자 권한 검증
         item.verifySeller(clientId);
@@ -87,23 +86,24 @@ public class ItemService {
         return item;
     }
 
-
-    public ItemStatusUpdateResponse updateItemStatus(Item item, TradeStatus tradeStatus, Client buyer) {
-        item.updateStatus(tradeStatus, buyer);
-        itemRepository.flush();
-
-        Long buyerId = item.getBuyer() == null ? null : item.getBuyer().getId();
-        return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), buyerId, item.getUpdatedAt());
-    }
-
-
-
     public void softDelete(Item item) {
         itemRepository.delete(item);
     }
 
     public void hardDeleteById(Long itemId) {
         itemRepository.hardDeleteById(itemId);
+    }
+
+    @Transactional
+    public ItemStatusUpdateResponse updateItemStatus(Item item, TradeStatus tradeStatus, Client client) {
+        item.verifySeller(item.getSeller().getId());
+        item.validateStatusUpdatable();
+
+        item.updateStatus(tradeStatus, client);
+        itemRepository.flush();
+
+        Long buyerId = item.getBuyer() == null ? null : item.getBuyer().getId();
+        return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), buyerId, item.getUpdatedAt());
     }
 
     public void flush() {
