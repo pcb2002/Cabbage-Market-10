@@ -3,6 +3,8 @@ package com.example.cabbagemarket10.domain.chat.entity;
 import com.example.cabbagemarket10.common.entity.BaseEntity;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.entity.Item;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -42,5 +44,11 @@ public class ChatRoom extends BaseEntity {
     public ChatRoom(Item item, Client createdBy) {
         this.item = item;
         this.createdBy = createdBy;
+    }
+
+    public void inspectClientAsParticipant(long clientId) {
+        if(clientId != createdBy.getId() && item.getSeller().getId() != clientId) {
+            throw new BusinessException(ErrorCode.CLIENT_NOT_PARTICIPANT);
+        }
     }
 }

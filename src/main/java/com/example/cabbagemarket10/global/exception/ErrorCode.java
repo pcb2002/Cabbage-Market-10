@@ -88,7 +88,8 @@ public enum ErrorCode {
     // chat
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "채팅방을 찾을 수 없습니다."),
     CHAT_MESSAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_MESSAGE_NOT_FOUND", "메시지를 찾을 수 없습니다."),
-    CHAT_MESSAGE_NOT_PUBLISHER(HttpStatus.FORBIDDEN, "CHAT_MESSAGE_NOT_PUBLISHER", "사용자가 작성한 메시지가 아니므로 삭제할 수 없습니다."),;
+    CHAT_MESSAGE_NOT_PUBLISHER(HttpStatus.FORBIDDEN, "CHAT_MESSAGE_NOT_PUBLISHER", "사용자가 작성한 메시지가 아니므로 삭제할 수 없습니다."),
+    CLIENT_NOT_PARTICIPANT(HttpStatus.FORBIDDEN, "CLIENT_NOT_PARTICIPANT", "채팅방 참여자가 아니므로 접근할 수 없습니다."),;
 
     private final HttpStatus httpStatus;
     private final String code;
