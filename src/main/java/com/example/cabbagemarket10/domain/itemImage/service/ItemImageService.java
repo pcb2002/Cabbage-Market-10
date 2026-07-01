@@ -4,6 +4,8 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemImageUploadResponse;
 import com.example.cabbagemarket10.domain.itemImage.entity.ItemImage;
 import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ItemImageService {
 
     private final ItemImageRepository itemImageRepository;
+
+    public ItemImage findByIdAndItemId(Long imageId, Long itemId) {
+        return itemImageRepository.findByIdAndItem_Id(imageId, itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
 
     public int countImagesByItemId(Long itemId) {
         return itemImageRepository.countByItem_Id(itemId);
@@ -36,5 +43,18 @@ public class ItemImageService {
                 savedImage.getSortOrder(),
                 savedImage.getIsThumbnail()
         );
+    }
+
+    @Transactional
+    public void demoteThumbnailsByItemId(Long itemId) {
+        itemImageRepository.updateIsThumbnailFalseByItemId(itemId);
+    }
+
+    @Transactional
+    public void promoteToThumbnail(Long imageId, Long itemId) {
+        int updatedRows = itemImageRepository.updateIsThumbnailTrueByIdAndItemId(imageId, itemId);
+        if (updatedRows == 0) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
     }
 }
