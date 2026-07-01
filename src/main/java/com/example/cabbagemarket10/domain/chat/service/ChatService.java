@@ -77,7 +77,7 @@ public class ChatService {
     public ChatMessageList getRecentMessages(
             String chatRoomId,
             Long clientId,
-            @PageableDefault(size = 50) Pageable pageable) {
+            Pageable pageable) {
 
         ChatRoom room  = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_ROOM_NOT_FOUND));
