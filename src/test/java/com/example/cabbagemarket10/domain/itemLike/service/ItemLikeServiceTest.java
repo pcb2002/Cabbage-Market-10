@@ -1,23 +1,16 @@
 package com.example.cabbagemarket10.domain.itemLike.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 import com.example.cabbagemarket10.domain.client.entity.Client;
-import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
-import com.example.cabbagemarket10.domain.item.dto.response.ItemLikeToggleResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
-import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
-import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemLike.entity.ItemLike;
 import com.example.cabbagemarket10.domain.itemLike.repository.ItemLikeRepository;
-import com.example.cabbagemarket10.global.exception.BusinessException;
-import com.example.cabbagemarket10.global.exception.ErrorCode;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,74 +26,49 @@ class ItemLikeServiceTest {
     @Mock
     private ItemLikeRepository itemLikeRepository;
 
-    @Mock
-    private ItemService itemService;
-
-    @Mock
-    private ItemRepository itemRepository;
-
-    @Mock
-    private ClientRepository clientRepository;
-
     @InjectMocks
     private ItemLikeService itemLikeService;
 
-    @DisplayName("좋아요가 없으면 상품 좋아요를 등록하고 좋아요 수를 증가시킨다")
+    @DisplayName("회원과 상품으로 기존 좋아요를 조회한다")
     @Test
-    void 좋아요가_없으면_상품_좋아요를_등록하고_좋아요_수를_증가시킨다() {
-        Item item = item(10L, 0L);
-        Client client = client(1L);
+    void 회원과_상품으로_기존_좋아요를_조회한다() {
+        ItemLike itemLike = ItemLike.builder()
+                .client(client(1L))
+                .item(item(10L))
+                .build();
+        given(itemLikeRepository.findByClient_IdAndItem_Id(1L, 10L))
+                .willReturn(Optional.of(itemLike));
 
-        given(itemService.getItem(10L)).willReturn(item);
-        given(clientRepository.findById(1L)).willReturn(Optional.of(client));
-        given(itemLikeRepository.findByClient_IdAndItem_Id(1L, 10L)).willReturn(Optional.empty());
-        given(itemRepository.findLikeCountById(10L)).willReturn(1L);
+        Optional<ItemLike> result = itemLikeService.findByClientIdAndItemId(1L, 10L);
 
-        ItemLikeToggleResponse response = itemLikeService.toggle(10L, 1L);
-
-        assertThat(response.itemId()).isEqualTo(10L);
-        assertThat(response.liked()).isTrue();
-        assertThat(response.likeCount()).isEqualTo(1L);
-        verify(itemRepository).incrementLikeCount(10L);
+        assertThat(result).contains(itemLike);
     }
 
-    @DisplayName("기존 좋아요가 있으면 상품 좋아요를 취소하고 좋아요 수를 감소시킨다")
+    @DisplayName("좋아요를 저장한다")
     @Test
-    void 기존_좋아요가_있으면_상품_좋아요를_취소하고_좋아요_수를_감소시킨다() {
-        Item item = item(10L, 2L);
+    void 좋아요를_저장한다() {
         Client client = client(1L);
+        Item item = item(10L);
+
+        itemLikeService.save(client, item);
+
+        verify(itemLikeRepository).save(org.mockito.ArgumentMatchers.any(ItemLike.class));
+    }
+
+    @DisplayName("좋아요를 삭제한다")
+    @Test
+    void 좋아요를_삭제한다() {
         ItemLike itemLike = ItemLike.builder()
-                .client(client)
-                .item(item)
+                .client(client(1L))
+                .item(item(10L))
                 .build();
 
-        given(itemService.getItem(10L)).willReturn(item);
-        given(clientRepository.findById(1L)).willReturn(Optional.of(client));
-        given(itemLikeRepository.findByClient_IdAndItem_Id(1L, 10L)).willReturn(Optional.of(itemLike));
-        given(itemRepository.findLikeCountById(10L)).willReturn(1L);
+        itemLikeService.delete(itemLike);
 
-        ItemLikeToggleResponse response = itemLikeService.toggle(10L, 1L);
-
-        assertThat(response.liked()).isFalse();
-        assertThat(response.likeCount()).isEqualTo(1L);
         verify(itemLikeRepository).delete(itemLike);
-        verify(itemRepository).decrementLikeCount(10L);
     }
 
-    @DisplayName("회원이 없으면 CLIENT_NOT_FOUND 예외가 발생한다")
-    @Test
-    void 회원이_없으면_CLIENT_NOT_FOUND_예외가_발생한다() {
-        Item item = item(10L, 0L);
-
-        given(itemService.getItem(10L)).willReturn(item);
-        given(clientRepository.findById(1L)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> itemLikeService.toggle(10L, 1L))
-                .isInstanceOfSatisfying(BusinessException.class, exception ->
-                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_FOUND));
-    }
-
-    private Item item(Long itemId, Long likeCount) {
+    private Item item(Long itemId) {
         Item item = Item.builder()
                 .category(null)
                 .seller(client(2L))
@@ -113,7 +81,6 @@ class ItemLikeServiceTest {
                 .isDraft(false)
                 .build();
         ReflectionTestUtils.setField(item, "id", itemId);
-        ReflectionTestUtils.setField(item, "likeCount", likeCount);
         return item;
     }
 

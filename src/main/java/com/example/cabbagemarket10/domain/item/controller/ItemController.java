@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.item.controller;
 
 import com.example.cabbagemarket10.application.facade.AuctionFacade;
 import com.example.cabbagemarket10.application.facade.ItemFacade;
+import com.example.cabbagemarket10.application.facade.ItemLikeFacade;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemBidRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
@@ -16,7 +17,6 @@ import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
-import com.example.cabbagemarket10.domain.itemLike.service.ItemLikeService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.exception.BusinessException;
@@ -47,8 +47,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class ItemController {
 
     private final ItemFacade itemFacade;
+    private final ItemLikeFacade itemLikeFacade;
     private final ItemService itemService;
-    private final ItemLikeService itemLikeService;
     private final ObjectProvider<AuctionFacade> auctionFacadeProvider;
 
     @PostMapping
@@ -107,7 +107,7 @@ public class ItemController {
             @PathVariable Long itemId,
             @AuthenticationPrincipal AuthenticatedClient userDetails
     ) {
-        ItemLikeToggleResponse response = itemLikeService.toggle(itemId, userDetails.clientId());
+        ItemLikeToggleResponse response = itemLikeFacade.toggle(itemId, userDetails.clientId());
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 
