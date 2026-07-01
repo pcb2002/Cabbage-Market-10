@@ -688,6 +688,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | currentBid | 현재 입찰가, 경매 상태가 없으면 null |
 | tradeStatus | 판매 상태 |
 | closeDate | 경매 마감 일시, 경매 상태가 없으면 null |
+| likeCount | 좋아요 수 |
 
 ### 상품 검색 v1
 

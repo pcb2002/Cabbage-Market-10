@@ -439,6 +439,8 @@ class ItemControllerTest {
                 .tradeStatus(TradeStatus.ON_SALE)
                 .isDraft(false)
                 .build());
+        visibleItem.incrementLikeCount();
+        itemRepository.saveAndFlush(visibleItem);
         auctionStatusRepository.save(AuctionStatus.builder()
                 .item(visibleItem)
                 .currentBid(9000L)
@@ -480,6 +482,7 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.data.content[0].initialPrice").value(7000))
                 .andExpect(jsonPath("$.data.content[0].currentBid").value(9000))
                 .andExpect(jsonPath("$.data.content[0].tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.content[0].likeCount").value(1))
                 .andExpect(jsonPath("$.data.content[0].closeDate").value("2026-08-01T10:00:00"))
                 .andExpect(jsonPath("$.data.totalElements").value(1));
     }
