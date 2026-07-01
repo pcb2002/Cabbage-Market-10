@@ -3,9 +3,11 @@ package com.example.cabbagemarket10.domain.search.service;
 import com.example.cabbagemarket10.domain.search.dto.request.ItemSearchRequest;
 import com.example.cabbagemarket10.domain.search.dto.response.SearchItemResponse;
 import com.example.cabbagemarket10.domain.search.repository.ItemSearchRepository;
+import com.example.cabbagemarket10.global.config.cache.ItemSearchCacheConfig;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,25 @@ public class SearchService {
 
     @Transactional(readOnly = true)
     public Page<SearchItemResponse> searchItemsV1(
+            ItemSearchRequest request,
+            Pageable pageable
+    ) {
+        return searchItems(request, pageable);
+    }
+
+    @Cacheable(
+            cacheNames = ItemSearchCacheConfig.ITEM_SEARCH_V2_CACHE,
+            key = "T(com.example.cabbagemarket10.domain.search.service.ItemSearchCacheKey).from(#request, #pageable)"
+    )
+    @Transactional(readOnly = true)
+    public Page<SearchItemResponse> searchItemsV2(
+            ItemSearchRequest request,
+            Pageable pageable
+    ) {
+        return searchItems(request, pageable);
+    }
+
+    private Page<SearchItemResponse> searchItems(
             ItemSearchRequest request,
             Pageable pageable
     ) {

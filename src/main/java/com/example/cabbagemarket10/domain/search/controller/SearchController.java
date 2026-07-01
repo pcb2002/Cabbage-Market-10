@@ -29,6 +29,19 @@ public class SearchController {
             Pageable pageable
     ) {
         Page<SearchItemResponse> items = searchService.searchItemsV1(request, pageable);
+ 
+        return CommonResponse.success(
+                HttpStatus.OK,
+                PageResponse.from(items)
+        ).toResponseEntity();
+    }
+
+    @GetMapping("/v2/items/search")
+    public ResponseEntity<CommonResponse<PageResponse<SearchItemResponse>>> searchItemsV2(
+            @Valid @ModelAttribute ItemSearchRequest request,
+            Pageable pageable
+    ) {
+        Page<SearchItemResponse> items = searchService.searchItemsV2(request, pageable);
 
         return CommonResponse.success(
                 HttpStatus.OK,
