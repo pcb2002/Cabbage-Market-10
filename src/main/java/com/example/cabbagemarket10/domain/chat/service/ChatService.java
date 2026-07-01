@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.chat.service;
 
 import com.example.cabbagemarket10.domain.chat.dto.restful.RoomCreate;
 import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageDto;
+import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageList;
 import com.example.cabbagemarket10.domain.chat.entity.ChatMessage;
 import com.example.cabbagemarket10.domain.chat.entity.ChatRoom;
 import com.example.cabbagemarket10.domain.chat.repository.ChatMessageRepository;
@@ -14,6 +15,11 @@ import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,4 +74,22 @@ public class ChatService {
         chatMessageRepository.delete(chatMessage);
     }
 
+    public ChatMessageList getRecentMessages(
+            String chatRoomId,
+            Long clientId,
+            @PageableDefault(size = 50) Pageable pageable) {
+
+        ChatRoom room  = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_ROOM_NOT_FOUND));
+        room.inspectClientAsParticipant(clientId);
+
+        Pageable descPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by("createdAt").descending());
+        Page<ChatMessage> chatMessagesPage = chatMessageRepository.findByChatRoomId(chatRoomId, descPageable);
+
+        return ChatMessageList.from(chatMessagesPage);
+
+    }
 }
