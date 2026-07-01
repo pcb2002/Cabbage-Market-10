@@ -10,11 +10,13 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemLikeToggleResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemUpdateResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
+import com.example.cabbagemarket10.domain.itemLike.service.ItemLikeService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.exception.BusinessException;
@@ -46,6 +48,7 @@ public class ItemController {
 
     private final ItemFacade itemFacade;
     private final ItemService itemService;
+    private final ItemLikeService itemLikeService;
     private final ObjectProvider<AuctionFacade> auctionFacadeProvider;
 
     @PostMapping
@@ -96,6 +99,15 @@ public class ItemController {
     @GetMapping("/{itemId}")
     public ResponseEntity<CommonResponse<ItemDetailResponse>> getItemDetail(@PathVariable Long itemId) {
         ItemDetailResponse response = itemService.getItemDetail(itemId);
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
+    @PostMapping("/{itemId}/likes")
+    public ResponseEntity<CommonResponse<ItemLikeToggleResponse>> toggleItemLike(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal AuthenticatedClient userDetails
+    ) {
+        ItemLikeToggleResponse response = itemLikeService.toggle(itemId, userDetails.clientId());
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 

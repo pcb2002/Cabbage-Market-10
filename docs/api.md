@@ -429,6 +429,15 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 좋아요 토글 | POST | `/api/items/{itemId}/likes` | 필요 | Path `itemId` | `200 OK` |
 | 입찰하기 | POST | `/api/items/{itemId}/auction-status/bid` | 필요 | `bidPrice` | `200 OK` |
 
+상품 좋아요 토글 성공 응답 `data`: `itemId`, `liked`, `likeCount`
+
+상품 좋아요 토글 오류 응답:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제된 상품 |
+
 입찰하기 성공 응답 `data`: `itemId`, `currentBid`, `closeDate`
 
 입찰하기 오류 응답:
