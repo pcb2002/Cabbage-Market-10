@@ -12,6 +12,7 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
+import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemLike.entity.ItemLike;
 import com.example.cabbagemarket10.domain.itemLike.repository.ItemLikeRepository;
@@ -36,6 +37,9 @@ class ItemLikeServiceTest {
     private ItemService itemService;
 
     @Mock
+    private ItemRepository itemRepository;
+
+    @Mock
     private ClientRepository clientRepository;
 
     @InjectMocks
@@ -50,13 +54,14 @@ class ItemLikeServiceTest {
         given(itemService.getItem(10L)).willReturn(item);
         given(clientRepository.findById(1L)).willReturn(Optional.of(client));
         given(itemLikeRepository.findByClient_IdAndItem_Id(1L, 10L)).willReturn(Optional.empty());
+        given(itemRepository.findLikeCountById(10L)).willReturn(1L);
 
         ItemLikeToggleResponse response = itemLikeService.toggle(10L, 1L);
 
         assertThat(response.itemId()).isEqualTo(10L);
         assertThat(response.liked()).isTrue();
         assertThat(response.likeCount()).isEqualTo(1L);
-        assertThat(item.getLikeCount()).isEqualTo(1L);
+        verify(itemRepository).incrementLikeCount(10L);
     }
 
     @DisplayName("기존 좋아요가 있으면 상품 좋아요를 취소하고 좋아요 수를 감소시킨다")
@@ -72,13 +77,14 @@ class ItemLikeServiceTest {
         given(itemService.getItem(10L)).willReturn(item);
         given(clientRepository.findById(1L)).willReturn(Optional.of(client));
         given(itemLikeRepository.findByClient_IdAndItem_Id(1L, 10L)).willReturn(Optional.of(itemLike));
+        given(itemRepository.findLikeCountById(10L)).willReturn(1L);
 
         ItemLikeToggleResponse response = itemLikeService.toggle(10L, 1L);
 
         assertThat(response.liked()).isFalse();
         assertThat(response.likeCount()).isEqualTo(1L);
-        assertThat(item.getLikeCount()).isEqualTo(1L);
         verify(itemLikeRepository).delete(itemLike);
+        verify(itemRepository).decrementLikeCount(10L);
     }
 
     @DisplayName("회원이 없으면 CLIENT_NOT_FOUND 예외가 발생한다")

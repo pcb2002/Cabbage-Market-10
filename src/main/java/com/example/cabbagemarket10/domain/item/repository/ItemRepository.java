@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -35,4 +36,30 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
     @Modifying
     @Query(value = "delete from item where id = :itemId", nativeQuery = true)
     void hardDeleteById(Long itemId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update Item i
+            set i.likeCount = i.likeCount + 1
+            where i.id = :itemId
+            """)
+    int incrementLikeCount(@Param("itemId") Long itemId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update Item i
+            set i.likeCount = case
+                when i.likeCount > 0 then i.likeCount - 1
+                else 0
+            end
+            where i.id = :itemId
+            """)
+    int decrementLikeCount(@Param("itemId") Long itemId);
+
+    @Query("""
+            select i.likeCount
+            from Item i
+            where i.id = :itemId
+            """)
+    Long findLikeCountById(@Param("itemId") Long itemId);
 }
