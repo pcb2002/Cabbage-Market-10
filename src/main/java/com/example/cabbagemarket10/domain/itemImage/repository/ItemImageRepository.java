@@ -17,4 +17,6 @@ public interface ItemImageRepository extends JpaRepository<ItemImage, Long> {
 
     // 특정 상품의 모든 이미지 삭제 (Cascade로 해결 가능하지만, 명시적 삭제 필요 시 사용)
     void deleteByItemId(Long itemId);
+
+    int countByItem_Id(Long itemId);
 }
