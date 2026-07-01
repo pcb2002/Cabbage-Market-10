@@ -468,7 +468,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | Status | Code | 설명 |
 |---:|---|---|
 | 401 | `UNAUTHORIZED` | 미인증 사용자 |
-| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제된 상품 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제되었거나 임시저장인 상품 |
 
 입찰하기 성공 응답 `data`: `itemId`, `currentBid`, `closeDate`
 

@@ -251,6 +251,47 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
     }
 
+    @DisplayName("임시저장 상품에 좋아요를 요청하면 ITEM_NOT_FOUND를 반환한다")
+    @Test
+    void 임시저장_상품에_좋아요를_요청하면_ITEM_NOT_FOUND를_반환한다() throws Exception {
+        Client seller = saveClient("draft-like-seller@example.com", "판매자");
+        Client liker = saveClient("draft-like-user@example.com", "좋아요회원");
+        Category category = categoryRepository.save(Category.builder()
+                .name("draft-like-category")
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        Item draftItem = itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title("임시저장 좋아요 상품")
+                .description("임시저장 상품")
+                .initialPrice(1000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+
+        mockMvc.perform(post("/api/items/{itemId}/likes", draftItem.getId())
+                        .with(authentication(authenticationOf(liker))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+
+        Long likeCount = jdbcTemplate.queryForObject(
+                "select like_count from item where id = ?",
+                Long.class,
+                draftItem.getId());
+        Integer itemLikeCount = jdbcTemplate.queryForObject(
+                "select count(*) from item_like where item_id = ?",
+                Integer.class,
+                draftItem.getId());
+
+        assertThat(likeCount).isEqualTo(0L);
+        assertThat(itemLikeCount).isEqualTo(0);
+    }
+
     @DisplayName("인증 회원이 상품을 임시저장하면 isDraft true인 Item과 AuctionStatus가 저장된다")
     @Test
     void authenticatedClientCanCreateItemDraft() throws Exception {
