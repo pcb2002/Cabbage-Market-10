@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,6 +58,9 @@ class SearchControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private CacheManager cacheManager;
 
     private Client seller;
     private Category vegetableCategory;
@@ -90,6 +95,11 @@ class SearchControllerTest {
                 .sortOrder(2)
                 .isActive(true)
                 .build());
+
+        Cache itemSearchV2Cache = cacheManager.getCache("itemSearchV2");
+        if (itemSearchV2Cache != null) {
+            itemSearchV2Cache.clear();
+        }
     }
 
     @DisplayName("상품 검색은 비로그인 사용자도 접근할 수 있다")
@@ -105,6 +115,94 @@ class SearchControllerTest {
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.content.length()").value(1))
                 .andExpect(jsonPath("$.data.content[0].title").value("비로그인 검색 배추"));
+    }
+
+    @DisplayName("상품 검색 v2는 비로그인 사용자도 접근할 수 있다")
+    @Test
+    void searchItemsV2AllowsAnonymousAccess() throws Exception {
+        saveDirectItem("비로그인 검색 배추 v2", "인증 없이 조회 가능", vegetableCategory, 10_000L);
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "배추")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].title").value("비로그인 검색 배추 v2"));
+    }
+
+    @DisplayName("상품 검색 v2는 동일 요청 반복 시 캐시된 결과를 반환한다")
+    @Test
+    void searchItemsV2ReturnsCachedResultForSameRequest() throws Exception {
+        Item cachedItem = saveDirectItem("캐시 대상 배추", "캐시 확인", vegetableCategory, 10_000L);
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "배추")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(cachedItem.getId()));
+
+        itemRepository.delete(cachedItem);
+        itemRepository.flush();
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "배추")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(cachedItem.getId()));
+    }
+
+    @DisplayName("상품 검색 v2는 sort 조건별로 서로 다른 캐시 key를 사용한다")
+    @Test
+    void searchItemsV2SeparatesCacheBySort() throws Exception {
+        Item cheap = saveDirectItem("정렬 캐시 배추", "낮은 가격", vegetableCategory, 1_000L);
+        Item expensive = saveDirectItem("정렬 캐시 배추", "높은 가격", vegetableCategory, 9_000L);
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "정렬 캐시")
+                        .param("sort", "initialPrice,asc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].itemId").value(cheap.getId()));
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "정렬 캐시")
+                        .param("sort", "initialPrice,desc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].itemId").value(expensive.getId()));
+    }
+
+    @DisplayName("상품 검색 v2는 page와 size 조건별로 서로 다른 캐시 key를 사용한다")
+    @Test
+    void searchItemsV2SeparatesCacheByPageAndSize() throws Exception {
+        Item first = saveDirectItem("페이지 캐시 배추 1", "첫 번째", vegetableCategory, 1_000L);
+        Item second = saveDirectItem("페이지 캐시 배추 2", "두 번째", vegetableCategory, 2_000L);
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "페이지 캐시")
+                        .param("sort", "createdAt,desc")
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(second.getId()));
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "페이지 캐시")
+                        .param("sort", "createdAt,desc")
+                        .param("page", "1")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(first.getId()));
     }
 
     @DisplayName("상품 검색 keyword가 100자를 초과하면 400을 반환한다")
