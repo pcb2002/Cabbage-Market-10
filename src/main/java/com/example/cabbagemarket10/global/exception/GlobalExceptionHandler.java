@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -113,11 +114,20 @@ public class GlobalExceptionHandler {
     // 여러 필드 오류가 있어도 첫 번째 메시지만 공통 응답에 사용한다.
     private String extractFirstErrorMessage(BindException exception) {
         return exception.getBindingResult().getFieldErrors().stream()
-                .map(error -> Objects.requireNonNullElse(
-                        error.getDefaultMessage(),
-                        ErrorCode.VALIDATION_ERROR.getMessage()))
+                .map(this::resolveFieldErrorMessage)
                 .findFirst()
                 .orElse(ErrorCode.VALIDATION_ERROR.getMessage());
+    }
+
+    private String resolveFieldErrorMessage(FieldError error) {
+        // 타입 변환 실패(enum 등 바인딩 실패)는 Spring 기본 영문 메시지 대신 ErrorCode 메시지로 통일한다.
+        if (error.isBindingFailure()) {
+            return ErrorCode.INVALID_INPUT.getMessage();
+        }
+        // @Size, @PositiveOrZero 등 검증 실패는 지정한 커스텀 메시지를 그대로 사용한다.
+        return Objects.requireNonNullElse(
+                error.getDefaultMessage(),
+                ErrorCode.VALIDATION_ERROR.getMessage());
     }
 
     private boolean isEnumDeserializationError(Throwable exception) {
