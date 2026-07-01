@@ -218,6 +218,99 @@ class SearchControllerTest {
                 .andExpect(jsonPath("$.data.content[1].itemId").value(lowBid.getId()));
     }
 
+    @DisplayName("상품 검색은 tradeType과 conditionType 조건을 함께 적용한다")
+    @Test
+    void searchItemsAppliesTradeTypeAndConditionTypeFiltersTogether() throws Exception {
+        Item expected = saveItem("경매 중고 배추", "조건 필터 대상", vegetableCategory, 10_000L,
+                TradeType.AUCTION, ConditionType.USED, TradeStatus.ON_SALE, false);
+        saveItem("직거래 중고 배추", "tradeType 제외", vegetableCategory, 11_000L,
+                TradeType.DIRECT, ConditionType.USED, TradeStatus.ON_SALE, false);
+        saveItem("경매 새상품 배추", "conditionType 제외", vegetableCategory, 12_000L,
+                TradeType.AUCTION, ConditionType.NEW, TradeStatus.ON_SALE, false);
+
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("keyword", "배추")
+                        .param("tradeType", "AUCTION")
+                        .param("conditionType", "USED")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(expected.getId()))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    @DisplayName("상품 검색은 최소 가격과 최대 가격 범위를 적용한다")
+    @Test
+    void searchItemsAppliesMinPriceAndMaxPriceFilters() throws Exception {
+        Item expected = saveDirectItem("가격 범위 배추", "범위 포함", vegetableCategory, 10_000L);
+        saveDirectItem("저가 배추", "범위 미만", vegetableCategory, 9_000L);
+        saveDirectItem("고가 배추", "범위 초과", vegetableCategory, 20_000L);
+
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("keyword", "배추")
+                        .param("minPrice", "10000")
+                        .param("maxPrice", "15000")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(expected.getId()))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    @DisplayName("상품 검색은 최소 가격이 최대 가격보다 크면 400을 반환한다")
+    @Test
+    void searchItemsWithInvalidPriceRangeReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("minPrice", "20000")
+                        .param("maxPrice", "10000"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("INVALID_INPUT"))
+                .andExpect(jsonPath("$.message").value("최소 가격은 최대 가격보다 클 수 없습니다."));
+    }
+
+    @DisplayName("상품 검색은 음수 가격 요청이면 400을 반환한다")
+    @Test
+    void searchItemsWithNegativePriceReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("minPrice", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("최소 가격은 0 이상이어야 합니다."));
+    }
+
+    @DisplayName("상품 검색은 enum 바인딩 실패 시 400을 반환한다")
+    @Test
+    void searchItemsWithInvalidEnumReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("tradeType", "INVALID"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."));
+    }
+
+    @DisplayName("상품 검색은 현재 입찰가순 정렬 시 경매 상태가 없는 상품을 제외한다")
+    @Test
+    void searchItemsWithCurrentBidSortExcludesAuctionItemsWithoutAuctionStatus() throws Exception {
+        Item included = saveAuctionItem("입찰가 있는 경매 배추", "정렬 포함", vegetableCategory, 10_000L, 15_000L);
+        saveItem("입찰가 없는 경매 배추", "정렬 제외", vegetableCategory, 11_000L,
+                TradeType.AUCTION, ConditionType.USED, TradeStatus.ON_SALE, false);
+
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("keyword", "경매 배추")
+                        .param("sort", "currentBid,desc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(included.getId()))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
     @DisplayName("상품 검색 비지원 sort는 기본 최신순으로 처리하고 일반거래 상품을 제외하지 않는다")
     @Test
     void searchItemsWithUnsupportedSortFallsBackToDefaultWithoutFilteringDirectItems() throws Exception {
