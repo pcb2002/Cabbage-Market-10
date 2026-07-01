@@ -44,7 +44,6 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
 
         BooleanBuilder where = new BooleanBuilder();
         where.and(item.isDraft.isFalse());
-        where.and(item.isDeleted.isFalse());
 
         if (categoryId != null) {
             where.and(item.category.id.eq(categoryId));
