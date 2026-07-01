@@ -14,6 +14,7 @@ import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemImageUploadResponse;
+import com.example.cabbagemarket10.domain.itemImage.entity.ItemImage;
 import com.example.cabbagemarket10.domain.itemImage.service.ItemImageService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -26,6 +27,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @ExtendWith(MockitoExtension.class)
@@ -141,6 +143,45 @@ class ItemImageFacadeTest {
         verify(storageUploadUtils).delete(imageUrl, "items");
     }
 
+    @DisplayName("item image delete removes storage file and image metadata")
+    @Test
+    void deleteItemImageRemovesStorageFileAndImageMetadata() {
+        Long itemId = 1L;
+        Long imageId = 100L;
+        Long clientId = 10L;
+        String imageUrl = "https://test-bucket.s3.ap-northeast-2.amazonaws.com/items/delete.jpg";
+        Item item = itemWithIdAndSellerId(itemId, clientId);
+        ItemImage itemImage = itemImage(item, imageId, imageUrl, false);
+
+        given(itemService.getValidatedItem(itemId, clientId)).willReturn(item);
+        given(itemImageService.getValidItemImage(imageId, itemId)).willReturn(itemImage);
+
+        itemImageFacade.deleteItemImage(itemId, imageId, clientId);
+
+        verify(storageUploadUtils).delete(imageUrl, "items");
+        verify(itemImageService).delete(itemImage);
+    }
+
+    @DisplayName("item image delete does not touch storage when thumbnail validation fails")
+    @Test
+    void deleteItemImageDoesNotTouchStorageWhenValidationFails() {
+        Long itemId = 1L;
+        Long imageId = 100L;
+        Long clientId = 10L;
+        Item item = itemWithIdAndSellerId(itemId, clientId);
+
+        given(itemService.getValidatedItem(itemId, clientId)).willReturn(item);
+        given(itemImageService.getValidItemImage(imageId, itemId))
+                .willThrow(new BusinessException(ErrorCode.CANNOT_DELETE_THUMBNAIL));
+
+        assertThatThrownBy(() -> itemImageFacade.deleteItemImage(itemId, imageId, clientId))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CANNOT_DELETE_THUMBNAIL));
+
+        verify(storageUploadUtils, never()).delete(any(String.class), any(String.class));
+        verify(itemImageService, never()).delete(any(ItemImage.class));
+    }
+
     private MockMultipartFile imageFile(String filename) {
         return new MockMultipartFile(
                 "files",
@@ -150,15 +191,19 @@ class ItemImageFacadeTest {
     }
 
     private Item itemWithSellerId(Long sellerId) {
+        return itemWithIdAndSellerId(null, sellerId);
+    }
+
+    private Item itemWithIdAndSellerId(Long itemId, Long sellerId) {
         Client seller = Client.create(
                 "seller@example.com",
                 "encodedPassword",
                 "seller",
                 "seller",
                 "010-1234-5678");
-        org.springframework.test.util.ReflectionTestUtils.setField(seller, "id", sellerId);
+        ReflectionTestUtils.setField(seller, "id", sellerId);
 
-        return Item.builder()
+        Item item = Item.builder()
                 .seller(seller)
                 .title("item")
                 .description("description")
@@ -168,5 +213,18 @@ class ItemImageFacadeTest {
                 .tradeStatus(TradeStatus.ON_SALE)
                 .isDraft(false)
                 .build();
+        ReflectionTestUtils.setField(item, "id", itemId);
+        return item;
+    }
+
+    private ItemImage itemImage(Item item, Long imageId, String imageUrl, boolean isThumbnail) {
+        ItemImage itemImage = ItemImage.builder()
+                .item(item)
+                .imageUrl(imageUrl)
+                .sortOrder(1)
+                .isThumbnail(isThumbnail)
+                .build();
+        ReflectionTestUtils.setField(itemImage, "id", imageId);
+        return itemImage;
     }
 }
