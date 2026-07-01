@@ -36,24 +36,24 @@ public class ItemImageController {
     public ResponseEntity<?> updateThumbnail(
             @PathVariable Long itemId,
             @PathVariable Long imageId,
-            @AuthenticationPrincipal AuthenticatedClient authenticatedClient
+            @AuthenticationPrincipal AuthenticatedClient userDetails
     ) {
-        ItemThumbnailUpdateResponse response = itemImageFacade.updateItemThumbnail(itemId, imageId, authenticatedClient.clientId());
+        ItemThumbnailUpdateResponse response = itemImageFacade.updateItemThumbnail(itemId, imageId, userDetails.clientId());
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 
     /**
      * 상품 이미지 단독 삭제 API
      */
-    @DeleteMapping("/{itemId}/images/{imageId}")
+    @DeleteMapping("/{imageId}")
     public ResponseEntity<CommonResponse<Map<String, String>>> deleteItemImage(
             @PathVariable Long itemId,
             @PathVariable Long imageId,
-            @RequestAttribute("clientId") Long clientId // security.md 규칙 반영
+            @AuthenticationPrincipal AuthenticatedClient userDetails
     ) {
-        itemImageFacade.deleteItemImage(itemId, imageId, clientId);
+        itemImageFacade.deleteItemImage(itemId, imageId, userDetails.clientId());
 
         Map<String, String> response = Map.of("message", "이미지가 성공적으로 삭제되었습니다.");
-        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+        return CommonResponse.success(HttpStatus.NO_CONTENT, response).toResponseEntity();
     }
 }
