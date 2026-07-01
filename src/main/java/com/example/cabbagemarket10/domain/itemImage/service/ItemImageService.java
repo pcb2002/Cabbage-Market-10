@@ -51,7 +51,10 @@ public class ItemImageService {
     }
 
     @Transactional
-    public void promoteToThumbnail(ItemImage itemImage) {
-        itemImage.updateThumbnail(true); // 더티 체킹 엔티티 행위 메서드 호출
+    public void promoteToThumbnail(Long imageId, Long itemId) {
+        int updatedRows = itemImageRepository.updateIsThumbnailTrueByIdAndItemId(imageId, itemId);
+        if (updatedRows == 0) {
+            throw new BusinessException(ErrorCode.NOT_FOUND);
+        }
     }
 }

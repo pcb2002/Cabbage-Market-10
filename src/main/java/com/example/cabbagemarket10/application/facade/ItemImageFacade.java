@@ -115,7 +115,7 @@ public class ItemImageFacade {
         itemImageService.demoteThumbnailsByItemId(itemId);
 
         // 4-2. 선택된 타겟 이미지를 대표 이미지(is_thumbnail = true)로 업데이트
-        itemImageService.promoteToThumbnail(targetImage);
+        itemImageService.promoteToThumbnail(targetImage.getId(), itemId);
 
         return ItemThumbnailUpdateResponse.of(itemId, targetImage.getId(), targetImage.getImageUrl());
     }

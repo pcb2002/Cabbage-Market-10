@@ -35,4 +35,8 @@ public interface ItemImageRepository extends JpaRepository<ItemImage, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE ItemImage ii SET ii.isThumbnail = false WHERE ii.item.id = :itemId")
     void updateIsThumbnailFalseByItemId(@Param("itemId") Long itemId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE ItemImage ii SET ii.isThumbnail = true WHERE ii.id = :imageId AND ii.item.id = :itemId")
+    int updateIsThumbnailTrueByIdAndItemId(@Param("imageId") Long imageId, @Param("itemId") Long itemId);
 }
