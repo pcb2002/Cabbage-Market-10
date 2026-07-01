@@ -37,6 +37,9 @@ public class StorageUploadUtils {
         }
 
         String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR);
+        }
         String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
 
         // 입력받은 dirName을 기반으로 경로 세분화 (예: items/uuid.jpg 또는 profiles/uuid.png)
@@ -70,7 +73,11 @@ public class StorageUploadUtils {
         try {
             // "items/" 또는 "profiles/" 위치를 기준으로 S3 Key 값 슬라이싱
             String targetMarker = dirName + "/";
-            String s3Key = imageUrl.substring(imageUrl.indexOf(targetMarker));
+            int keyStartIndex = imageUrl.indexOf(targetMarker);
+            if (keyStartIndex < 0) {
+                return;
+            }
+            String s3Key = imageUrl.substring(keyStartIndex);
 
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                     .bucket(bucket)

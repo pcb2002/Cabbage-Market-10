@@ -20,6 +20,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ItemImageFacade {
 
+    private static final String ITEM_IMAGE_DIR = "items";
+
     private final ItemService itemService;
     private final ItemImageService itemImageService;
     private final StorageUploadUtils storageUploadUtils;
@@ -50,10 +52,10 @@ public class ItemImageFacade {
         try {
             // 4. 스토리지 파일 업로드와 도메인 저장을 순차적으로 수행
             for (int i = 0; i < files.size(); i++) {
-                MultipartFile file = files[i];
+                MultipartFile file = files.get(i);
 
                 // 외부 인프라 연동 (클라우드 스토리지 파일 업로드)
-                String imageUrl = storageUploadUtils.upload(file);
+                String imageUrl = storageUploadUtils.upload(file, ITEM_IMAGE_DIR);
                 uploadedUrls.add(imageUrl);
 
                 // 핵심 분기 비즈니스 규칙 적용: 기존 등록이 0개이고 현재 배열의 index 0일 때만 썸네일로 지정
@@ -67,7 +69,7 @@ public class ItemImageFacade {
         } catch (Exception e) {
             // 스토리지 업로드 혹은 DB 처리 중 하나라도 실패할 시 스토리지에 먼저 올라간 파일들 삭제 조치
             for (String url : uploadedUrls) {
-                try { storageUploadUtils.delete(url); } catch (Exception ignored) {}
+                try { storageUploadUtils.delete(url, ITEM_IMAGE_DIR); } catch (Exception ignored) {}
             }
             // @Transactional에 의해 DB 작업도 통롤백되며 비즈니스 예외 전파
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);

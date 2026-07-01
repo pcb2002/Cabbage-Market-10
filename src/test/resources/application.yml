@@ -31,6 +31,15 @@ auth:
   cookie:
     secure: false
 
+cloud:
+  aws:
+    credentials:
+      access-key: test-access-key
+      secret-key: test-secret-key
+    s3:
+      bucket: test-bucket
+      region: ap-northeast-2
+
 #cloud:
 #  aws:
 #    credentials:
