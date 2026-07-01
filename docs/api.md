@@ -269,6 +269,44 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 민감정보인 `email`, `password`, `phone`과 내부 상태값은 공개 프로필 응답에 포함하지 않는다.
 
+### 내 판매글 목록
+
+`GET /api/clients/me/items`는 인증된 회원이 자신이 등록한 판매글 목록을 페이징으로 조회한다. 다른 회원의 판매글은 조회 결과에 포함하지 않는다.
+
+요청 Query:
+
+| 필드 | 규칙 |
+|---|---|
+| tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
+| page | 선택, 0부터 시작 |
+| size | 선택 |
+
+정렬 조건이 정의되어 있지 않아 상품 목록 조회(`GET /api/items`)와 동일하게 기본 정렬은 등록일 최신순(`createdAt desc`)을 따른다.
+
+응답 `data.content` 항목:
+
+| 필드 | 설명 |
+|---|---|
+| itemId | 상품 ID |
+| title | 상품 제목 |
+| initialPrice | 시작가 |
+| currentBid | 현재 입찰가, 경매 상태가 없으면 null |
+| tradeStatus | 판매 상태 |
+| closeDate | 경매 마감 일시, 경매 상태가 없으면 null |
+| isDraft | 임시저장 여부 |
+| tradeType | 거래 방식(`DIRECT`, `AUCTION`) |
+| conditionType | 상품 상태(`NEW`, `USED`) |
+| likeCount | 좋아요 수 |
+| thumbnailUrl | 대표 이미지 URL, 등록된 대표 이미지가 없으면 null |
+| categoryId | 카테고리 ID |
+| createdAt | 등록일시 |
+
+`categoryId`는 카테고리 ID만 내려주며, 카테고리명 표시는 `GET /api/categories` 목록을 기준으로 프론트에서 매핑한다.
+
+노출 정책: 삭제된 상품(`is_deleted = true`)은 제외한다. 임시저장 상품(`is_draft = true`)은 소유자 본인만 볼 수 있는 마이페이지이므로 목록에 포함한다.
+
+토큰 없이 요청하면 `401 Unauthorized`로 응답한다.
+
 ### 상품 게시글
 
 | 기능 | Method | Path | 인증 | 요청 | 성공 |
