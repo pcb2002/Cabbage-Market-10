@@ -3,6 +3,7 @@ package com.example.cabbagemarket10.domain.chat.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.chat.dto.restful.RoomCreate;
 import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageDto;
+import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageList;
 import com.example.cabbagemarket10.domain.chat.entity.ChatMessage;
 import com.example.cabbagemarket10.domain.chat.entity.ChatRoom;
 import com.example.cabbagemarket10.domain.chat.entity.MessageType;
@@ -25,6 +27,8 @@ import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +37,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -154,6 +162,87 @@ class ChatServiceTest {
         verify(chatMessageRepository, never()).delete(any());
     }
 
+    @DisplayName("채팅방 참여자는 최신 메시지 50개를 최신순으로 조회한다")
+    @Test
+    void 채팅방_참여자는_최신_메시지_50개를_최신순으로_조회한다() {
+        Client buyer = client(1L, "buyer@example.com", "구매자", "김구매");
+        Client seller = client(2L, "seller@example.com", "판매자", "김판매");
+        ChatRoom chatRoom = chatRoom("room-1", buyer, seller);
+        ChatMessage oldest = chatMessage(
+                1L,
+                chatRoom,
+                buyer,
+                "첫 번째 메시지",
+                LocalDateTime.of(2026, 7, 1, 10, 0));
+        ChatMessage middle = chatMessage(
+                2L,
+                chatRoom,
+                seller,
+                "두 번째 메시지",
+                LocalDateTime.of(2026, 7, 1, 10, 1));
+        ChatMessage newest = chatMessage(
+                3L,
+                chatRoom,
+                buyer,
+                "세 번째 메시지",
+                LocalDateTime.of(2026, 7, 1, 10, 2));
+        Pageable requestPageable = PageRequest.of(0, 50);
+        Pageable repositoryPageable = PageRequest.of(
+                0,
+                50,
+                Sort.by("createdAt").descending());
+
+        given(chatRoomRepository.findById("room-1")).willReturn(Optional.of(chatRoom));
+        given(chatMessageRepository.findByChatRoomId(eq("room-1"), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(newest, middle, oldest), repositoryPageable, 60));
+
+        ChatMessageList response = chatService.getRecentMessages("room-1", seller.getId(), requestPageable);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(chatMessageRepository).findByChatRoomId(eq("room-1"), pageableCaptor.capture());
+        Pageable usedPageable = pageableCaptor.getValue();
+        assertThat(usedPageable.getPageNumber()).isZero();
+        assertThat(usedPageable.getPageSize()).isEqualTo(50);
+        assertThat(usedPageable.getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(usedPageable.getSort().getOrderFor("id")).isNull();
+        assertThat(response.content())
+                .extracting("messageId")
+                .containsExactly(3L, 2L, 1L);
+        assertThat(response.page()).isZero();
+        assertThat(response.size()).isEqualTo(50);
+        assertThat(response.totalElements()).isEqualTo(60);
+        assertThat(response.totalPages()).isEqualTo(2);
+    }
+
+    @DisplayName("채팅방이 없으면 메시지 목록 조회 시 CHAT_ROOM_NOT_FOUND 예외가 발생한다")
+    @Test
+    void 채팅방이_없으면_메시지_목록_조회_시_CHAT_ROOM_NOT_FOUND_예외가_발생한다() {
+        Pageable pageable = PageRequest.of(0, 50);
+        given(chatRoomRepository.findById("missing-room")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatService.getRecentMessages("missing-room", 1L, pageable))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CHAT_ROOM_NOT_FOUND));
+
+        verify(chatMessageRepository, never()).findByChatRoomId(any(), any());
+    }
+
+    @DisplayName("채팅방 참여자가 아니면 메시지 목록 조회 시 CLIENT_NOT_PARTICIPANT 예외가 발생한다")
+    @Test
+    void 채팅방_참여자가_아니면_메시지_목록_조회_시_CLIENT_NOT_PARTICIPANT_예외가_발생한다() {
+        Client buyer = client(1L, "buyer@example.com", "구매자", "김구매");
+        Client seller = client(2L, "seller@example.com", "판매자", "김판매");
+        ChatRoom chatRoom = chatRoom("room-1", buyer, seller);
+        Pageable pageable = PageRequest.of(0, 50);
+        given(chatRoomRepository.findById("room-1")).willReturn(Optional.of(chatRoom));
+
+        assertThatThrownBy(() -> chatService.getRecentMessages("room-1", 3L, pageable))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_PARTICIPANT));
+
+        verify(chatMessageRepository, never()).findByChatRoomId(any(), any());
+    }
+
     private ChatMessage chatMessage(Client sender) {
         return ChatMessage.builder()
                 .chatRoom(chatRoom("room-1", sender))
@@ -163,9 +252,31 @@ class ChatServiceTest {
                 .build();
     }
 
+    private ChatMessage chatMessage(
+            Long id,
+            ChatRoom chatRoom,
+            Client sender,
+            String content,
+            LocalDateTime createdAt
+    ) {
+        ChatMessage chatMessage = ChatMessage.builder()
+                .chatRoom(chatRoom)
+                .sender(sender)
+                .messageType(MessageType.TEXT)
+                .content(content)
+                .build();
+        ReflectionTestUtils.setField(chatMessage, "id", id);
+        ReflectionTestUtils.setField(chatMessage, "createdAt", createdAt);
+        return chatMessage;
+    }
+
     private ChatRoom chatRoom(String id, Client creator) {
+        return chatRoom(id, creator, creator);
+    }
+
+    private ChatRoom chatRoom(String id, Client creator, Client seller) {
         ChatRoom chatRoom = ChatRoom.builder()
-                .item(item(creator))
+                .item(item(seller))
                 .createdBy(creator)
                 .build();
         ReflectionTestUtils.setField(chatRoom, "id", id);

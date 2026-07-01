@@ -127,6 +127,17 @@ public class ItemService {
         return new ItemStatusUpdateResponse(item.getId(), item.getTradeStatus(), buyerId, item.getUpdatedAt());
     }
 
+    public Item getValidatedItem(Long itemId, Long clientId) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        // 보안 정책 검증: 상품 수정/상태변경/이미지 관리는 작성자(판매자)만 가능하다.
+        if (!item.getSeller().getId().equals(clientId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        return item;
+    }
+
     public void flush() {
         itemRepository.flush();
     }

@@ -30,3 +30,21 @@ jwt:
 auth:
   cookie:
     secure: false
+
+cloud:
+  aws:
+    credentials:
+      access-key: test-access-key
+      secret-key: test-secret-key
+    s3:
+      bucket: test-bucket
+      region: ap-northeast-2
+
+#cloud:
+#  aws:
+#    credentials:
+#      access-key: ${AWS_ACCESS_KEY_ID:your_access_key_here} # 실제 AWS Access Key
+#      secret-key: ${AWS_SECRET_ACCESS_KEY:your_secret_key_here} # 실제 AWS Secret Key
+#    s3:
+#      bucket: your-bucket-name # S3 버킷명
+#      region: ap-northeast-2 # 서울 리전 기준
