@@ -5,6 +5,7 @@ import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemImageUpload
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +24,9 @@ public class ItemImageController {
     public ResponseEntity<?> uploadItemImages(
             @PathVariable Long itemId,
             @RequestPart("files") List<MultipartFile> files,
-            @AuthenticationPrincipal AuthenticatedClient authenticatedClient
+            @AuthenticationPrincipal AuthenticatedClient userDetails
     ) {
-        ItemImageUploadResponse response = itemImageFacade.uploadItemImages(itemId, files, authenticatedClient.getId());
-        return CommonResponse.success(response).toResponseEntity();
+        ItemImageUploadResponse response = itemImageFacade.uploadItemImages(itemId, files, userDetails.clientId());
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 }
