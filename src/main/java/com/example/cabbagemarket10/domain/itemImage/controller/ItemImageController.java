@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.itemImage.controller;
 
 import com.example.cabbagemarket10.application.facade.ItemImageFacade;
 import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemImageUploadResponse;
+import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemThumbnailUpdateResponse;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,16 @@ public class ItemImageController {
             @AuthenticationPrincipal AuthenticatedClient userDetails
     ) {
         ItemImageUploadResponse response = itemImageFacade.uploadItemImages(itemId, files, userDetails.clientId());
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
+    @PatchMapping("/{itemId}/images/{imageId}/thumbnail")
+    public ResponseEntity<?> updateThumbnail(
+            @PathVariable Long itemId,
+            @PathVariable Long imageId,
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient
+    ) {
+        ItemThumbnailUpdateResponse response = itemImageFacade.updateItemThumbnail(itemId, imageId, authenticatedClient.clientId());
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 }
