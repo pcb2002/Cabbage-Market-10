@@ -15,6 +15,8 @@ import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.itemImage.entity.ItemImage;
+import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.category.repository.CategoryRepository;
 import com.example.cabbagemarket10.domain.review.entity.Review;
@@ -49,6 +51,9 @@ class ClientControllerTest {
     private ItemRepository itemRepository;
 
     @Autowired
+    private ItemImageRepository itemImageRepository;
+
+    @Autowired
     private FollowRepository followRepository;
 
     @Autowired
@@ -68,6 +73,7 @@ class ClientControllerTest {
         deleteIfExists("follow");
         deleteIfExists("review");
         deleteIfExists("auction_status");
+        deleteIfExists("item_image");
         deleteIfExists("item");
         deleteIfExists("category");
         deleteIfExists("client");
@@ -118,6 +124,165 @@ class ClientControllerTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
+
+    @DisplayName("인증된 회원은 자신의 판매글 목록을 조회할 수 있다")
+    @Test
+    void 인증된_회원은_자신의_판매글_목록을_조회할_수_있다() throws Exception {
+        Client client = saveClient(
+                "myitems@example.com",
+                "내판매글회원",
+                "홍길동",
+                "010-1234-5678");
+        Category category = saveCategory();
+        Item onSaleItem = saveItem(category, client, "판매중 상품", TradeStatus.ON_SALE, false);
+        Item draftItem = saveItem(category, client, "임시저장 상품", TradeStatus.ON_SALE, true);
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+
+        mockMvc.perform(get("/api/clients/me/items")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.content[*].itemId")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                onSaleItem.getId().intValue(), draftItem.getId().intValue())));
+    }
+
+    @DisplayName("내 판매글 목록 응답에는 대표 이미지, 카테고리, 좋아요 수, 거래 방식, 상품 상태가 포함된다")
+    @Test
+    void 내_판매글_목록_응답에는_대표_이미지_카테고리_좋아요_수_거래_방식_상품_상태가_포함된다() throws Exception {
+        Client client = saveClient(
+                "richitem@example.com",
+                "상세필드회원",
+                "홍길동",
+                "010-6666-7777");
+        Category category = saveCategory();
+        Item item = itemRepository.save(Item.builder()
+                .category(category)
+                .seller(client)
+                .tradeType(TradeType.AUCTION)
+                .title("경매 상품")
+                .description("설명")
+                .initialPrice(10000L)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+        itemImageRepository.save(ItemImage.builder()
+                .item(item)
+                .imageUrl("https://example.com/items/thumbnail.jpg")
+                .sortOrder(0)
+                .isThumbnail(true)
+                .build());
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+
+        mockMvc.perform(get("/api/clients/me/items")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.content[0].tradeType").value("AUCTION"))
+                .andExpect(jsonPath("$.data.content[0].conditionType").value("USED"))
+                .andExpect(jsonPath("$.data.content[0].likeCount").value(0))
+                .andExpect(jsonPath("$.data.content[0].categoryId").value(category.getId()))
+                .andExpect(jsonPath("$.data.content[0].thumbnailUrl")
+                        .value("https://example.com/items/thumbnail.jpg"));
+    }
+
+    @DisplayName("대표 이미지가 없는 상품은 목록에서 thumbnailUrl이 null이다")
+    @Test
+    void 대표_이미지가_없는_상품은_목록에서_thumbnailUrl이_null이다() throws Exception {
+        Client client = saveClient(
+                "noimage@example.com",
+                "이미지없는회원",
+                "홍길동",
+                "010-7777-8888");
+        Category category = saveCategory();
+        saveItem(category, client, "이미지 없는 상품", TradeStatus.ON_SALE, false);
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+
+        mockMvc.perform(get("/api/clients/me/items")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].thumbnailUrl")
+                        .value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @DisplayName("다른 회원의 판매글은 내 판매글 목록에 포함되지 않는다")
+    @Test
+    void 다른_회원의_판매글은_내_판매글_목록에_포함되지_않는다() throws Exception {
+        Client owner = saveClient(
+                "owner@example.com",
+                "소유자",
+                "소유",
+                "010-1111-2222");
+        Client other = saveClient(
+                "other@example.com",
+                "다른회원",
+                "다른",
+                "010-2222-3333");
+        Category category = saveCategory();
+        Item ownItem = saveItem(category, owner, "내 상품", TradeStatus.ON_SALE, false);
+        saveItem(category, other, "다른 회원 상품", TradeStatus.ON_SALE, false);
+        String accessToken = jwtTokenProvider.createAccessToken(owner);
+
+        mockMvc.perform(get("/api/clients/me/items")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(ownItem.getId()));
+    }
+
+    @DisplayName("삭제된 상품은 내 판매글 목록에서 제외된다")
+    @Test
+    void 삭제된_상품은_내_판매글_목록에서_제외된다() throws Exception {
+        Client client = saveClient(
+                "deleteitem@example.com",
+                "삭제상품회원",
+                "홍길동",
+                "010-3333-4444");
+        Category category = saveCategory();
+        Item remainingItem = saveItem(category, client, "남는 상품", TradeStatus.ON_SALE, false);
+        Item deletedItem = saveItem(category, client, "삭제될 상품", TradeStatus.ON_SALE, false);
+        itemRepository.delete(deletedItem);
+        itemRepository.flush();
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+
+        mockMvc.perform(get("/api/clients/me/items")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(remainingItem.getId()));
+    }
+
+    @DisplayName("tradeStatus로 내 판매글 목록을 필터링할 수 있다")
+    @Test
+    void tradeStatus로_내_판매글_목록을_필터링할_수_있다() throws Exception {
+        Client client = saveClient(
+                "filteritem@example.com",
+                "필터상품회원",
+                "홍길동",
+                "010-4444-5555");
+        Category category = saveCategory();
+        saveItem(category, client, "판매중 상품", TradeStatus.ON_SALE, false);
+        Item soldItem = saveItem(category, client, "판매완료 상품", TradeStatus.SOLD_OUT, false);
+        String accessToken = jwtTokenProvider.createAccessToken(client);
+
+        mockMvc.perform(get("/api/clients/me/items")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .param("tradeStatus", "SOLD_OUT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(soldItem.getId()));
+    }
+
+    @DisplayName("토큰 없이 내 판매글 목록 조회를 요청하면 401을 반환한다")
+    @Test
+    void 토큰_없이_내_판매글_목록_조회를_요청하면_401을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/clients/me/items"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
 
     @DisplayName("비회원도 회원 공개 프로필을 조회할 수 있다")
     @Test
