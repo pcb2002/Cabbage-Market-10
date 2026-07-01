@@ -6,11 +6,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.cache.item-search-v2")
 public record ItemSearchCacheProperties(
         Duration ttl,
-        long maximumSize
+        long maximumSize,
+        String keyPrefix
 ) {
 
     public ItemSearchCacheProperties {
         ttl = ttl == null ? Duration.ofMinutes(5) : ttl;
         maximumSize = maximumSize > 0 ? maximumSize : 1000L;
+        keyPrefix = keyPrefix == null || keyPrefix.isBlank() ? "item-search:v2:" : keyPrefix;
     }
 }
