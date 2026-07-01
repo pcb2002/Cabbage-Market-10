@@ -24,3 +24,8 @@
 - 기능 구현 흐름은 [docs/workflow.md](docs/workflow.md)를 따른다.
 - 외부 API 계약 변경은 [docs/api.md](docs/api.md)를 갱신한다.
 - DB 스키마 변경은 [docs/ERD.md](docs/ERD.md)를 갱신한다.
+
+## 검색 캐시
+
+- `GET /api/v2/items/search`는 동일 검색 조건의 반복 조회 성능 개선을 위해 Caffeine 기반 Local Memory Cache를 사용한다.
+- 단일 서버 메모리 캐시이므로 서버 간 캐시 공유는 지원하지 않으며, 분산 캐시 전환은 별도 작업으로 다룬다.
