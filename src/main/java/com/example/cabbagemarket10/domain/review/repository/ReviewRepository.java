@@ -1,6 +1,9 @@
 package com.example.cabbagemarket10.domain.review.repository;
 
+import com.example.cabbagemarket10.domain.review.dto.response.ReceivedReviewListItemResponse;
 import com.example.cabbagemarket10.domain.review.entity.Review;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,4 +20,26 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             where review.reviewee.id = :revieweeId
             """)
     double findAverageRatingByRevieweeId(@Param("revieweeId") Long revieweeId);
+
+    @Query(value = """
+            select new com.example.cabbagemarket10.domain.review.dto.response.ReceivedReviewListItemResponse(
+                r.id,
+                r.item.id,
+                r.reviewer.id,
+                r.reviewer.nickname,
+                r.reviewer.profileImageUrl,
+                r.rating,
+                r.content,
+                r.createdAt
+            )
+            from Review r
+            where r.reviewee.id = :revieweeId
+            order by r.createdAt desc, r.id desc
+            """,
+            countQuery = """
+            select count(r)
+            from Review r
+            where r.reviewee.id = :revieweeId
+            """)
+    Page<ReceivedReviewListItemResponse> findReceivedReviews(@Param("revieweeId") Long revieweeId, Pageable pageable);
 }
