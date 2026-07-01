@@ -85,6 +85,7 @@
 | 카테고리 목록 조회 | 카테고리 | GET | `/api/categories` |
 | 상품 등록 | 상품 게시글 | POST | `/api/items` |
 | 상품 임시저장 | 상품 게시글 | POST | `/api/items/drafts` |
+| 상품 이미지 업로드 | 상품 이미지 | POST | `/api/items/{itemId}/images` |
 | 상품 임시저장 게시 | 상품 게시글 | POST | `/api/items/{itemId}/publish` |
 | 상품 목록 조회 | 상품 게시글 | GET | `/api/items` |
 | 상품 상세 조회 | 상품 게시글 | GET | `/api/items/{itemId}` |
@@ -135,7 +136,7 @@
 
 | 공개 API | 인증 필요 API |
 |---|---|
-| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세·검색, 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·게시·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰 |
+| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세·검색, 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·게시·삭제, 상품 이미지 업로드·수정·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰 |
 
 ## Notion DB 상세 명세
 
@@ -307,6 +308,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 카테고리 목록 조회 | GET | `/api/categories` | 불필요 | 없음 | `200 OK` |
 | 상품 등록 | POST | `/api/items` | 필요 | 상품 필수 필드 | `201 Created` |
 | 상품 임시저장 | POST | `/api/items/drafts` | 필요 | 상품 필수 필드, `closeDate` 선택 | `201 Created` |
+| 상품 이미지 업로드 | POST | `/api/items/{itemId}/images` | 필요 | `multipart/form-data`, `files` | `200 OK` |
 | 상품 임시저장 게시 | POST | `/api/items/{itemId}/publish` | 필요 | Path `itemId` | `200 OK` |
 | 상품 목록 조회 | GET | `/api/items` | 불필요 | `categoryId`, `tradeStatus`, `page`, `size` 선택 | `200 OK` |
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
@@ -456,6 +458,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 
 | 기능 | Method | Path | 인증 | 요청 | 성공 |
 |---|---:|---|---|---|---|
+| 상품 이미지 업로드 | POST | `/api/items/{itemId}/images` | 필요 | `multipart/form-data`, `files` | `200 OK` |
 | 대표 이미지 설정 | PATCH | `/api/items/{itemId}/images/{imageId}/thumbnail` | 필요 | Path `itemId`, `imageId` | `200 OK` |
 | 상품 이미지 삭제 | DELETE | `/api/items/{itemId}/images/{imageId}` | 필요 | Path `itemId`, `imageId` | `204 No Content` |
 | 상품 좋아요 토글 | POST | `/api/items/{itemId}/likes` | 필요 | Path `itemId` | `200 OK` |
@@ -469,6 +472,23 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 |---:|---|---|
 | 401 | `UNAUTHORIZED` | 미인증 사용자 |
 | 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제되었거나 임시저장인 상품 |
+상품 이미지 업로드는 상품 판매자만 요청할 수 있다. `files`는 `jpg`, `jpeg`, `png`, `webp` 확장자만 허용하고 파일당 최대 크기는 5MB다. 기존 이미지가 없는 상품의 첫 번째 업로드 이미지는 썸네일로 저장된다.
+
+성공 응답 `data`:
+
+```json
+{
+  "itemId": 1,
+  "uploadedImages": [
+    {
+      "imageId": 10,
+      "imageUrl": "https://test-bucket.s3.ap-northeast-2.amazonaws.com/items/example.jpg",
+      "sortOrder": 1,
+      "isThumbnail": true
+    }
+  ]
+}
+```
 
 입찰하기 성공 응답 `data`: `itemId`, `currentBid`, `closeDate`
 
