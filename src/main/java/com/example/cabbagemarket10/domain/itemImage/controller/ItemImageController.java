@@ -13,15 +13,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/items")
+@RequestMapping("/api/items/{itemId}/images")
 @RequiredArgsConstructor
 public class ItemImageController {
 
     private final ItemImageFacade itemImageFacade;
 
-    @PostMapping("/{itemId}/images")
+    @PostMapping
     public ResponseEntity<?> uploadItemImages(
             @PathVariable Long itemId,
             @RequestPart("files") List<MultipartFile> files,
@@ -31,13 +32,28 @@ public class ItemImageController {
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 
-    @PatchMapping("/{itemId}/images/{imageId}/thumbnail")
+    @PatchMapping("/{imageId}/thumbnail")
     public ResponseEntity<?> updateThumbnail(
             @PathVariable Long itemId,
             @PathVariable Long imageId,
             @AuthenticationPrincipal AuthenticatedClient authenticatedClient
     ) {
         ItemThumbnailUpdateResponse response = itemImageFacade.updateItemThumbnail(itemId, imageId, authenticatedClient.clientId());
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
+    /**
+     * 상품 이미지 단독 삭제 API
+     */
+    @DeleteMapping("/{itemId}/images/{imageId}")
+    public ResponseEntity<CommonResponse<Map<String, String>>> deleteItemImage(
+            @PathVariable Long itemId,
+            @PathVariable Long imageId,
+            @RequestAttribute("clientId") Long clientId // security.md 규칙 반영
+    ) {
+        itemImageFacade.deleteItemImage(itemId, imageId, clientId);
+
+        Map<String, String> response = Map.of("message", "이미지가 성공적으로 삭제되었습니다.");
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 }
