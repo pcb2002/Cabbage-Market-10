@@ -4,10 +4,15 @@ import com.example.cabbagemarket10.domain.client.dto.request.ClientMyInfoUpdateR
 import com.example.cabbagemarket10.domain.client.dto.response.ClientMyInfoResponse;
 import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileResponse;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
+import com.example.cabbagemarket10.domain.item.dto.response.MyItemListItemResponse;
+import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class ClientController {
 
     private final ClientService clientService;
+    private final ItemService itemService;
 
     @GetMapping("/me")
     public ResponseEntity<CommonResponse<ClientMyInfoResponse>> getMyInfo(
@@ -27,6 +33,19 @@ public class ClientController {
         ClientMyInfoResponse response = clientService.getMyInfo(authenticatedClient.clientId());
 
         return CommonResponse.success(HttpStatus.OK, response)
+                .toResponseEntity();
+    }
+
+    @GetMapping("/me/items")
+    public ResponseEntity<CommonResponse<PageResponse<MyItemListItemResponse>>> getMyItems(
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            @RequestParam(required = false) String tradeStatus,
+            Pageable pageable
+    ) {
+        Page<MyItemListItemResponse> items = itemService.getMyItemList(
+                authenticatedClient.clientId(), tradeStatus, pageable);
+
+        return CommonResponse.success(HttpStatus.OK, PageResponse.from(items))
                 .toResponseEntity();
     }
 

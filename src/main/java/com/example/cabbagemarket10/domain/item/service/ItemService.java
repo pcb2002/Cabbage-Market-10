@@ -7,6 +7,7 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.MyItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
@@ -57,6 +58,11 @@ public class ItemService {
     @Transactional(readOnly = true)
     public Page<ItemListItemResponse> getItemList(Long categoryId, String tradeStatus, Pageable pageable) {
         return itemRepository.searchItems(categoryId, tradeStatus, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MyItemListItemResponse> getMyItemList(Long sellerId, String tradeStatus, Pageable pageable) {
+        return itemRepository.findMyItems(sellerId, tradeStatus, pageable);
     }
 
     @Transactional

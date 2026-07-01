@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.item.repository;
 
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.MyItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -68,6 +69,64 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         bindParameters(countQuery, categoryId, parsedTradeStatus);
 
         return new PageImpl<>(contentQuery.getResultList(), pageable, countQuery.getSingleResult());
+    }
+
+    @Override
+    public Page<MyItemListItemResponse> findMyItems(Long sellerId, String tradeStatus, Pageable pageable) {
+        TradeStatus parsedTradeStatus = parseTradeStatus(tradeStatus);
+        String whereClause = buildMyItemsWhereClause(parsedTradeStatus);
+
+        TypedQuery<MyItemListItemResponse> contentQuery = entityManager.createQuery(
+                """
+                        select new com.example.cabbagemarket10.domain.item.dto.response.MyItemListItemResponse(
+                            i.id,
+                            i.title,
+                            i.initialPrice,
+                            a.currentBid,
+                            i.tradeStatus,
+                            a.closeDate,
+                            i.isDraft,
+                            i.tradeType,
+                            i.conditionType,
+                            i.likeCount,
+                            (select min(ii.imageUrl) from ItemImage ii where ii.item = i and ii.isThumbnail = true),
+                            i.category.id,
+                            i.createdAt
+                        )
+                        from Item i
+                        left join AuctionStatus a on a.item = i
+                        """
+                        + whereClause
+                        + buildOrderClause(pageable),
+                MyItemListItemResponse.class);
+        contentQuery.setParameter("sellerId", sellerId);
+        bindParameters(contentQuery, null, parsedTradeStatus);
+        contentQuery.setFirstResult((int) pageable.getOffset());
+        contentQuery.setMaxResults(pageable.getPageSize());
+
+        TypedQuery<Long> countQuery = entityManager.createQuery(
+                """
+                        select count(i.id)
+                        from Item i
+                        """
+                        + whereClause,
+                Long.class);
+        countQuery.setParameter("sellerId", sellerId);
+        bindParameters(countQuery, null, parsedTradeStatus);
+
+        return new PageImpl<>(contentQuery.getResultList(), pageable, countQuery.getSingleResult());
+    }
+
+    private String buildMyItemsWhereClause(TradeStatus tradeStatus) {
+        List<String> conditions = new ArrayList<>();
+        conditions.add("i.isDeleted = false");
+        conditions.add("i.seller.id = :sellerId");
+
+        if (tradeStatus != null) {
+            conditions.add("i.tradeStatus = :tradeStatus");
+        }
+
+        return " where " + String.join(" and ", conditions);
     }
 
     private TradeStatus parseTradeStatus(String tradeStatus) {
