@@ -41,6 +41,7 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
         QItem item = QItem.item;
         QAuctionStatus auctionStatus = QAuctionStatus.auctionStatus;
         QItemImage thumbnail = QItemImage.itemImage;
+        boolean currentBidSort = isCurrentBidSort(pageable);
 
         BooleanBuilder where = new BooleanBuilder();
         where.and(item.isDraft.isFalse());
@@ -79,24 +80,13 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
         }
 
         // 현재 입찰가순 정렬일 때는 경매 상품만 대상으로 한다 (일반거래는 입찰가가 없음)
-        if (isCurrentBidSort(pageable)) {
+        if (currentBidSort) {
             where.and(item.tradeType.eq(TradeType.AUCTION));
+            where.and(auctionStatus.item.isNotNull());
         }
 
         List<SearchItemResponse> content = jpaQueryFactory
-                .select(Projections.constructor(
-                        SearchItemResponse.class,
-                        item.id,
-                        thumbnail.imageUrl,
-                        item.category.name,
-                        item.title,
-                        item.tradeType,
-                        item.initialPrice,
-                        auctionStatus.currentBid,
-                        item.tradeStatus,
-                        item.likeCount,
-                        item.createdAt
-                ))
+                .select(searchItemProjection(item, auctionStatus, thumbnail))
                 .from(item)
                 .join(item.category)
                 .leftJoin(auctionStatus).on(auctionStatus.item.eq(item))
@@ -110,10 +100,31 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
         Long total = jpaQueryFactory
                 .select(item.count())
                 .from(item)
+                .leftJoin(auctionStatus).on(auctionStatus.item.eq(item))
                 .where(where)
                 .fetchOne();
 
         return new PageImpl<>(content, pageable, total == null ? 0L : total);
+    }
+
+    private com.querydsl.core.types.ConstructorExpression<SearchItemResponse> searchItemProjection(
+            QItem item,
+            QAuctionStatus auctionStatus,
+            QItemImage thumbnail
+    ) {
+        return Projections.constructor(
+                SearchItemResponse.class,
+                item.id,
+                thumbnail.imageUrl,
+                item.category.name,
+                item.title,
+                item.tradeType,
+                item.initialPrice,
+                auctionStatus.currentBid,
+                item.tradeStatus,
+                item.likeCount,
+                item.createdAt
+        );
     }
 
     private OrderSpecifier<?>[] buildOrderSpecifiers(
