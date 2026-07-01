@@ -762,7 +762,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 
 ### 상품 검색 v2
 
-`GET /api/v2/items/search`는 v1과 동일한 검색 조건과 응답 구조를 사용하되, 동일 요청 반복 조회 성능 개선을 위해 Caffeine 기반 Local Memory Cache를 적용한다.
+`GET /api/v2/items/search`는 v1과 동일한 검색 조건과 응답 구조를 사용하되, 동일 요청 반복 조회 성능 개선을 위해 Redis 기반 Cache를 적용한다.
 
 요청 Query:
 
@@ -795,7 +795,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | createdAt | 상품 생성 일시 |
 
 캐시 key에는 검색 조건(`keyword`, `categoryId`, `tradeStatus`, `tradeType`, `conditionType`, `minPrice`, `maxPrice`)과 페이징 조건(`page`, `size`, `sort`)이 모두 포함된다.
-Local Memory Cache는 단일 서버 기준 조회 성능 개선 목적이며 서버 간 캐시 공유는 지원하지 않는다.
+Redis Cache는 다중 서버 환경에서도 동일 캐시를 공유하며 TTL 만료 시 자동 삭제된다.
 
 ## 열린 결정
 
