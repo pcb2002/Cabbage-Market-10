@@ -100,7 +100,43 @@ class AuctionFacadeTest {
         verify(lock, never()).unlock();
     }
 
+    @DisplayName("경매 상품이 아니면 입찰을 처리하지 않고 락을 해제한다")
+    @Test
+    void directItemCannotReceiveBid() throws InterruptedException {
+        assertInvalidBidItem(itemWithSellerId(3L, TradeType.DIRECT, TradeStatus.ON_SALE, false));
+    }
+
+    @DisplayName("임시저장 상품이면 입찰을 처리하지 않고 락을 해제한다")
+    @Test
+    void draftItemCannotReceiveBid() throws InterruptedException {
+        assertInvalidBidItem(itemWithSellerId(3L, TradeType.AUCTION, TradeStatus.ON_SALE, true));
+    }
+
+    @DisplayName("판매중 상태가 아니면 입찰을 처리하지 않고 락을 해제한다")
+    @Test
+    void notOnSaleItemCannotReceiveBid() throws InterruptedException {
+        assertInvalidBidItem(itemWithSellerId(3L, TradeType.AUCTION, TradeStatus.RESERVED, false));
+    }
+
+    private void assertInvalidBidItem(Item item) throws InterruptedException {
+        given(redissonClient.getLock("auction:bid:1")).willReturn(lock);
+        given(lock.tryLock(5, 10, TimeUnit.SECONDS)).willReturn(true);
+        given(lock.isHeldByCurrentThread()).willReturn(true);
+        given(itemService.getItem(1L)).willReturn(item);
+
+        assertThatThrownBy(() -> auctionFacade.bidItem(1L, 2L, 12000L))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_BID_REQUEST));
+
+        verify(auctionStatusService, never()).bid(1L, 2L, 3L, 12000L);
+        verify(lock).unlock();
+    }
+
     private Item itemWithSellerId(Long sellerId) {
+        return itemWithSellerId(sellerId, TradeType.AUCTION, TradeStatus.ON_SALE, false);
+    }
+
+    private Item itemWithSellerId(Long sellerId, TradeType tradeType, TradeStatus tradeStatus, boolean isDraft) {
         Client seller = Client.create(
                 "seller@example.com",
                 "encodedPassword",
@@ -111,13 +147,13 @@ class AuctionFacadeTest {
 
         return Item.builder()
                 .seller(seller)
-                .tradeType(TradeType.AUCTION)
+                .tradeType(tradeType)
                 .title("auction item")
                 .description("auction description")
                 .initialPrice(10000L)
                 .conditionType(ConditionType.USED)
-                .tradeStatus(TradeStatus.ON_SALE)
-                .isDraft(false)
+                .tradeStatus(tradeStatus)
+                .isDraft(isDraft)
                 .build();
     }
 }

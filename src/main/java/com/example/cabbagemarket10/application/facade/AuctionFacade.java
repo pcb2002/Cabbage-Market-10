@@ -34,6 +34,7 @@ public class AuctionFacade {
             }
 
             Item item = itemService.getItem(itemId);
+            item.validateBiddable();
             return auctionStatusService.bid(itemId, clientId, item.getSeller().getId(), bidPrice);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
