@@ -43,14 +43,17 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                 """
                         select new com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse(
                             i.id,
+                            thumbnail.imageUrl,
                             i.title,
                             i.initialPrice,
                             a.currentBid,
                             i.tradeStatus,
-                            a.closeDate
+                            a.closeDate,
+                            i.likeCount
                         )
                         from Item i
                         left join AuctionStatus a on a.item = i
+                        left join ItemImage thumbnail on thumbnail.item = i and thumbnail.isThumbnail = true
                         """
                         + whereClause
                         + buildOrderClause(pageable),

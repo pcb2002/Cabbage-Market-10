@@ -60,6 +60,10 @@ public enum ErrorCode {
     ITEM_STATUS_UPDATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ITEM_STATUS_UPDATE_NOT_ALLOWED", "임시저장 상품의 판매 상태는 변경할 수 없습니다."),
     ITEM_PUBLISH_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "ITEM_PUBLISH_NOT_ALLOWED", "이미 게시된 상품입니다."),
 
+    // itemImage
+    CANNOT_DELETE_THUMBNAIL(HttpStatus.BAD_REQUEST, "CANNOT_DELETE_THUMBNAIL", "대표 이미지는 삭제할 수 없습니다. 다른 이미지를 대표로 설정 후 삭제 필요"),
+    IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMAGE_NOT_FOUND", "요청한 ID의 이미지를 찾을 수 없습니다."),
+
     // Auction
     AUCTION_STATUS_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION_STATUS_NOT_FOUND","경매 상태 정보를 찾을 수 없습니다."),
     AUCTION_ALREADY_CLOSED(HttpStatus.BAD_REQUEST, "AUCTION_ALREADY_CLOSED", "이미 마감된 경매입니다."),
