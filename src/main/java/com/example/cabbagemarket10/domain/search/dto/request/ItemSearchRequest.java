@@ -13,6 +13,7 @@ public record ItemSearchRequest(
         TradeStatus tradeStatus,            // ON_SALE / RESERVED / SOLD_OUT
         TradeType tradeType,                // DIRECT / AUCTION
         ConditionType conditionType,        // NEW / USED
+        Boolean likedOnly,
 
         @PositiveOrZero(message = "최소 가격은 0 이상이어야 합니다.")
         Long minPrice,

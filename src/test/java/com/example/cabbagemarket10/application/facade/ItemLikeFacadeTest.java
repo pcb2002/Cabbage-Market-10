@@ -15,6 +15,7 @@ import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemLike.entity.ItemLike;
 import com.example.cabbagemarket10.domain.itemLike.service.ItemLikeService;
+import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import java.util.Optional;
@@ -38,6 +39,9 @@ class ItemLikeFacadeTest {
     @Mock
     private ItemLikeService itemLikeService;
 
+    @Mock
+    private SearchCacheEvictionService searchCacheEvictionService;
+
     @InjectMocks
     private ItemLikeFacade itemLikeFacade;
 
@@ -59,6 +63,7 @@ class ItemLikeFacadeTest {
         assertThat(response.likeCount()).isEqualTo(1L);
         verify(itemLikeService).save(client, item);
         verify(itemService).incrementLikeCount(10L);
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     @DisplayName("기존 좋아요가 있으면 상품 좋아요를 취소하고 좋아요 수를 감소시킨다")
@@ -82,6 +87,7 @@ class ItemLikeFacadeTest {
         assertThat(response.likeCount()).isEqualTo(1L);
         verify(itemLikeService).delete(itemLike);
         verify(itemService).decrementLikeCount(10L);
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     @DisplayName("회원이 없으면 CLIENT_NOT_FOUND 예외가 발생한다")
