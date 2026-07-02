@@ -1661,6 +1661,25 @@ class ItemControllerTest {
                 .build());
     }
 
+    private Item saveDraftItem(Client seller, String title) {
+        Category category = categoryRepository.save(Category.builder()
+                .name("draft-like-category-" + title)
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        return itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title(title)
+                .description(title + " description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
+    }
+
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {
         return new UsernamePasswordAuthenticationToken(
                 new AuthenticatedClient(seller.getId(), seller.getEmail()),
