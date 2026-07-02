@@ -695,11 +695,14 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | 필드 | 설명 |
 |---|---|
 | itemId | 상품 ID |
+| thumbnailUrl | 대표 이미지 URL, 없으면 null |
 | title | 상품 제목 |
 | initialPrice | 시작가 |
 | currentBid | 현재 입찰가, 경매 상태가 없으면 null |
 | tradeStatus | 판매 상태 |
 | closeDate | 경매 마감 일시, 경매 상태가 없으면 null |
+
+`GET /api/items/{itemId}` 상품 상세 조회 응답은 `images` 배열을 포함한다. 각 이미지는 `imageId`, `imageUrl`, `sortOrder`, `isThumbnail`을 포함하며 `sortOrder` 오름차순으로 정렬된다. 이미지가 없으면 빈 배열을 반환한다.
 
 ### 상품 검색 v1
 
