@@ -1,6 +1,8 @@
 spring:
   application:
     name: Cabbage-Market-10
+  config:
+    import: optional:file:./env/local.env[.properties]
 
 app:
   cache:
