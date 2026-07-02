@@ -666,19 +666,21 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 
 ```json
 {
-  "id": 1,
+  "itemId": 1,
   "sellerId": 1,
   "categoryId": 1,
-  "tradeType": "SALE",
+  "tradeType": "AUCTION",
   "title": "싱싱한 배추",
   "description": "오늘 수확한 배추입니다.",
   "initialPrice": 12000,
+  "currentBid": 12000,
   "conditionType": "NEW",
   "tradeStatus": "ON_SALE",
   "viewCount": 0,
   "likeCount": 0,
   "inquiryCount": 0,
   "isDraft": false,
+  "closeDate": "2026-06-30T23:59:59",
   "createdAt": "2026-06-24T04:00:00"
 }
 ```
