@@ -45,9 +45,9 @@ class ItemImageFacadeTest {
     @InjectMocks
     private ItemImageFacade itemImageFacade;
 
-    @DisplayName("item image upload stores files under items directory and saves image metadata")
+    @DisplayName("상품이미지_업로드는_파일을_저장하고_이미지_메타데이터를_저장한다")
     @Test
-    void uploadItemImagesStoresFilesAndSavesImageMetadata() {
+    void 상품이미지_업로드는_파일을_저장하고_이미지_메타데이터를_저장한다() {
         Long itemId = 1L;
         Long clientId = 10L;
         Item item = itemWithSellerId(clientId);
@@ -80,9 +80,9 @@ class ItemImageFacadeTest {
         verify(storageUploadUtils).upload(secondFile, "items");
     }
 
-    @DisplayName("item image upload appends sort order and does not create thumbnail when images already exist")
+    @DisplayName("상품이미지_업로드는_기존_이미지_다음_순서로_추가한다")
     @Test
-    void uploadItemImagesAppendsAfterExistingImages() {
+    void 상품이미지_업로드는_기존_이미지_다음_순서로_추가한다() {
         Long itemId = 1L;
         Long clientId = 10L;
         Item item = itemWithSellerId(clientId);
@@ -104,9 +104,9 @@ class ItemImageFacadeTest {
         verify(itemImageService).saveItemImage(item, imageUrl, 4, false);
     }
 
-    @DisplayName("item image upload rejects unsupported extensions before storage upload")
+    @DisplayName("지원하지_않는_확장자의_상품이미지_업로드는_거부된다")
     @Test
-    void uploadItemImagesRejectsUnsupportedExtension() {
+    void 지원하지_않는_확장자의_상품이미지_업로드는_거부된다() {
         MockMultipartFile file = new MockMultipartFile(
                 "files",
                 "malware.exe",
@@ -121,9 +121,9 @@ class ItemImageFacadeTest {
         verify(storageUploadUtils, never()).upload(any(MultipartFile.class), any(String.class));
     }
 
-    @DisplayName("item image upload deletes already uploaded files when metadata save fails")
+    @DisplayName("상품이미지_저장에_실패하면_업로드된_파일을_삭제한다")
     @Test
-    void uploadItemImagesDeletesUploadedFilesWhenSaveFails() {
+    void 상품이미지_저장에_실패하면_업로드된_파일을_삭제한다() {
         Long itemId = 1L;
         Long clientId = 10L;
         Item item = itemWithSellerId(clientId);
@@ -143,9 +143,9 @@ class ItemImageFacadeTest {
         verify(storageUploadUtils).delete(imageUrl, "items");
     }
 
-    @DisplayName("item image delete removes storage file and image metadata")
+    @DisplayName("상품이미지_삭제는_저장소_파일과_이미지_메타데이터를_삭제한다")
     @Test
-    void deleteItemImageRemovesStorageFileAndImageMetadata() {
+    void 상품이미지_삭제는_저장소_파일과_이미지_메타데이터를_삭제한다() {
         Long itemId = 1L;
         Long imageId = 100L;
         Long clientId = 10L;
@@ -162,9 +162,9 @@ class ItemImageFacadeTest {
         verify(itemImageService).delete(itemImage);
     }
 
-    @DisplayName("item image delete does not touch storage when thumbnail validation fails")
+    @DisplayName("검증에_실패한_상품이미지_삭제는_저장소_파일을_건드리지_않는다")
     @Test
-    void deleteItemImageDoesNotTouchStorageWhenValidationFails() {
+    void 검증에_실패한_상품이미지_삭제는_저장소_파일을_건드리지_않는다() {
         Long itemId = 1L;
         Long imageId = 100L;
         Long clientId = 10L;
