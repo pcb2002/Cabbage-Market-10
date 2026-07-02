@@ -30,7 +30,8 @@ public class SearchService {
 
     @Cacheable(
             cacheNames = ItemSearchCacheConfig.ITEM_SEARCH_V2_CACHE,
-            key = "T(com.example.cabbagemarket10.domain.search.service.ItemSearchCacheKey).from(#request, #pageable, #clientId)"
+            key = "T(com.example.cabbagemarket10.domain.search.service.ItemSearchCacheKey).from(#request, #pageable, #clientId)",
+            condition = "#clientId == null"
     )
     @Transactional(readOnly = true)
     public Page<SearchItemResponse> searchItemsV2(

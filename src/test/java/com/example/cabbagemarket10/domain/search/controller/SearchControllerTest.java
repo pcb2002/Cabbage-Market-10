@@ -365,8 +365,7 @@ class SearchControllerTest {
         saveItem("임시저장 배추", "검색 제외", vegetableCategory, 12_000L,
                 TradeType.DIRECT, ConditionType.USED, TradeStatus.ON_SALE, true);
 
-        itemRepository.delete(deleted);
-        itemRepository.flush();
+        jdbcTemplate.update("update item set is_deleted = true where id = ?", deleted.getId());
 
         mockMvc.perform(get("/api/v1/items/search")
                         .param("keyword", "배추")
