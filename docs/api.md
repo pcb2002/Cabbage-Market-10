@@ -91,6 +91,7 @@
 | 상품 상세 조회 | 상품 게시글 | GET | `/api/items/{itemId}` |
 | 인기 검색어 조회 | 검색어 | GET | `/api/search/popular` |
 | 상품 검색 v1 | 검색어 | GET | `/api/v1/items/search` |
+| 상품 검색 v2 | 검색어 | GET | `/api/v2/items/search` |
 | 상품 정보 수정 | 상품 게시글 | PUT | `/api/items/{itemId}` |
 | 판매 상태 변경 | 상품 게시글 | PATCH | `/api/items/{itemId}/status` |
 | 상품 삭제 | 상품 게시글 | DELETE | `/api/items/{itemId}` |
@@ -136,7 +137,7 @@
 
 | 공개 API | 인증 필요 API |
 |---|---|
-| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세·검색, 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·게시·삭제, 상품 이미지 업로드·수정·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰 |
+| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세·검색(v1/v2, `likedOnly=true` 제외), 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·게시·삭제, 상품 이미지 업로드·수정·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰, 좋아요한 상품만 검색(`likedOnly=true`) |
 
 ## Notion DB 상세 명세
 
@@ -181,8 +182,17 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 검색 v1 | tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | 상품 검색 v1 | tradeType | 선택, `DIRECT`, `AUCTION` |
 | 상품 검색 v1 | conditionType | 선택, `NEW`, `USED` |
+| 상품 검색 v1 | likedOnly | 선택, `true`면 로그인 회원이 좋아요한 상품만 검색 |
 | 상품 검색 v1 | minPrice, maxPrice | 선택, 0 이상. 둘 다 전달 시 `minPrice <= maxPrice` |
 | 상품 검색 v1 | page, size, sort | 선택, 페이징 및 정렬 |
+| 상품 검색 v2 | keyword | 선택, 최대 100자, 공백이면 전체 검색 결과 |
+| 상품 검색 v2 | categoryId | 선택, 해당 카테고리 상품만 검색 |
+| 상품 검색 v2 | tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
+| 상품 검색 v2 | tradeType | 선택, `DIRECT`, `AUCTION` |
+| 상품 검색 v2 | conditionType | 선택, `NEW`, `USED` |
+| 상품 검색 v2 | likedOnly | 선택, `true`면 로그인 회원이 좋아요한 상품만 검색 |
+| 상품 검색 v2 | minPrice, maxPrice | 선택, 0 이상. 둘 다 전달 시 `minPrice <= maxPrice` |
+| 상품 검색 v2 | page, size, sort | 선택, 페이징 및 정렬 |
 | 상품 정보 수정 | categoryId | 필수, 존재하는 카테고리 ID |
 | 상품 정보 수정 | title | 필수, 공백 불가 |
 | 상품 정보 수정 | description | 필수, 공백 불가 |
@@ -312,7 +322,8 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 임시저장 게시 | POST | `/api/items/{itemId}/publish` | 필요 | Path `itemId` | `200 OK` |
 | 상품 목록 조회 | GET | `/api/items` | 불필요 | `categoryId`, `tradeStatus`, `page`, `size` 선택 | `200 OK` |
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
-| 상품 검색 v1 | GET | `/api/v1/items/search` | 불필요 | `keyword`, `categoryId`, `tradeStatus`, `page`, `size`, `sort` 선택 | `200 OK` |
+| 상품 검색 v1 | GET | `/api/v1/items/search` | 조건부 필요 | `keyword`, `categoryId`, `tradeStatus`, `likedOnly`, `page`, `size`, `sort` 선택 | `200 OK` |
+| 상품 검색 v2 | GET | `/api/v2/items/search` | 조건부 필요 | `keyword`, `categoryId`, `tradeStatus`, `likedOnly`, `page`, `size`, `sort` 선택 | `200 OK` |
 | 상품 정보 수정 | PUT | `/api/items/{itemId}` | 필요 | 수정할 상품 필드 | `200 OK` |
 | 판매 상태 변경 | PATCH | `/api/items/{itemId}/status` | 필요 | `tradeStatus`, 직거래 완료 시 `buyerId` | `200 OK` |
 | 상품 삭제 | DELETE | `/api/items/{itemId}` | 필요 | Path `itemId` | `204 No Content` |
@@ -748,6 +759,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 ### 상품 검색 v1
 
 `GET /api/v1/items/search`는 캐시가 적용되지 않은 상품 검색 결과를 페이징으로 조회한다.
+비로그인 사용자도 일반 검색은 가능하지만, `likedOnly=true`는 로그인 회원만 사용할 수 있다.
 
 요청 Query:
 
@@ -758,6 +770,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | tradeType | 선택, `DIRECT`, `AUCTION` |
 | conditionType | 선택, `NEW`, `USED` |
+| likedOnly | 선택, `true`면 현재 로그인 회원이 좋아요한 상품만 검색. 비로그인 요청 시 `401 UNAUTHORIZED` |
 | minPrice | 선택, 0 이상 |
 | maxPrice | 선택, 0 이상. `minPrice`와 함께 전달 시 `minPrice` 이상이어야 함 |
 | page | 선택, 0부터 시작 |
@@ -777,11 +790,52 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | currentBid | 경매 상품의 현재 입찰가, 경매 상태가 없으면 null |
 | tradeStatus | 판매 상태 |
 | likeCount | 좋아요 수 |
+| likedByMe | 현재 로그인 회원의 좋아요 여부, 비로그인이면 항상 `false` |
 | createdAt | 상품 생성 일시 |
 
 삭제된 상품과 임시저장 상품은 검색 결과에 노출하지 않는다.
 `keyword`가 없거나 공백이면 키워드 조건 없이 전체 상품을 페이징 조회한다.
 `currentBid,desc` 정렬은 경매 상품만 대상으로 한다.
+
+### 상품 검색 v2
+
+`GET /api/v2/items/search`는 v1과 동일한 검색 조건과 응답 구조를 사용하되, 동일 요청 반복 조회 성능 개선을 위해 Redis 기반 Cache를 적용한다.
+비로그인 사용자도 일반 검색은 가능하지만, `likedOnly=true`는 로그인 회원만 사용할 수 있다.
+
+요청 Query:
+
+| 필드 | 규칙 |
+|---|---|
+| keyword | 선택, 최대 100자. 상품 제목 또는 설명에 대해 `LIKE` 검색 |
+| categoryId | 선택, 해당 카테고리 상품만 검색 |
+| tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
+| tradeType | 선택, `DIRECT`, `AUCTION` |
+| conditionType | 선택, `NEW`, `USED` |
+| likedOnly | 선택, `true`면 현재 로그인 회원이 좋아요한 상품만 검색. 비로그인 요청 시 `401 UNAUTHORIZED` |
+| minPrice | 선택, 0 이상 |
+| maxPrice | 선택, 0 이상. `minPrice`와 함께 전달 시 `minPrice` 이상이어야 함 |
+| page | 선택, 0부터 시작 |
+| size | 선택 |
+| sort | 선택, `createdAt,desc`(최신순), `initialPrice,asc`(낮은 가격순), `initialPrice,desc`(높은 가격순), `currentBid,desc`(현재 입찰가순) |
+
+응답 `data.content` 항목:
+
+| 필드 | 설명 |
+|---|---|
+| itemId | 상품 ID |
+| thumbnailUrl | 대표 이미지 URL, 없으면 null |
+| categoryName | 카테고리명 |
+| title | 상품 제목 |
+| tradeType | 거래 유형, `DIRECT` 또는 `AUCTION` |
+| initialPrice | 시작가 |
+| currentBid | 경매 상품의 현재 입찰가, 경매 상태가 없으면 null |
+| tradeStatus | 판매 상태 |
+| likeCount | 좋아요 수 |
+| likedByMe | 현재 로그인 회원의 좋아요 여부, 비로그인이면 항상 `false` |
+| createdAt | 상품 생성 일시 |
+
+캐시 key에는 회원 ID, 검색 조건(`keyword`, `categoryId`, `tradeStatus`, `tradeType`, `conditionType`, `likedOnly`, `minPrice`, `maxPrice`)과 페이징 조건(`page`, `size`, `sort`)이 모두 포함된다.
+Redis Cache는 다중 서버 환경에서도 동일 캐시를 공유하며 TTL 만료 시 자동 삭제된다.
 
 ## 열린 결정
 
