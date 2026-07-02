@@ -19,6 +19,7 @@ import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemImage.service.ItemImageService;
+import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,12 +47,15 @@ class ItemFacadeTest {
     @Mock
     private ItemImageService itemImageService;
 
+    @Mock
+    private SearchCacheEvictionService searchCacheEvictionService;
+
     @InjectMocks
     private ItemFacade itemFacade;
 
-    @DisplayName("auction item creation returns full item response")
+    @DisplayName("경매 상품 등록은 전체 상품 응답을 반환한다")
     @Test
-    void createAuctionItemReturnsFullResponse() {
+    void 경매_상품_등록은_전체_상품_응답을_반환한다() {
         LocalDateTime closeDate = LocalDateTime.of(2026, 7, 10, 12, 0);
         LocalDateTime createdAt = LocalDateTime.of(2026, 7, 2, 9, 30);
         Client seller = client(1L);
@@ -95,11 +99,13 @@ class ItemFacadeTest {
         assertThat(response.isDraft()).isFalse();
         assertThat(response.closeDate()).isEqualTo(closeDate);
         assertThat(response.createdAt()).isEqualTo(createdAt);
+        verify(auctionStatusService).createAuctionStatus(item, request.initialPrice(), request.closeDate());
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
-    @DisplayName("direct item creation does not create auction status")
+    @DisplayName("직거래 상품 등록은 경매 상태를 생성하지 않는다")
     @Test
-    void createDirectItemDoesNotCreateAuctionStatus() {
+    void 직거래_상품_등록은_경매_상태를_생성하지_않는다() {
         Client seller = client(1L);
         Category category = category(2L);
         ItemCreateRequest request = new ItemCreateRequest(
@@ -122,6 +128,7 @@ class ItemFacadeTest {
         assertThat(response.currentBid()).isNull();
         assertThat(response.closeDate()).isNull();
         verify(auctionStatusService, never()).createAuctionStatus(item, request.initialPrice(), request.closeDate());
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     private Client client(Long id) {

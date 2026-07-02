@@ -19,7 +19,6 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
-import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import com.example.cabbagemarket10.domain.itemImage.service.ItemImageService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
@@ -45,11 +44,10 @@ public class ItemFacade {
         Category category = categoryService.getCategory(request.categoryId());
 
         Item item = itemService.saveItem(seller, category, request);
-        auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate());
-        searchCacheEvictionService.evictItemSearchV2AfterCommit();
         AuctionStatus auctionStatus = item.isAuction()
                 ? auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate())
                 : null;
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
 
         return ItemCreateResponse.of(item, auctionStatus);
     }
