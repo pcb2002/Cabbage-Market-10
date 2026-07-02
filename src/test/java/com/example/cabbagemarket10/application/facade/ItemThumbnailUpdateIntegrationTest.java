@@ -57,7 +57,7 @@ class ItemThumbnailUpdateIntegrationTest {
         deleteIfExists("client");
     }
 
-    @DisplayName("updating thumbnail stores existing thumbnail false and selected image true")
+    @DisplayName("상품_대표_이미지를_변경하면_선택한_이미지만_대표_이미지로_저장된다")
     @Test
     void 상품_대표_이미지를_변경하면_선택한_이미지만_대표_이미지로_저장된다() {
         Client seller = clientRepository.save(Client.create(

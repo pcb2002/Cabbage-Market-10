@@ -30,7 +30,7 @@ class ItemImageServiceTest {
     @InjectMocks
     private ItemImageService itemImageService;
 
-    @DisplayName("non-thumbnail image in the item can be selected for deletion")
+    @DisplayName("유효한_상품이미지를_조회하면_상품에_속한_일반_이미지를_반환한다")
     @Test
     void 유효한_상품이미지를_조회하면_상품에_속한_일반_이미지를_반환한다() {
         Item item = item(1L);
@@ -42,7 +42,7 @@ class ItemImageServiceTest {
         assertThat(result).isSameAs(image);
     }
 
-    @DisplayName("missing image throws IMAGE_NOT_FOUND")
+    @DisplayName("이미지가_없으면_이미지_없음_예외가_발생한다")
     @Test
     void 이미지가_없으면_이미지_없음_예외가_발생한다() {
         given(itemImageRepository.findById(10L)).willReturn(Optional.empty());
@@ -52,7 +52,7 @@ class ItemImageServiceTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.IMAGE_NOT_FOUND));
     }
 
-    @DisplayName("image from another item throws FORBIDDEN")
+    @DisplayName("다른_상품의_이미지이면_권한_예외가_발생한다")
     @Test
     void 다른_상품의_이미지이면_권한_예외가_발생한다() {
         ItemImage image = itemImage(10L, item(2L), false);
@@ -63,7 +63,7 @@ class ItemImageServiceTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN));
     }
 
-    @DisplayName("thumbnail image cannot be selected for deletion")
+    @DisplayName("대표_이미지이면_조회할_수_없다")
     @Test
     void 대표_이미지이면_조회할_수_없다() {
         ItemImage image = itemImage(10L, item(1L), true);
