@@ -2,6 +2,8 @@ package com.example.cabbagemarket10.application.facade;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cabbagemarket10.domain.auction.facade.AuctionFacade;
+import com.example.cabbagemarket10.domain.auction.repository.AuctionBidHistoryRepository;
 import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
 import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
 import com.example.cabbagemarket10.domain.category.entity.Category;
@@ -51,6 +53,9 @@ class AuctionFacadeConcurrencyIntegrationTest {
     private AuctionStatusRepository auctionStatusRepository;
 
     @Autowired
+    private AuctionBidHistoryRepository auctionBidHistoryRepository;
+
+    @Autowired
     private ItemRepository itemRepository;
 
     @Autowired
@@ -77,6 +82,7 @@ class AuctionFacadeConcurrencyIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        auctionBidHistoryRepository.deleteAllInBatch();
         auctionStatusRepository.deleteAllInBatch();
         itemRepository.deleteAllInBatch();
         categoryRepository.deleteAllInBatch();

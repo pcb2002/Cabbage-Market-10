@@ -5,3 +5,11 @@ spring:
 auth:
   cookie:
     secure: true
+
+app:
+  auction:
+    redis-lock:
+      enabled: ${AUCTION_REDIS_LOCK_ENABLED:true}
+      key-prefix: ${AUCTION_REDIS_LOCK_KEY_PREFIX:auction:bid:}
+      wait-time-millis: ${AUCTION_REDIS_LOCK_WAIT_TIME_MILLIS:5000}
+      lease-time-millis: ${AUCTION_REDIS_LOCK_LEASE_TIME_MILLIS:10000}
