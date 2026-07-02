@@ -595,6 +595,21 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 리뷰 수정 | PATCH | `/api/reviews/{reviewId}` | 필요 | `rating`, `content` 선택 | `200 OK` |
 | 리뷰 삭제 | DELETE | `/api/reviews/{reviewId}` | 필요 | Path `reviewId` | `204 No Content` |
 
+`GET /api/clients/{clientId}/reviews`는 비회원과 회원 모두 특정 회원이 받은 리뷰 목록을 페이징으로 조회한다. 존재하지 않는 회원은 `404 Not Found`(`CLIENT_NOT_FOUND`)로 응답한다. 삭제된 리뷰(`is_deleted = true`)는 제외한다. 정렬 조건이 별도로 정의되어 있지 않아 최신순(`createdAt desc`)을 기본으로 한다.
+
+응답 `data.content` 항목:
+
+| 필드 | 설명 |
+|---|---|
+| reviewId | 리뷰 ID |
+| itemId | 리뷰 대상 상품 ID |
+| reviewerId | 작성자 회원 ID |
+| reviewerNickname | 작성자 닉네임 |
+| reviewerProfileImageUrl | 작성자 프로필 이미지 URL |
+| rating | 평점(1~5) |
+| content | 리뷰 내용 |
+| createdAt | 작성일시 |
+
 리뷰 오류 기준:
 
 | Status | Code | 설명 |

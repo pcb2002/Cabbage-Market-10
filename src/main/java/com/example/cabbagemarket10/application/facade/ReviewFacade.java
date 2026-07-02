@@ -7,11 +7,14 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.review.dto.request.ReviewCreateRequest;
+import com.example.cabbagemarket10.domain.review.dto.response.ReceivedReviewListItemResponse;
 import com.example.cabbagemarket10.domain.review.dto.response.ReviewCreateResponse;
 import com.example.cabbagemarket10.domain.review.service.ReviewService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,12 @@ public class ReviewFacade {
         Client reviewer = clientService.getClient(reviewerId);
         validateBuyer(item, reviewerId);
         return reviewService.createReview(item, reviewer, request);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ReceivedReviewListItemResponse> getReceivedReviews(Long clientId, Pageable pageable) {
+        clientService.getClient(clientId);
+        return reviewService.getReceivedReviews(clientId, pageable);
     }
 
     private void validateReviewableItem(Item item) {
