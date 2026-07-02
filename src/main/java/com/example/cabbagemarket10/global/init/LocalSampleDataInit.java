@@ -11,8 +11,6 @@ import com.example.cabbagemarket10.domain.chat.repository.ChatMessageRepository;
 import com.example.cabbagemarket10.domain.chat.repository.ChatRoomRepository;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
-import com.example.cabbagemarket10.domain.follow.entity.Follow;
-import com.example.cabbagemarket10.domain.follow.repository.FollowRepository;
 import com.example.cabbagemarket10.domain.inquiry.entity.InquiryLog;
 import com.example.cabbagemarket10.domain.inquiry.repository.InquiryLogRepository;
 import com.example.cabbagemarket10.domain.item.entity.Item;
@@ -29,9 +27,6 @@ import com.example.cabbagemarket10.domain.review.repository.ReviewRepository;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -49,7 +44,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LocalSampleDataInit implements CommandLineRunner {
 
-    private static final String SAMPLE_SELLER_EMAIL = "local-seller@example.com";
+    private static final String SAMPLE_MINJI_EMAIL = "local-minji@example.com";
+    private static final String SAMPLE_JUN_EMAIL = "local-jun@example.com";
     private static final String SAMPLE_PASSWORD = "Password1!";
 
     private final PasswordEncoder passwordEncoder;
@@ -59,7 +55,6 @@ public class LocalSampleDataInit implements CommandLineRunner {
     private final ItemImageRepository itemImageRepository;
     private final ItemLikeRepository itemLikeRepository;
     private final AuctionStatusRepository auctionStatusRepository;
-    private final FollowRepository followRepository;
     private final InquiryLogRepository inquiryLogRepository;
     private final ReviewRepository reviewRepository;
     private final ChatRoomRepository chatRoomRepository;
@@ -68,31 +63,36 @@ public class LocalSampleDataInit implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String @NonNull ... args) {
-        if (clientRepository.countByEmailIncludingDeleted(SAMPLE_SELLER_EMAIL) > 0) {
-            log.info("로컬 샘플 데이터가 이미 존재하여 초기화를 건너뜁니다. email={}", SAMPLE_SELLER_EMAIL);
+        if (clientRepository.countByEmailIncludingDeleted(SAMPLE_MINJI_EMAIL) > 0
+                || clientRepository.countByEmailIncludingDeleted(SAMPLE_JUN_EMAIL) > 0) {
+            log.info("Local sample data already exists. emails={}, {}", SAMPLE_MINJI_EMAIL, SAMPLE_JUN_EMAIL);
             return;
         }
 
-        Map<String, Category> categories = ensureCategories();
-        List<Client> clients = createClients();
-        Client seller = clients.get(0);
-        Client buyer = clients.get(1);
-        Client bidder = clients.get(2);
-        Client reviewer = clients.get(3);
+        List<Category> categories = ensureCategories();
+        Client minji = clientRepository.save(
+                Client.create(SAMPLE_MINJI_EMAIL, passwordEncoder.encode(SAMPLE_PASSWORD), "민지마켓", "김민지", "010-1111-1111"));
+        Client jun = clientRepository.save(
+                Client.create(SAMPLE_JUN_EMAIL, passwordEncoder.encode(SAMPLE_PASSWORD), "준이상점", "박준호", "010-2222-2222"));
 
-        List<Item> items = createItems(categories, seller, buyer);
-        createItemImages(items);
-        createAuctionStatuses(items, bidder);
-        createLikes(items, buyer, bidder, reviewer);
-        createFollows(seller, buyer, bidder, reviewer);
-        createInquiries(items, seller, buyer, bidder);
-        createReviews(items, seller, buyer, reviewer);
-        createChatRooms(items, seller, buyer, bidder);
+        List<Item> minjiItems = createMinjiItems(categories, minji, jun);
+        List<Item> junItems = createJunItems(categories, jun, minji);
+        List<Item> allItems = List.of(
+                minjiItems.get(0), minjiItems.get(1), minjiItems.get(2), minjiItems.get(3), minjiItems.get(4),
+                junItems.get(0), junItems.get(1), junItems.get(2), junItems.get(3), junItems.get(4));
 
-        log.info("로컬 샘플 데이터 세팅 완료. 계정 비밀번호는 모두 {} 입니다.", SAMPLE_PASSWORD);
+        createItemImages(allItems);
+        createAuctionStatuses(minjiItems, junItems, minji, jun);
+        createLikes(minjiItems, junItems, minji, jun);
+        createInquiries(minjiItems, junItems, minji, jun);
+        createReviews(minjiItems, junItems, minji, jun);
+        createChatRooms(minjiItems, junItems, minji, jun);
+
+        log.info("Local sample data created. accounts: {} / {}, password={}",
+                SAMPLE_MINJI_EMAIL, SAMPLE_JUN_EMAIL, SAMPLE_PASSWORD);
     }
 
-    private Map<String, Category> ensureCategories() {
+    private List<Category> ensureCategories() {
         if (categoryRepository.count() == 0) {
             categoryRepository.saveAll(List.of(
                     Category.builder().name("패션/의류").sortOrder(1).isActive(true).build(),
@@ -107,186 +107,133 @@ public class LocalSampleDataInit implements CommandLineRunner {
         }
 
         return categoryRepository.findAll().stream()
-                .sorted(Comparator.comparing(Category::getSortOrder))
-                .collect(Collectors.toMap(Category::getName, Function.identity(), (left, right) -> left));
+                .sorted(Comparator.comparing(Category::getSortOrder, Comparator.nullsLast(Integer::compareTo)))
+                .toList();
     }
 
-    private List<Client> createClients() {
-        String encodedPassword = passwordEncoder.encode(SAMPLE_PASSWORD);
-        return clientRepository.saveAll(List.of(
-                Client.create(SAMPLE_SELLER_EMAIL, encodedPassword, "미니멀라이프", "판매자", "010-1111-1111"),
-                Client.create("local-buyer@example.com", encodedPassword, "배추도사", "구매자", "010-2222-2222"),
-                Client.create("local-bidder@example.com", encodedPassword, "입찰왕", "입찰자", "010-3333-3333"),
-                Client.create("local-reviewer@example.com", encodedPassword, "후기장인", "리뷰어", "010-4444-4444")
-        ));
+    private List<Item> createMinjiItems(List<Category> categories, Client seller, Client buyer) {
+        Item camera = item(categories, 1, seller, TradeType.DIRECT, "라이카 M10-P 블랙 바디",
+                "생활 흠집이 거의 없는 카메라입니다. 박스와 스트랩을 함께 드립니다.",
+                8_500_000L, ConditionType.USED, TradeStatus.ON_SALE, false);
+        Item headphones = item(categories, 1, seller, TradeType.DIRECT, "소니 WH-1000XM5 실버",
+                "6개월 사용한 노이즈 캔슬링 헤드폰입니다. 케이스 포함입니다.",
+                320_000L, ConditionType.USED, TradeStatus.RESERVED, false);
+        Item keyboard = item(categories, 1, seller, TradeType.DIRECT, "커스텀 기계식 키보드",
+                "윤활 작업 완료한 조용한 키보드입니다. 사무실용으로 좋습니다.",
+                280_000L, ConditionType.USED, TradeStatus.SOLD_OUT, false);
+        keyboard.updateStatus(TradeStatus.SOLD_OUT, buyer);
+        Item lamp = item(categories, 4, seller, TradeType.AUCTION, "아르떼미데 테이블 램프",
+                "상태 좋은 테이블 램프입니다. 로컬 경매 테스트용 상품입니다.",
+                185_000L, ConditionType.USED, TradeStatus.ON_SALE, false);
+        Item grinder = item(categories, 4, seller, TradeType.DIRECT, "펠로우 오드 그라인더 Gen 2",
+                "분쇄 균일도가 좋은 커피 그라인더입니다. 구성품 모두 있습니다.",
+                350_000L, ConditionType.USED, TradeStatus.ON_SALE, false);
+
+        return itemRepository.saveAll(List.of(camera, headphones, keyboard, lamp, grinder));
     }
 
-    private List<Item> createItems(Map<String, Category> categories, Client seller, Client buyer) {
-        Category digital = category(categories, "디지털/가전");
-        Category living = category(categories, "생활/주방");
-        Category hobby = category(categories, "취미/게임");
-        Category book = category(categories, "도서/음반");
-        Category fashion = category(categories, "패션/의류");
+    private List<Item> createJunItems(List<Category> categories, Client seller, Client buyer) {
+        Item jacket = item(categories, 0, seller, TradeType.DIRECT, "빈티지 코튼 재킷",
+                "봄가을에 입기 좋은 빈티지 재킷입니다. 오염 없이 깨끗합니다.",
+                65_000L, ConditionType.USED, TradeStatus.ON_SALE, false);
+        Item calculator = item(categories, 2, seller, TradeType.DIRECT, "브라운 계산기 ET66 복각판",
+                "미개봉 계산기입니다. 책상 소품으로도 좋습니다.",
+                45_000L, ConditionType.NEW, TradeStatus.SOLD_OUT, false);
+        calculator.updateStatus(TradeStatus.SOLD_OUT, buyer);
+        Item bicycle = item(categories, 3, seller, TradeType.DIRECT, "브롬톤 클래식 시티 바이크",
+                "가벼운 출퇴근용 접이식 자전거입니다. 정비 완료했습니다.",
+                1_200_000L, ConditionType.USED, TradeStatus.ON_SALE, false);
+        Item console = item(categories, 5, seller, TradeType.AUCTION, "닌텐도 스위치 OLED 세트",
+                "본체, 독, 조이콘, 게임 타이틀 2개 포함입니다. 경매 테스트용입니다.",
+                210_000L, ConditionType.USED, TradeStatus.ON_SALE, false);
+        Item bag = item(categories, 0, seller, TradeType.DIRECT, "포터 탱커 숄더백",
+                "사용감 적은 숄더백입니다. 데일리 가방으로 좋습니다.",
+                120_000L, ConditionType.USED, TradeStatus.RESERVED, false);
 
-        Item soldKeyboard = Item.builder()
-                .category(digital)
+        return itemRepository.saveAll(List.of(jacket, calculator, bicycle, console, bag));
+    }
+
+    private Item item(
+            List<Category> categories,
+            int categoryIndex,
+            Client seller,
+            TradeType tradeType,
+            String title,
+            String description,
+            Long initialPrice,
+            ConditionType conditionType,
+            TradeStatus tradeStatus,
+            boolean isDraft
+    ) {
+        return Item.builder()
+                .category(category(categories, categoryIndex))
                 .seller(seller)
-                .tradeType(TradeType.DIRECT)
-                .title("커스텀 기계식 키보드 HHKB 레이아웃")
-                .description("윤활 작업 완료된 커스텀 키보드입니다. 조용하고 단단한 타건감입니다.")
-                .initialPrice(280_000L)
-                .conditionType(ConditionType.USED)
-                .tradeStatus(TradeStatus.SOLD_OUT)
-                .isDraft(false)
+                .tradeType(tradeType)
+                .title(title)
+                .description(description)
+                .initialPrice(initialPrice)
+                .conditionType(conditionType)
+                .tradeStatus(tradeStatus)
+                .isDraft(isDraft)
                 .build();
-        soldKeyboard.updateStatus(TradeStatus.SOLD_OUT, buyer);
-
-        return itemRepository.saveAll(List.of(
-                Item.builder()
-                        .category(digital)
-                        .seller(seller)
-                        .tradeType(TradeType.DIRECT)
-                        .title("라이카 M10-P 블랙 페인트 에디션")
-                        .description("상태 좋은 카메라입니다. 생활 흠집은 거의 없고 렌즈 캡과 박스를 함께 드립니다.")
-                        .initialPrice(8_500_000L)
-                        .conditionType(ConditionType.USED)
-                        .tradeStatus(TradeStatus.ON_SALE)
-                        .isDraft(false)
-                        .build(),
-                Item.builder()
-                        .category(digital)
-                        .seller(seller)
-                        .tradeType(TradeType.DIRECT)
-                        .title("소니 WH-1000XM5 실버")
-                        .description("노이즈 캔슬링이 좋은 헤드폰입니다. 실사용 기간은 6개월입니다.")
-                        .initialPrice(320_000L)
-                        .conditionType(ConditionType.USED)
-                        .tradeStatus(TradeStatus.RESERVED)
-                        .isDraft(false)
-                        .build(),
-                soldKeyboard,
-                Item.builder()
-                        .category(living)
-                        .seller(seller)
-                        .tradeType(TradeType.AUCTION)
-                        .title("아르떼미데 네시노 테이블 램프")
-                        .description("따뜻한 빛감의 테이블 램프입니다. 경매 상품으로 현재 입찰 중입니다.")
-                        .initialPrice(185_000L)
-                        .conditionType(ConditionType.USED)
-                        .tradeStatus(TradeStatus.ON_SALE)
-                        .isDraft(false)
-                        .build(),
-                Item.builder()
-                        .category(living)
-                        .seller(seller)
-                        .tradeType(TradeType.DIRECT)
-                        .title("펠로우 오드 그라인더 Gen 2")
-                        .description("커피 그라인더입니다. 분쇄 균일도가 좋고 구성품 모두 있습니다.")
-                        .initialPrice(350_000L)
-                        .conditionType(ConditionType.USED)
-                        .tradeStatus(TradeStatus.ON_SALE)
-                        .isDraft(false)
-                        .build(),
-                Item.builder()
-                        .category(book)
-                        .seller(seller)
-                        .tradeType(TradeType.DIRECT)
-                        .title("브라운 계산기 ET66 복각판")
-                        .description("미개봉 복각판 계산기입니다. 책상 위 소품으로도 좋습니다.")
-                        .initialPrice(45_000L)
-                        .conditionType(ConditionType.NEW)
-                        .tradeStatus(TradeStatus.ON_SALE)
-                        .isDraft(false)
-                        .build(),
-                Item.builder()
-                        .category(hobby)
-                        .seller(seller)
-                        .tradeType(TradeType.DIRECT)
-                        .title("벨로라인 클래식 시티 바이크")
-                        .description("가벼운 출퇴근용 시티 바이크입니다.")
-                        .initialPrice(210_000L)
-                        .conditionType(ConditionType.USED)
-                        .tradeStatus(TradeStatus.ON_SALE)
-                        .isDraft(false)
-                        .build(),
-                Item.builder()
-                        .category(fashion)
-                        .seller(seller)
-                        .tradeType(TradeType.DIRECT)
-                        .title("빈티지 코튼 재킷")
-                        .description("봄가을에 입기 좋은 빈티지 코튼 재킷입니다.")
-                        .initialPrice(65_000L)
-                        .conditionType(ConditionType.USED)
-                        .tradeStatus(TradeStatus.ON_SALE)
-                        .isDraft(true)
-                        .build()
-        ));
     }
 
-    private Category category(Map<String, Category> categories, String name) {
-        return categories.getOrDefault(name, categories.values().iterator().next());
+    private Category category(List<Category> categories, int index) {
+        if (categories.isEmpty()) {
+            throw new IllegalStateException("Local sample categories are required.");
+        }
+        return categories.get(Math.min(index, categories.size() - 1));
     }
 
     private void createItemImages(List<Item> items) {
-        String[][] images = {
-                {
-                        "https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=720&q=80",
-                        "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=720&q=80"
-                },
-                {
-                        "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=720&q=80"
-                },
-                {
-                        "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=720&q=80"
-                },
-                {
-                        "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=720&q=80",
-                        "https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&w=720&q=80"
-                },
-                {
-                        "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&w=720&q=80"
-                },
-                {
-                        "https://images.unsplash.com/photo-1564473185935-58113cba1e80?auto=format&fit=crop&w=720&q=80"
-                },
-                {
-                        "https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?auto=format&fit=crop&w=720&q=80"
-                },
-                {
-                        "https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=720&q=80"
-                }
+        String[] imageUrls = {
+                "https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1564473185935-58113cba1e80?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=720&q=80",
+                "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=720&q=80"
         };
 
-        for (int itemIndex = 0; itemIndex < items.size(); itemIndex++) {
-            for (int imageIndex = 0; imageIndex < images[itemIndex].length; imageIndex++) {
-                itemImageRepository.save(ItemImage.builder()
-                        .item(items.get(itemIndex))
-                        .imageUrl(images[itemIndex][imageIndex])
-                        .sortOrder(imageIndex + 1)
-                        .isThumbnail(imageIndex == 0)
-                        .build());
-            }
+        for (int index = 0; index < items.size(); index++) {
+            itemImageRepository.save(ItemImage.builder()
+                    .item(items.get(index))
+                    .imageUrl(imageUrls[index])
+                    .sortOrder(1)
+                    .isThumbnail(true)
+                    .build());
         }
     }
 
-    private void createAuctionStatuses(List<Item> items, Client bidder) {
-        Item auctionItem = items.get(3);
-        AuctionStatus auctionStatus = AuctionStatus.builder()
-                .item(auctionItem)
-                .currentBid(auctionItem.getInitialPrice())
+    private void createAuctionStatuses(List<Item> minjiItems, List<Item> junItems, Client minji, Client jun) {
+        AuctionStatus minjiAuction = AuctionStatus.builder()
+                .item(minjiItems.get(3))
+                .currentBid(minjiItems.get(3).getInitialPrice())
                 .closeDate(LocalDateTime.now().plusDays(7))
                 .build();
-        auctionStatus.updateBid(211_000L, bidder.getId(), LocalDateTime.now());
-        auctionStatusRepository.save(auctionStatus);
+        minjiAuction.updateBid(211_000L, jun.getId(), LocalDateTime.now());
+
+        AuctionStatus junAuction = AuctionStatus.builder()
+                .item(junItems.get(3))
+                .currentBid(junItems.get(3).getInitialPrice())
+                .closeDate(LocalDateTime.now().plusDays(5))
+                .build();
+        junAuction.updateBid(230_000L, minji.getId(), LocalDateTime.now());
+
+        auctionStatusRepository.saveAll(List.of(minjiAuction, junAuction));
     }
 
-    private void createLikes(List<Item> items, Client buyer, Client bidder, Client reviewer) {
-        saveLike(buyer, items.get(0));
-        saveLike(buyer, items.get(3));
-        saveLike(bidder, items.get(0));
-        saveLike(bidder, items.get(1));
-        saveLike(reviewer, items.get(4));
-        saveLike(reviewer, items.get(6));
+    private void createLikes(List<Item> minjiItems, List<Item> junItems, Client minji, Client jun) {
+        saveLike(jun, minjiItems.get(0));
+        saveLike(jun, minjiItems.get(3));
+        saveLike(jun, minjiItems.get(4));
+        saveLike(minji, junItems.get(0));
+        saveLike(minji, junItems.get(2));
+        saveLike(minji, junItems.get(3));
     }
 
     private void saveLike(Client client, Item item) {
@@ -297,90 +244,107 @@ public class LocalSampleDataInit implements CommandLineRunner {
                 .build());
     }
 
-    private void createFollows(Client seller, Client buyer, Client bidder, Client reviewer) {
-        followRepository.saveAll(List.of(
-                Follow.builder().follower(buyer).following(seller).build(),
-                Follow.builder().follower(bidder).following(seller).build(),
-                Follow.builder().follower(reviewer).following(seller).build(),
-                Follow.builder().follower(seller).following(buyer).build()
-        ));
-    }
-
-    private void createInquiries(List<Item> items, Client seller, Client buyer, Client bidder) {
+    private void createInquiries(List<Item> minjiItems, List<Item> junItems, Client minji, Client jun) {
         InquiryLog cameraQuestion = inquiryLogRepository.save(InquiryLog.builder()
-                .item(items.get(0))
-                .author(buyer)
-                .title("직거래 가능 지역 문의")
-                .description("주말에 합정역 근처에서 직거래 가능할까요?")
+                .item(minjiItems.get(0))
+                .author(jun)
+                .title("직거래 가능 시간 문의")
+                .description("오늘 저녁이나 주말 오전에 직거래 가능할까요?")
                 .status("OPEN")
                 .build());
         inquiryLogRepository.save(InquiryLog.builder()
-                .item(items.get(0))
-                .author(seller)
+                .item(minjiItems.get(0))
+                .author(minji)
                 .targetInquiry(cameraQuestion)
                 .title("답변")
-                .description("네, 토요일 오후 합정역 3번 출구에서 가능합니다.")
+                .description("주말 오전 10시 이후로 가능합니다.")
                 .status("ANSWERED")
                 .build());
-        inquiryLogRepository.save(InquiryLog.builder()
-                .item(items.get(3))
-                .author(bidder)
-                .title("경매 마감 문의")
-                .description("즉시 구매는 어렵고 경매로만 진행하시나요?")
+
+        InquiryLog jacketQuestion = inquiryLogRepository.save(InquiryLog.builder()
+                .item(junItems.get(0))
+                .author(minji)
+                .title("사이즈 문의")
+                .description("평소 95 사이즈를 입는데 잘 맞을까요?")
                 .status("OPEN")
                 .build());
+        inquiryLogRepository.save(InquiryLog.builder()
+                .item(junItems.get(0))
+                .author(jun)
+                .targetInquiry(jacketQuestion)
+                .title("답변")
+                .description("95에서 100 사이즈까지 편하게 맞습니다.")
+                .status("ANSWERED")
+                .build());
     }
 
-    private void createReviews(List<Item> items, Client seller, Client buyer, Client reviewer) {
+    private void createReviews(List<Item> minjiItems, List<Item> junItems, Client minji, Client jun) {
         reviewRepository.saveAll(List.of(
                 Review.builder()
-                        .item(items.get(2))
-                        .reviewer(buyer)
-                        .reviewee(seller)
+                        .item(minjiItems.get(2))
+                        .reviewer(jun)
+                        .reviewee(minji)
                         .rating(5)
-                        .content("상품 상태 설명이 정확했고 거래가 빨랐습니다.")
+                        .content("상품 설명이 정확했고 약속 시간도 잘 지켜주셨습니다.")
                         .isDeleted(false)
                         .build(),
                 Review.builder()
-                        .item(items.get(2))
-                        .reviewer(reviewer)
-                        .reviewee(buyer)
+                        .item(minjiItems.get(1))
+                        .reviewer(jun)
+                        .reviewee(minji)
                         .rating(4)
-                        .content("약속 시간을 잘 지켜주셨어요.")
+                        .content("응답이 빠르고 포장이 꼼꼼했습니다.")
+                        .isDeleted(false)
+                        .build(),
+                Review.builder()
+                        .item(junItems.get(1))
+                        .reviewer(minji)
+                        .reviewee(jun)
+                        .rating(5)
+                        .content("새 상품 그대로였고 거래가 편했습니다.")
+                        .isDeleted(false)
+                        .build(),
+                Review.builder()
+                        .item(junItems.get(4))
+                        .reviewer(minji)
+                        .reviewee(jun)
+                        .rating(4)
+                        .content("사진과 같은 상태였고 설명이 친절했습니다.")
                         .isDeleted(false)
                         .build()
         ));
     }
 
-    private void createChatRooms(List<Item> items, Client seller, Client buyer, Client bidder) {
-        ChatRoom cameraRoom = chatRoomRepository.save(ChatRoom.builder()
-                .item(items.get(0))
-                .createdBy(buyer)
+    private void createChatRooms(List<Item> minjiItems, List<Item> junItems, Client minji, Client jun) {
+        ChatRoom minjiItemRoom = chatRoomRepository.save(ChatRoom.builder()
+                .item(minjiItems.get(0))
+                .createdBy(jun)
                 .build());
         chatMessageRepository.saveAll(List.of(
-                ChatMessage.builder()
-                        .chatRoom(cameraRoom)
-                        .sender(buyer)
-                        .messageType(MessageType.TEXT)
-                        .content("안녕하세요, 구매 가능한가요?")
-                        .build(),
-                ChatMessage.builder()
-                        .chatRoom(cameraRoom)
-                        .sender(seller)
-                        .messageType(MessageType.TEXT)
-                        .content("네, 가능합니다. 구성품은 모두 보관 중입니다.")
-                        .build()
+                message(minjiItemRoom, jun, "안녕하세요. 라이카 아직 구매 가능할까요?"),
+                message(minjiItemRoom, minji, "네, 가능합니다. 구성품은 모두 보관 중입니다."),
+                message(minjiItemRoom, jun, "그럼 주말 오전에 직접 보고 거래하고 싶습니다."),
+                message(minjiItemRoom, minji, "좋습니다. 토요일 오전 10시에 가능합니다.")
         ));
 
-        ChatRoom auctionRoom = chatRoomRepository.save(ChatRoom.builder()
-                .item(items.get(3))
-                .createdBy(bidder)
+        ChatRoom junItemRoom = chatRoomRepository.save(ChatRoom.builder()
+                .item(junItems.get(0))
+                .createdBy(minji)
                 .build());
-        chatMessageRepository.save(ChatMessage.builder()
-                .chatRoom(auctionRoom)
-                .sender(bidder)
+        chatMessageRepository.saveAll(List.of(
+                message(junItemRoom, minji, "재킷 실측 사이즈를 알 수 있을까요?"),
+                message(junItemRoom, jun, "가슴 56cm, 총장 68cm 정도입니다."),
+                message(junItemRoom, minji, "확인 감사합니다. 오늘 저녁 거래 가능하세요?"),
+                message(junItemRoom, jun, "네, 7시 이후 가능합니다.")
+        ));
+    }
+
+    private ChatMessage message(ChatRoom chatRoom, Client sender, String content) {
+        return ChatMessage.builder()
+                .chatRoom(chatRoom)
+                .sender(sender)
                 .messageType(MessageType.TEXT)
-                .content("램프 실사용 사진을 더 볼 수 있을까요?")
-                .build());
+                .content(content)
+                .build();
     }
 }
