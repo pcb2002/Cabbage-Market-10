@@ -71,6 +71,8 @@ class AuctionFacadeConcurrencyIntegrationTest {
         registry.add("spring.data.redis.port", () -> REDIS_PORT);
         registry.add("spring.data.redis.password", () -> "");
         registry.add("app.auction.redis-lock.enabled", () -> true);
+        registry.add("app.auction.redis-lock.wait-time-millis", () -> 30_000L);
+        registry.add("app.auction.redis-lock.lease-time-millis", () -> 60_000L);
     }
 
     @AfterAll
