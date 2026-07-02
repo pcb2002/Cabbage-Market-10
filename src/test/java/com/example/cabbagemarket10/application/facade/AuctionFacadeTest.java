@@ -62,9 +62,9 @@ class AuctionFacadeTest {
         Thread.interrupted();
     }
 
-    @DisplayName("bid uses redis lock and unlocks")
+    @DisplayName("입찰은 Redis 락을 획득한 뒤 처리하고 락을 해제한다")
     @Test
-    void bidItemUsesRedissonLockAndUnlocks() throws InterruptedException {
+    void 입찰은_Redis_락을_획득한_뒤_처리하고_락을_해제한다() throws InterruptedException {
         Item item = itemWithSellerId(3L);
         ItemBidResponse expectedResponse = new ItemBidResponse(1L, 12000L, LocalDateTime.now().plusDays(1));
         given(redissonClient.getLock("auction:bid:1")).willReturn(lock);
@@ -81,9 +81,9 @@ class AuctionFacadeTest {
         verify(lock).unlock();
     }
 
-    @DisplayName("bid uses configured redis lock values")
+    @DisplayName("입찰은 설정된 Redis 락 값을 사용한다")
     @Test
-    void bidItemUsesConfiguredRedisLockValues() throws InterruptedException {
+    void 입찰은_설정된_Redis_락_값을_사용한다() throws InterruptedException {
         lockProperties.setKeyPrefix("custom:auction:");
         lockProperties.setWaitTimeMillis(25L);
         lockProperties.setLeaseTimeMillis(50L);
@@ -103,9 +103,9 @@ class AuctionFacadeTest {
         verify(lock).unlock();
     }
 
-    @DisplayName("bid fails when redis lock is not acquired")
+    @DisplayName("Redis 락을 획득하지 못하면 입찰에 실패한다")
     @Test
-    void bidItemFailsWhenLockCannotBeAcquired() throws InterruptedException {
+    void Redis_락을_획득하지_못하면_입찰에_실패한다() throws InterruptedException {
         given(redissonClient.getLock("auction:bid:1")).willReturn(lock);
         given(lock.tryLock(5000L, 10000L, TimeUnit.MILLISECONDS)).willReturn(false);
 
@@ -119,9 +119,9 @@ class AuctionFacadeTest {
         verify(lock, never()).unlock();
     }
 
-    @DisplayName("bid restores interrupted status")
+    @DisplayName("입찰 대기 중 인터럽트가 발생하면 인터럽트 상태를 복구한다")
     @Test
-    void bidItemRestoresInterruptedStatus() throws InterruptedException {
+    void 입찰_대기_중_인터럽트가_발생하면_인터럽트_상태를_복구한다() throws InterruptedException {
         given(redissonClient.getLock("auction:bid:1")).willReturn(lock);
         given(lock.tryLock(5000L, 10000L, TimeUnit.MILLISECONDS)).willThrow(new InterruptedException());
 
@@ -135,21 +135,21 @@ class AuctionFacadeTest {
         verify(lock, never()).unlock();
     }
 
-    @DisplayName("direct item cannot receive bid")
+    @DisplayName("직거래 상품은 입찰할 수 없다")
     @Test
-    void directItemCannotReceiveBid() throws InterruptedException {
+    void 직거래_상품은_입찰할_수_없다() throws InterruptedException {
         assertInvalidBidItem(itemWithSellerId(3L, TradeType.DIRECT, TradeStatus.ON_SALE, false));
     }
 
-    @DisplayName("draft item cannot receive bid")
+    @DisplayName("임시저장 상품은 입찰할 수 없다")
     @Test
-    void draftItemCannotReceiveBid() throws InterruptedException {
+    void 임시저장_상품은_입찰할_수_없다() throws InterruptedException {
         assertInvalidBidItem(itemWithSellerId(3L, TradeType.AUCTION, TradeStatus.ON_SALE, true));
     }
 
-    @DisplayName("not on sale item cannot receive bid")
+    @DisplayName("판매중이 아닌 상품은 입찰할 수 없다")
     @Test
-    void notOnSaleItemCannotReceiveBid() throws InterruptedException {
+    void 판매중이_아닌_상품은_입찰할_수_없다() throws InterruptedException {
         assertInvalidBidItem(itemWithSellerId(3L, TradeType.AUCTION, TradeStatus.RESERVED, false));
     }
 
