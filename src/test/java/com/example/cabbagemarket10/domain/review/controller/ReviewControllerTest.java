@@ -17,6 +17,8 @@ import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.itemImage.entity.ItemImage;
+import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import com.example.cabbagemarket10.domain.review.entity.Review;
 import com.example.cabbagemarket10.domain.review.repository.ReviewRepository;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
@@ -54,6 +56,9 @@ class ReviewControllerTest {
 
     @Autowired
     private ReviewRepository reviewRepository;
+
+    @Autowired
+    private ItemImageRepository itemImageRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -370,6 +375,165 @@ class ReviewControllerTest {
                 .andExpect(jsonPath("$.data.content[0].reviewId").value(review.getId()))
                 .andExpect(jsonPath("$.data.content[0].reviewerNickname")
                         .value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @DisplayName("인증된 회원은 자신이 작성한 리뷰 목록을 조회할 수 있다")
+    @Test
+    void 인증된_회원은_자신이_작성한_리뷰_목록을_조회할_수_있다() throws Exception {
+        Client seller = saveClient("written-seller@example.com", "작성리뷰판매자", "김판매");
+        Client buyer = saveClient("written-buyer@example.com", "작성리뷰구매자", "박구매");
+        Item item = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        Review review = reviewRepository.save(Review.builder()
+                .item(item)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(4)
+                .content("좋은 판매자였습니다.")
+                .build());
+        String accessToken = jwtTokenProvider.createAccessToken(buyer);
+
+        mockMvc.perform(get("/api/clients/me/reviews/written")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].reviewId").value(review.getId()))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.content[0].itemTitle").value(item.getTitle()))
+                .andExpect(jsonPath("$.data.content[0].itemThumbnailUrl")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.data.content[0].revieweeId").value(seller.getId()))
+                .andExpect(jsonPath("$.data.content[0].revieweeNickname").value("작성리뷰판매자"))
+                .andExpect(jsonPath("$.data.content[0].rating").value(4))
+                .andExpect(jsonPath("$.data.content[0].content").value("좋은 판매자였습니다."))
+                .andExpect(jsonPath("$.data.content[0].createdAt").exists())
+                .andExpect(jsonPath("$.data.content[0].reviewerId").doesNotExist());
+    }
+
+    @DisplayName("작성한 리뷰 목록 응답에는 상품 대표 이미지가 포함된다")
+    @Test
+    void 작성한_리뷰_목록_응답에는_상품_대표_이미지가_포함된다() throws Exception {
+        Client seller = saveClient("written-thumb-seller@example.com", "썸네일판매자", "김판매");
+        Client buyer = saveClient("written-thumb-buyer@example.com", "썸네일구매자", "박구매");
+        Item item = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        itemImageRepository.save(ItemImage.builder()
+                .item(item)
+                .imageUrl("https://example.com/items/written-thumb.jpg")
+                .sortOrder(0)
+                .isThumbnail(true)
+                .build());
+        reviewRepository.save(Review.builder()
+                .item(item)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(5)
+                .content("만족스러운 거래")
+                .build());
+        String accessToken = jwtTokenProvider.createAccessToken(buyer);
+
+        mockMvc.perform(get("/api/clients/me/reviews/written")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].itemThumbnailUrl")
+                        .value("https://example.com/items/written-thumb.jpg"));
+    }
+
+    @DisplayName("토큰 없이 내가 작성한 리뷰 목록 조회를 요청하면 401을 반환한다")
+    @Test
+    void 토큰_없이_내가_작성한_리뷰_목록_조회를_요청하면_401을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/clients/me/reviews/written"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("삭제된 리뷰는 내가 작성한 리뷰 목록에서 제외된다")
+    @Test
+    void 삭제된_리뷰는_내가_작성한_리뷰_목록에서_제외된다() throws Exception {
+        Client seller = saveClient("written-deleted-seller@example.com", "삭제작성판매자", "김판매");
+        Client buyer = saveClient("written-deleted-buyer@example.com", "삭제작성구매자", "박구매");
+        Item remainingItem = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        Item deletedItem = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        Review remainingReview = reviewRepository.save(Review.builder()
+                .item(remainingItem)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(4)
+                .content("남는 리뷰")
+                .build());
+        Review deletedReview = reviewRepository.save(Review.builder()
+                .item(deletedItem)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(2)
+                .content("삭제될 리뷰")
+                .build());
+        reviewRepository.delete(deletedReview);
+        reviewRepository.flush();
+        String accessToken = jwtTokenProvider.createAccessToken(buyer);
+
+        mockMvc.perform(get("/api/clients/me/reviews/written")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].reviewId").value(remainingReview.getId()));
+    }
+
+    @DisplayName("작성한 리뷰 목록은 최신순으로 정렬된다")
+    @Test
+    void 작성한_리뷰_목록은_최신순으로_정렬된다() throws Exception {
+        Client seller = saveClient("written-sort-seller@example.com", "작성정렬판매자", "김판매");
+        Client buyer = saveClient("written-sort-buyer@example.com", "작성정렬구매자", "박구매");
+        Item olderItem = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        Item newerItem = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        Review olderReview = reviewRepository.save(Review.builder()
+                .item(olderItem)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(3)
+                .content("먼저 작성한 리뷰")
+                .build());
+        Review newerReview = reviewRepository.save(Review.builder()
+                .item(newerItem)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(5)
+                .content("나중에 작성한 리뷰")
+                .build());
+        String accessToken = jwtTokenProvider.createAccessToken(buyer);
+
+        mockMvc.perform(get("/api/clients/me/reviews/written")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].reviewId").value(newerReview.getId()))
+                .andExpect(jsonPath("$.data.content[1].reviewId").value(olderReview.getId()));
+    }
+
+    @DisplayName("리뷰를 작성한 상품이 이후 삭제되어도 작성한 리뷰 목록에서 사라지지 않는다")
+    @Test
+    void 리뷰를_작성한_상품이_이후_삭제되어도_작성한_리뷰_목록에서_사라지지_않는다() throws Exception {
+        Client seller = saveClient("deleted-item-seller@example.com", "상품삭제판매자", "김판매");
+        Client buyer = saveClient("deleted-item-buyer@example.com", "상품삭제구매자", "박구매");
+        Item item = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        Review review = reviewRepository.save(Review.builder()
+                .item(item)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(5)
+                .content("상품은 나중에 삭제됨")
+                .build());
+        itemRepository.delete(item);
+        itemRepository.flush();
+        String accessToken = jwtTokenProvider.createAccessToken(buyer);
+
+        mockMvc.perform(get("/api/clients/me/reviews/written")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].reviewId").value(review.getId()))
+                .andExpect(jsonPath("$.data.content[0].itemTitle")
+                        .value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.data.content[0].revieweeNickname").value("상품삭제판매자"));
     }
 
     private Client saveClient(String email, String nickname, String name) {
