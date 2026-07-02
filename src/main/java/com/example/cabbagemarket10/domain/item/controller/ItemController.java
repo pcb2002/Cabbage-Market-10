@@ -1,14 +1,15 @@
 package com.example.cabbagemarket10.domain.item.controller;
 
-import com.example.cabbagemarket10.application.facade.AuctionFacade;
-import com.example.cabbagemarket10.application.facade.ItemFacade;
-import com.example.cabbagemarket10.application.facade.ItemLikeFacade;
+import com.example.cabbagemarket10.domain.auction.facade.AuctionFacade;
+import com.example.cabbagemarket10.domain.item.facade.ItemFacade;
+import com.example.cabbagemarket10.domain.item.facade.ItemLikeFacade;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemBidRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemStatusUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemCreateResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemLikeToggleResponse;
@@ -52,14 +53,14 @@ public class ItemController {
     private final ObjectProvider<AuctionFacade> auctionFacadeProvider;
 
     @PostMapping
-    public ResponseEntity<CommonResponse<Long>> createItem(
+    public ResponseEntity<CommonResponse<ItemCreateResponse>> createItem(
             @Valid @RequestBody ItemCreateRequest request,
             @AuthenticationPrincipal AuthenticatedClient userDetails) {
 
         Long sellerId = userDetails.clientId();
-        Long itemId = itemFacade.createItem(sellerId, request);
+        ItemCreateResponse response = itemFacade.createItem(sellerId, request);
 
-        return CommonResponse.success(HttpStatus.CREATED, itemId).toResponseEntity();
+        return CommonResponse.success(HttpStatus.CREATED, response).toResponseEntity();
     }
 
     @PostMapping("/drafts")

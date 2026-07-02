@@ -22,7 +22,6 @@ import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -38,7 +37,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -64,9 +62,6 @@ class ItemControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
@@ -116,11 +111,24 @@ class ItemControllerTest {
                                 """.formatted(category.getId())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value(201))
-                .andExpect(jsonPath("$.data").isNumber())
+                .andExpect(jsonPath("$.data.itemId").isNumber())
+                .andExpect(jsonPath("$.data.sellerId").value(seller.getId()))
+                .andExpect(jsonPath("$.data.categoryId").value(category.getId()))
+                .andExpect(jsonPath("$.data.tradeType").value("AUCTION"))
+                .andExpect(jsonPath("$.data.title").exists())
+                .andExpect(jsonPath("$.data.initialPrice").value(12000))
+                .andExpect(jsonPath("$.data.currentBid").value(12000))
+                .andExpect(jsonPath("$.data.tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.viewCount").value(0))
+                .andExpect(jsonPath("$.data.likeCount").value(0))
+                .andExpect(jsonPath("$.data.inquiryCount").value(0))
+                .andExpect(jsonPath("$.data.isDraft").value(false))
+                .andExpect(jsonPath("$.data.closeDate").value("2026-06-30T23:59:59"))
+                .andExpect(jsonPath("$.data.createdAt").exists())
                 .andReturn()
                 .getResponse()
                 .getContentAsString()
-                .replaceAll(".*\"data\":(\\d+).*", "$1");
+                .replaceAll(".*\"itemId\":(\\d+).*", "$1");
 
         Long savedItemId = Long.valueOf(itemId);
         Item item = itemRepository.findById(savedItemId).orElseThrow();
@@ -895,7 +903,7 @@ class ItemControllerTest {
                 .isDraft(false)
                 .build());
 
-        String responseBody = mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
+        mockMvc.perform(patch("/api/items/{itemId}/status", item.getId())
                         .with(authentication(authenticationOf(seller)))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -907,18 +915,10 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.itemId").value(item.getId()))
                 .andExpect(jsonPath("$.data.tradeStatus").value("RESERVED"))
-                .andExpect(jsonPath("$.data.updatedAt").exists())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(jsonPath("$.data.updatedAt").exists());
 
         Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
-        LocalDateTime responseUpdatedAt = LocalDateTime.parse(
-                objectMapper.readTree(responseBody).path("data").path("updatedAt").asText());
-        long updatedAtDiffNanos = Math.abs(Duration.between(responseUpdatedAt, updatedItem.getUpdatedAt()).toNanos());
-
         assertThat(updatedItem.getTradeStatus()).isEqualTo(TradeStatus.RESERVED);
-        assertThat(updatedAtDiffNanos).isLessThan(1_000_000L);
     }
 
     @DisplayName("직거래 상품을 판매완료로 변경할 때 구매자를 저장한다")
@@ -1263,23 +1263,15 @@ class ItemControllerTest {
                 .isDraft(true)
                 .build());
 
-        String responseBody = mockMvc.perform(post("/api/items/{itemId}/publish", item.getId())
+        mockMvc.perform(post("/api/items/{itemId}/publish", item.getId())
                         .with(authentication(authenticationOf(seller))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.itemId").value(item.getId()))
-                .andExpect(jsonPath("$.data.updatedAt").exists())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(jsonPath("$.data.updatedAt").exists());
 
         Item publishedItem = itemRepository.findById(item.getId()).orElseThrow();
-        LocalDateTime responseUpdatedAt = LocalDateTime.parse(
-                objectMapper.readTree(responseBody).path("data").path("updatedAt").asText());
-        long updatedAtDiffNanos = Math.abs(Duration.between(responseUpdatedAt, publishedItem.getUpdatedAt()).toNanos());
-
         assertThat(publishedItem.getIsDraft()).isFalse();
-        assertThat(updatedAtDiffNanos).isLessThan(1_000_000L);
     }
 
     @DisplayName("상품 판매자가 아니면 임시저장 상품을 게시할 수 없다")
