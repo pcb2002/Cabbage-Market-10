@@ -19,6 +19,8 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
+import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
+import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import com.example.cabbagemarket10.domain.itemImage.service.ItemImageService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -34,6 +36,7 @@ public class ItemFacade {
     private final CategoryService categoryService;
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
+    private final SearchCacheEvictionService searchCacheEvictionService;
     private final ItemImageService itemImageService;
 
     @Transactional
@@ -42,6 +45,8 @@ public class ItemFacade {
         Category category = categoryService.getCategory(request.categoryId());
 
         Item item = itemService.saveItem(seller, category, request);
+        auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate());
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
         AuctionStatus auctionStatus = item.isAuction()
                 ? auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate())
                 : null;
@@ -78,6 +83,7 @@ public class ItemFacade {
 
         item.publish();
         itemService.flush();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
 
         return new ItemPublishResponse(item.getId(), item.getUpdatedAt());
     }
@@ -95,6 +101,7 @@ public class ItemFacade {
 
         item.updateInfo(category, request.title(), request.description(), request.initialPrice());
         itemService.flush();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
 
         return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
     }
@@ -106,7 +113,9 @@ public class ItemFacade {
 
         Client buyer = resolveBuyer(item, request);
 
-        return itemService.updateItemStatus(item, request.tradeStatus(), buyer);
+        ItemStatusUpdateResponse response = itemService.updateItemStatus(item, request.tradeStatus(), buyer);
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
+        return response;
     }
 
     private Client resolveBuyer(Item item, ItemStatusUpdateRequest request) {
@@ -137,5 +146,6 @@ public class ItemFacade {
         }
 
         itemService.softDelete(item);
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
     }
 }
