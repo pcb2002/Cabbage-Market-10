@@ -610,6 +610,22 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | content | 리뷰 내용 |
 | createdAt | 작성일시 |
 
+`GET /api/clients/me/reviews/written`는 인증된 회원이 자신이 작성한 리뷰 목록을 페이징으로 조회한다. 삭제된 리뷰(`is_deleted = true`)는 제외한다. 정렬 조건이 별도로 정의되어 있지 않아 최신순(`createdAt desc`)을 기본으로 한다. 토큰 없이 요청하면 `401 Unauthorized`로 응답한다.
+
+응답 `data.content` 항목:
+
+| 필드 | 설명 |
+|---|---|
+| reviewId | 리뷰 ID |
+| itemId | 리뷰를 작성한 상품 ID |
+| itemTitle | 리뷰를 작성한 상품 제목 |
+| itemThumbnailUrl | 리뷰를 작성한 상품 대표 이미지 URL, 없으면 null |
+| revieweeId | 리뷰 대상(판매자) 회원 ID |
+| revieweeNickname | 리뷰 대상(판매자) 닉네임 |
+| rating | 평점(1~5) |
+| content | 리뷰 내용 |
+| createdAt | 작성일시 |
+
 리뷰 오류 기준:
 
 | Status | Code | 설명 |

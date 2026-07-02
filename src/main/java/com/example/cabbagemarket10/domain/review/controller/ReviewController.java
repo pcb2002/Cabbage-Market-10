@@ -4,6 +4,8 @@ import com.example.cabbagemarket10.application.facade.ReviewFacade;
 import com.example.cabbagemarket10.domain.review.dto.request.ReviewCreateRequest;
 import com.example.cabbagemarket10.domain.review.dto.response.ReceivedReviewListItemResponse;
 import com.example.cabbagemarket10.domain.review.dto.response.ReviewCreateResponse;
+import com.example.cabbagemarket10.domain.review.dto.response.WrittenReviewListItemResponse;
+import com.example.cabbagemarket10.domain.review.service.ReviewService;
 import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.common.response.PageResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReviewController {
 
     private final ReviewFacade reviewFacade;
+    private final ReviewService reviewService;
 
     @PostMapping("/items/{itemId}/reviews")
     public ResponseEntity<CommonResponse<ReviewCreateResponse>> createReview(
@@ -50,6 +53,18 @@ public class ReviewController {
             Pageable pageable
     ) {
         Page<ReceivedReviewListItemResponse> reviews = reviewFacade.getReceivedReviews(clientId, pageable);
+
+        return CommonResponse.success(HttpStatus.OK, PageResponse.from(reviews))
+                .toResponseEntity();
+    }
+
+    @GetMapping("/clients/me/reviews/written")
+    public ResponseEntity<CommonResponse<PageResponse<WrittenReviewListItemResponse>>> getWrittenReviews(
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            Pageable pageable
+    ) {
+        Page<WrittenReviewListItemResponse> reviews = reviewService.getWrittenReviews(
+                authenticatedClient.clientId(), pageable);
 
         return CommonResponse.success(HttpStatus.OK, PageResponse.from(reviews))
                 .toResponseEntity();
