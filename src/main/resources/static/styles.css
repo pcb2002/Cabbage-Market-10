@@ -801,10 +801,6 @@ textarea {
     margin: 0 16px 16px;
 }
 
-.chat-room-actions {
-    margin: -6px 16px 14px;
-}
-
 .chat-window {
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
