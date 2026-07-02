@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.example.cabbagemarket10.domain.category.entity.Category;
+import com.example.cabbagemarket10.domain.chat.dto.restful.ChatRoomDetail;
 import com.example.cabbagemarket10.domain.chat.dto.restful.RoomCreate;
 import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageDto;
 import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageList;
@@ -24,6 +25,7 @@ import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
@@ -241,6 +243,44 @@ class ChatServiceTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CLIENT_NOT_PARTICIPANT));
 
         verify(chatMessageRepository, never()).findByChatRoomId(any(), any());
+    }
+
+    @DisplayName("내 채팅방 목록은 마지막 메시지 시각 기준 최신순으로 조회한다")
+    @Test
+    void 내_채팅방_목록은_마지막_메시지_시각_기준_최신순으로_조회한다() {
+        Pageable requestPageable = PageRequest.of(1, 20);
+        Pageable repositoryPageable = PageRequest.of(
+                1,
+                20,
+                Sort.by("lastMessageAt").descending());
+        ChatRoomDetail firstRoom = new ChatRoomDetail(
+                "room-2",
+                "자전거",
+                LocalDateTime.of(2026, 7, 1, 11, 0));
+        ChatRoomDetail secondRoom = new ChatRoomDetail(
+                "room-1",
+                "노트북",
+                LocalDateTime.of(2026, 7, 1, 10, 0));
+
+        given(chatRoomRepository.findByClientId(eq(1L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of(firstRoom, secondRoom), repositoryPageable, 22));
+
+        PageResponse<ChatRoomDetail> response = chatService.getMyChatRoom(1L, requestPageable);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(chatRoomRepository).findByClientId(eq(1L), pageableCaptor.capture());
+        Pageable usedPageable = pageableCaptor.getValue();
+        assertThat(usedPageable.getPageNumber()).isEqualTo(1);
+        assertThat(usedPageable.getPageSize()).isEqualTo(20);
+        assertThat(usedPageable.getSort().getOrderFor("lastMessageAt").getDirection())
+                .isEqualTo(Sort.Direction.DESC);
+        assertThat(response.getContent())
+                .extracting(ChatRoomDetail::id)
+                .containsExactly("room-2", "room-1");
+        assertThat(response.getPage()).isEqualTo(1);
+        assertThat(response.getSize()).isEqualTo(20);
+        assertThat(response.getTotalElements()).isEqualTo(22);
+        assertThat(response.getTotalPages()).isEqualTo(2);
     }
 
     private ChatMessage chatMessage(Client sender) {
