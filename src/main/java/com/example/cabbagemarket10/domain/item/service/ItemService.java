@@ -4,6 +4,7 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailImageResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse;
@@ -11,8 +12,10 @@ import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResp
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ItemService {
 
     private final ItemRepository itemRepository;
+    private final ItemImageRepository itemImageRepository;
 
     public Item saveItem(Client seller, Category category, ItemCreateRequest request) {
         Item item = Item.builder()
@@ -72,8 +76,17 @@ public class ItemService {
             throw new BusinessException(ErrorCode.ITEM_NOT_FOUND);
         }
 
-        return itemRepository.findItemDetail(itemId)
+        ItemDetailResponse response = itemRepository.findItemDetail(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+        List<ItemDetailImageResponse> images = itemImageRepository.findByItemIdOrderBySortOrderAsc(itemId).stream()
+                .map(image -> new ItemDetailImageResponse(
+                        image.getId(),
+                        image.getImageUrl(),
+                        image.getSortOrder(),
+                        image.getIsThumbnail()))
+                .toList();
+
+        return response.withImages(images);
     }
 
     @Transactional(readOnly = true)

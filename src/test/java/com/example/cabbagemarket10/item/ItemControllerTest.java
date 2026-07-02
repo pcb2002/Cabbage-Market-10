@@ -21,6 +21,8 @@ import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.itemImage.entity.ItemImage;
+import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -57,6 +59,9 @@ class ItemControllerTest {
     private ItemRepository itemRepository;
 
     @Autowired
+    private ItemImageRepository itemImageRepository;
+
+    @Autowired
     private AuctionStatusRepository auctionStatusRepository;
 
     @Autowired
@@ -73,6 +78,7 @@ class ItemControllerTest {
         jdbcTemplate.update("delete from review");
         jdbcTemplate.update("delete from item_like");
         jdbcTemplate.update("delete from inquiry_log");
+        jdbcTemplate.update("delete from item_image");
         jdbcTemplate.update("delete from auction_status");
         jdbcTemplate.update("delete from item");
         jdbcTemplate.update("delete from category");
@@ -294,7 +300,7 @@ class ItemControllerTest {
 
     @DisplayName("인증 회원이 상품을 임시저장하면 isDraft true인 Item과 AuctionStatus가 저장된다")
     @Test
-    void authenticatedClientCanCreateItemDraft() throws Exception {
+    void 인증된_사용자는_상품_임시글을_생성할_수_있다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "draft-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -358,7 +364,7 @@ class ItemControllerTest {
 
     @DisplayName("인증 없이 상품 임시저장을 요청하면 401을 반환한다")
     @Test
-    void unauthenticatedClientCannotCreateItemDraft() throws Exception {
+    void 미인증_사용자는_상품_임시글을_생성할_수_없다() throws Exception {
         mockMvc.perform(post("/api/items/drafts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -379,7 +385,7 @@ class ItemControllerTest {
 
     @DisplayName("상품 임시저장 필수값이 없으면 400을 반환한다")
     @Test
-    void itemDraftMissingRequiredFieldReturnsBadRequest() throws Exception {
+    void 상품_임시글_필수값이_누락되면_잘못된_요청을_반환한다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "invalid-draft-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -406,7 +412,7 @@ class ItemControllerTest {
 
     @DisplayName("경매 임시저장에 closeDate가 없으면 AuctionStatus를 생성하지 않는다")
     @Test
-    void auctionDraftWithoutCloseDateDoesNotCreateAuctionStatus() throws Exception {
+    void 경매_임시글에_마감일이_없으면_경매상태를_생성하지_않는다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "auction-draft-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -450,7 +456,7 @@ class ItemControllerTest {
 
     @DisplayName("상품 목록 조회는 필터 조건에 맞는 공개 상품만 반환한다")
     @Test
-    void getItemListReturnsOnlyVisibleItemsMatchingFilters() throws Exception {
+    void 상품_목록은_필터에_맞는_노출_상품만_반환한다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "list-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -487,6 +493,12 @@ class ItemControllerTest {
                 .currentBid(9000L)
                 .closeDate(closeDate)
                 .build());
+        itemImageRepository.save(ItemImage.builder()
+                .item(visibleItem)
+                .imageUrl("https://cdn.example.com/items/list-thumbnail.jpg")
+                .sortOrder(1)
+                .isThumbnail(true)
+                .build());
         itemRepository.save(Item.builder()
                 .seller(seller)
                 .category(category)
@@ -519,6 +531,8 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.content.length()").value(1))
                 .andExpect(jsonPath("$.data.content[0].itemId").value(visibleItem.getId()))
+                .andExpect(jsonPath("$.data.content[0].thumbnailUrl")
+                        .value("https://cdn.example.com/items/list-thumbnail.jpg"))
                 .andExpect(jsonPath("$.data.content[0].title").value("visible auction cabbage"))
                 .andExpect(jsonPath("$.data.content[0].initialPrice").value(7000))
                 .andExpect(jsonPath("$.data.content[0].currentBid").value(9000))
@@ -530,7 +544,7 @@ class ItemControllerTest {
 
     @DisplayName("상품 목록 조회 tradeStatus가 잘못되면 400을 반환한다")
     @Test
-    void getItemListWithInvalidTradeStatusReturnsBadRequest() throws Exception {
+    void 잘못된_거래상태로_상품_목록을_조회하면_잘못된_요청을_반환한다() throws Exception {
         mockMvc.perform(get("/api/items")
                         .param("tradeStatus", "INVALID"))
                 .andExpect(status().isBadRequest())
@@ -540,7 +554,7 @@ class ItemControllerTest {
 
     @DisplayName("상품 상세 조회는 조회수를 증가시킨 뒤 증가된 카운트를 응답한다")
     @Test
-    void getItemDetailIncrementsViewCountAndReturnsUpdatedCount() throws Exception {
+    void 상품_상세_조회는_조회수를_증가시키고_갱신된_조회수를_반환한다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "detail-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -563,12 +577,33 @@ class ItemControllerTest {
                 .tradeStatus(TradeStatus.ON_SALE)
                 .isDraft(false)
                 .build());
+        itemImageRepository.save(ItemImage.builder()
+                .item(item)
+                .imageUrl("https://cdn.example.com/items/detail-2.jpg")
+                .sortOrder(2)
+                .isThumbnail(false)
+                .build());
+        itemImageRepository.save(ItemImage.builder()
+                .item(item)
+                .imageUrl("https://cdn.example.com/items/detail-1.jpg")
+                .sortOrder(1)
+                .isThumbnail(true)
+                .build());
 
         mockMvc.perform(get("/api/items/{itemId}", item.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.itemId").value(item.getId()))
                 .andExpect(jsonPath("$.data.title").value("visible detail item"))
+                .andExpect(jsonPath("$.data.images.length()").value(2))
+                .andExpect(jsonPath("$.data.images[0].imageUrl")
+                        .value("https://cdn.example.com/items/detail-1.jpg"))
+                .andExpect(jsonPath("$.data.images[0].sortOrder").value(1))
+                .andExpect(jsonPath("$.data.images[0].isThumbnail").value(true))
+                .andExpect(jsonPath("$.data.images[1].imageUrl")
+                        .value("https://cdn.example.com/items/detail-2.jpg"))
+                .andExpect(jsonPath("$.data.images[1].sortOrder").value(2))
+                .andExpect(jsonPath("$.data.images[1].isThumbnail").value(false))
                 .andExpect(jsonPath("$.data.viewCount").value(1))
                 .andExpect(jsonPath("$.data.inquiryCount").value(0));
 
@@ -591,7 +626,7 @@ class ItemControllerTest {
 
     @DisplayName("상품 상세 조회는 임시저장 상품을 노출하지 않는다")
     @Test
-    void getItemDetailDoesNotExposeDraftItems() throws Exception {
+    void 상품_상세_조회는_임시저장_상품을_노출하지_않는다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "draft-detail-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -629,7 +664,7 @@ class ItemControllerTest {
 
     @DisplayName("Item detail returns auction fields when auction status exists")
     @Test
-    void getItemDetailReturnsAuctionFields() throws Exception {
+    void 상품_상세_조회는_경매_필드를_반환한다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "auction-detail-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -675,7 +710,7 @@ class ItemControllerTest {
 
     @DisplayName("Item detail returns ITEM_NOT_FOUND for unknown item")
     @Test
-    void getItemDetailReturnsNotFoundForUnknownItem() throws Exception {
+    void 없는_상품_상세_조회는_찾을_수_없음을_반환한다() throws Exception {
         mockMvc.perform(get("/api/items/{itemId}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
@@ -684,7 +719,7 @@ class ItemControllerTest {
 
     @DisplayName("직거래 상품은 경매 종료일 없이 상품 정보를 수정할 수 있다")
     @Test
-    void updateDirectItemWithoutCloseDateSucceeds() throws Exception {
+    void 직거래_상품은_마감일_없이_수정할_수_있다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "direct-update-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -739,7 +774,7 @@ class ItemControllerTest {
 
     @DisplayName("등록된 경매 상품은 상품 정보를 수정할 수 없다")
     @Test
-    void updatePublishedAuctionItemReturnsBadRequest() throws Exception {
+    void 판매중인_경매_상품을_수정하면_잘못된_요청을_반환한다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "auction-update-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -794,7 +829,7 @@ class ItemControllerTest {
 
     @DisplayName("임시저장 경매 상품은 상품 정보와 경매 상태를 함께 수정할 수 있다")
     @Test
-    void updateDraftAuctionItemSynchronizesCurrentBid() throws Exception {
+    void 경매_임시글을_수정하면_현재입찰가가_동기화된다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "draft-auction-update-seller@example.com",
                 passwordEncoder.encode("password123!"),
@@ -850,7 +885,7 @@ class ItemControllerTest {
 
     @DisplayName("상품 판매자가 아니면 상품을 수정할 수 없다")
     @Test
-    void updateItemByNonSellerReturnsForbidden() throws Exception {
+    void 판매자가_아닌_사용자가_상품을_수정하면_금지된다() throws Exception {
         Client seller = clientRepository.save(Client.create(
                 "forbidden-update-seller@example.com",
                 passwordEncoder.encode("password123!"),
