@@ -6,12 +6,16 @@ import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileRespo
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.domain.follow.repository.FollowRepository;
+import com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.review.repository.ReviewRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +25,7 @@ public class ClientService {
 
     private final ClientRepository clientRepository;
     private final ItemRepository itemRepository;
+    private final ItemService itemService;
     private final FollowRepository followRepository;
     private final ReviewRepository reviewRepository;
 
@@ -81,7 +86,17 @@ public class ClientService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public Page<MyLikedItemResponse> getMyLikedItems(Long clientId, Pageable pageable) {
+        validateClientExists(clientId);
+        return itemService.getLikedItems(clientId, pageable);
+    }
+
     public Client getClient(Long clientId) {
+        return validateClientExists(clientId);
+    }
+
+    private Client validateClientExists(Long clientId) {
         return clientRepository.findById(clientId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CLIENT_NOT_FOUND));
     }

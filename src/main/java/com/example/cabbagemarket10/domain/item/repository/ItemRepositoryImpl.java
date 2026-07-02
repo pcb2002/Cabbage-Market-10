@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.item.repository;
 
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -27,6 +28,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
             "currentBid", "a.currentBid",
             "tradeStatus", "i.tradeStatus",
             "closeDate", "a.closeDate",
+            "likeCount", "i.likeCount",
             "createdAt", "i.createdAt",
             "updatedAt", "i.updatedAt"
     );
@@ -73,6 +75,54 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         return new PageImpl<>(contentQuery.getResultList(), pageable, countQuery.getSingleResult());
     }
 
+    @Override
+    public Page<MyLikedItemResponse> findLikedItems(Long clientId, Pageable pageable) {
+        TypedQuery<MyLikedItemResponse> contentQuery = entityManager.createQuery(
+                """
+                        select new com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse(
+                            i.id,
+                            i.title,
+                            i.initialPrice,
+                            a.currentBid,
+                            i.tradeStatus,
+                            a.closeDate,
+                            i.tradeType,
+                            i.conditionType,
+                            i.likeCount,
+                            true,
+                            ii.imageUrl,
+                            i.category.id,
+                            i.createdAt
+                        )
+                        from ItemLike il
+                        join il.item i
+                        left join AuctionStatus a on a.item = i
+                        left join ItemImage ii on ii.item = i and ii.isThumbnail = true
+                        where il.client.id = :clientId
+                          and i.isDeleted = false
+                          and i.isDraft = false
+                        """
+                        + buildLikedItemsOrderClause(pageable),
+                MyLikedItemResponse.class);
+        contentQuery.setParameter("clientId", clientId);
+        contentQuery.setFirstResult((int) pageable.getOffset());
+        contentQuery.setMaxResults(pageable.getPageSize());
+
+        TypedQuery<Long> countQuery = entityManager.createQuery(
+                """
+                        select count(il)
+                        from ItemLike il
+                        join il.item i
+                        where il.client.id = :clientId
+                          and i.isDeleted = false
+                          and i.isDraft = false
+                        """,
+                Long.class);
+        countQuery.setParameter("clientId", clientId);
+
+        return new PageImpl<>(contentQuery.getResultList(), pageable, countQuery.getSingleResult());
+    }
+
     private TradeStatus parseTradeStatus(String tradeStatus) {
         if (tradeStatus == null || tradeStatus.isBlank()) {
             return null;
@@ -115,6 +165,30 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
 
         if (orders.isEmpty()) {
             return " order by i.createdAt desc, i.id desc";
+        }
+        return " order by " + String.join(", ", orders) + ", i.id desc";
+    }
+
+    private String buildLikedItemsOrderClause(Pageable pageable) {
+        if (pageable.getSort().isUnsorted()) {
+            return " order by il.createdAt desc, i.id desc";
+        }
+
+        List<String> orders = new ArrayList<>();
+        for (Sort.Order order : pageable.getSort()) {
+            if ("likedAt".equals(order.getProperty())) {
+                orders.add("il.createdAt" + (order.isAscending() ? " asc" : " desc"));
+                continue;
+            }
+
+            String property = SORT_PROPERTIES.get(order.getProperty());
+            if (property != null) {
+                orders.add(property + (order.isAscending() ? " asc" : " desc"));
+            }
+        }
+
+        if (orders.isEmpty()) {
+            return " order by il.createdAt desc, i.id desc";
         }
         return " order by " + String.join(", ", orders) + ", i.id desc";
     }
