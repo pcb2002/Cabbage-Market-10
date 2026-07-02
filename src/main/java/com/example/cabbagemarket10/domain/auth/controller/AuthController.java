@@ -6,7 +6,7 @@ import com.example.cabbagemarket10.domain.auth.dto.request.SignupRequest;
 import com.example.cabbagemarket10.domain.auth.dto.response.LoginResponse;
 import com.example.cabbagemarket10.domain.auth.dto.response.SignupResponse;
 import com.example.cabbagemarket10.domain.auth.service.AuthCookieManager;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

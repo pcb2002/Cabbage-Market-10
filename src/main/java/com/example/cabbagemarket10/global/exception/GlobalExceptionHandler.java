@@ -1,6 +1,6 @@
 package com.example.cabbagemarket10.global.exception;
 
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;

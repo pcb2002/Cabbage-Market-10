@@ -3,7 +3,7 @@ package com.example.cabbagemarket10.domain.review.controller;
 import com.example.cabbagemarket10.application.facade.ReviewFacade;
 import com.example.cabbagemarket10.domain.review.dto.request.ReviewCreateRequest;
 import com.example.cabbagemarket10.domain.review.dto.response.ReviewCreateResponse;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package com.example.cabbagemarket10.domain.review.entity;
 
-import com.example.cabbagemarket10.common.entity.BaseEntity;
+import com.example.cabbagemarket10.global.common.entity.BaseEntity;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import jakarta.persistence.Column;

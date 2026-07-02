@@ -3,7 +3,7 @@ package com.example.cabbagemarket10.domain.itemImage.controller;
 import com.example.cabbagemarket10.application.facade.ItemImageFacade;
 import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemImageUploadResponse;
 import com.example.cabbagemarket10.domain.itemImage.dto.response.ItemThumbnailUpdateResponse;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

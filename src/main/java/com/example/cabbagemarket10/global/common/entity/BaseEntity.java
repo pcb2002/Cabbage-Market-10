@@ -1,4 +1,4 @@
-package com.example.cabbagemarket10.common.entity;
+package com.example.cabbagemarket10.global.common.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
