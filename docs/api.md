@@ -137,7 +137,7 @@
 
 | 공개 API | 인증 필요 API |
 |---|---|
-| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세·검색(v1/v2, `likedOnly=true` 제외), 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·게시·삭제, 상품 이미지 업로드·수정·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰, 좋아요한 상품만 검색(`likedOnly=true`) |
+| 회원가입, 로그인, 토큰 재발급, 상품 목록·상세·검색(v1/v2, `likedOnly=true` 제외), 인기 검색어, 카테고리, 회원 공개 프로필 | 로그아웃, 내 정보, 상품 등록·수정·게시·삭제, 상품 이미지 업로드·수정·삭제, 좋아요, 문의 작성·수정·삭제, 팔로우, 채팅, 리뷰, 입찰, 좋아요한 상품만 검색(`likedOnly=true`) |
 
 ## Notion DB 상세 명세
 
@@ -193,6 +193,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 검색 v2 | likedOnly | 선택, `true`면 로그인 회원이 좋아요한 상품만 검색 |
 | 상품 검색 v2 | minPrice, maxPrice | 선택, 0 이상. 둘 다 전달 시 `minPrice <= maxPrice` |
 | 상품 검색 v2 | page, size, sort | 선택, 페이징 및 정렬 |
+| 인기 검색어 조회 | 없음 | 당일 00:00 ~ 조회 시점까지 누적된 검색 횟수 상위 목록 반환 |
 | 상품 정보 수정 | categoryId | 필수, 존재하는 카테고리 ID |
 | 상품 정보 수정 | title | 필수, 공백 불가 |
 | 상품 정보 수정 | description | 필수, 공백 불가 |
@@ -324,6 +325,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 검색 v1 | GET | `/api/v1/items/search` | 조건부 필요 | `keyword`, `categoryId`, `tradeStatus`, `likedOnly`, `page`, `size`, `sort` 선택 | `200 OK` |
 | 상품 검색 v2 | GET | `/api/v2/items/search` | 조건부 필요 | `keyword`, `categoryId`, `tradeStatus`, `likedOnly`, `page`, `size`, `sort` 선택 | `200 OK` |
+| 인기 검색어 조회 | GET | `/api/search/popular` | 불필요 | 없음 | `200 OK` |
 | 상품 정보 수정 | PUT | `/api/items/{itemId}` | 필요 | 수정할 상품 필드 | `200 OK` |
 | 판매 상태 변경 | PATCH | `/api/items/{itemId}/status` | 필요 | `tradeStatus`, 직거래 완료 시 `buyerId` | `200 OK` |
 | 상품 삭제 | DELETE | `/api/items/{itemId}` | 필요 | Path `itemId` | `204 No Content` |
@@ -837,6 +839,18 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 캐시 key에는 회원 ID, 검색 조건(`keyword`, `categoryId`, `tradeStatus`, `tradeType`, `conditionType`, `likedOnly`, `minPrice`, `maxPrice`)과 페이징 조건(`page`, `size`, `sort`)이 모두 포함된다.
 Redis Cache는 다중 서버 환경에서도 동일 캐시를 공유하며 TTL 만료 시 자동 삭제된다.
 
-## 열린 결정
+`keyword`가 있으면 해당 검색어는 당일 인기 검색어 집계 대상이 된다.
 
-- 이미지 업로드 API 분리, 인기 검색어 집계 저장소는 [docs/adr/README.md](adr/README.md)에서 관리한다.
+### 인기 검색어 조회
+
+`GET /api/search/popular`는 조회 당일 00시부터 현재 시점까지 누적된 검색 횟수 기준으로 인기 검색어 상위 목록을 반환한다.
+
+응답 `data.keywords` 항목:
+
+| 필드 | 설명 |
+|---|---|
+| rank | 인기 순위 |
+| keyword | 검색어 |
+| score | 당일 누적 검색 횟수 |
+
+동일 회원은 `userId`, 비회원은 `sessionId` 기준으로 동일 검색어의 짧은 시간 반복 검색을 중복 집계하지 않는다.

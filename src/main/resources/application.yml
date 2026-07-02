@@ -9,6 +9,13 @@ app:
       ttl: 5m
       maximum-size: 1000
       key-prefix: "item-search:v2:"
+  search:
+    popular:
+      limit: 10
+      dedup-ttl: 1m
+      daily-key-ttl: 8d
+      daily-key-prefix: "popular:search:"
+      dedup-key-prefix: "popular:dedup:"
 
 auth:
   cookie:
