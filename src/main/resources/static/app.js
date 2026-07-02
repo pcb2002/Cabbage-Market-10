@@ -1,8 +1,6 @@
-const API_BASE = import.meta.env?.VITE_API_BASE ||
-    process.env?.REACT_APP_API_BASE ||
-    window.BAECHU_API_BASE ||
+const API_BASE = window.BAECHU_API_BASE ||
     localStorage.getItem("baechuApiBase") ||
-    "http://localhost:8080";
+    "";
 const ACCESS_TOKEN_KEY = "cabbageAccessToken";
 
 const state = {
