@@ -1,6 +1,8 @@
 package com.example.cabbagemarket10.domain.auction.service;
 
 import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
+import com.example.cabbagemarket10.domain.auction.entity.AuctionBidHistory;
+import com.example.cabbagemarket10.domain.auction.repository.AuctionBidHistoryRepository;
 import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
@@ -19,15 +21,16 @@ import java.time.LocalDateTime;
 public class AuctionStatusService {
 
     private final AuctionStatusRepository auctionStatusRepository;
+    private final AuctionBidHistoryRepository auctionBidHistoryRepository;
     private final ClientService clientService;
 
-    public void createAuctionStatus(Item item, Long initialPrice, LocalDateTime closeDate) {
+    public AuctionStatus createAuctionStatus(Item item, Long initialPrice, LocalDateTime closeDate) {
         AuctionStatus auctionStatus = AuctionStatus.builder()
                 .item(item)
                 .currentBid(initialPrice)
                 .closeDate(closeDate)
                 .build();
-        auctionStatusRepository.save(auctionStatus);
+        return auctionStatusRepository.save(auctionStatus);
     }
 
     @Transactional(readOnly = true)
@@ -78,7 +81,14 @@ public class AuctionStatusService {
         AuctionStatus auctionStatus = auctionStatusRepository.findById(itemId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_STATUS_NOT_FOUND));
 
+        Long previousBid = auctionStatus.getCurrentBid();
         auctionStatus.updateBid(bidPrice, clientId, LocalDateTime.now());
+        auctionBidHistoryRepository.save(AuctionBidHistory.builder()
+                .itemId(itemId)
+                .bidderId(clientId)
+                .previousBid(previousBid)
+                .bidPrice(bidPrice)
+                .build());
 
         return ItemBidResponse.from(auctionStatus);
     }

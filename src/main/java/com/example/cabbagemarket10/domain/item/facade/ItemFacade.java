@@ -1,5 +1,6 @@
-package com.example.cabbagemarket10.application.facade;
+package com.example.cabbagemarket10.domain.item.facade;
 
+import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
 import com.example.cabbagemarket10.domain.auction.service.AuctionStatusService;
 import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.category.service.CategoryService;
@@ -9,6 +10,7 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemStatusUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemCreateResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
@@ -17,8 +19,8 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
-import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
 import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
+import com.example.cabbagemarket10.domain.itemImage.service.ItemImageService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -33,19 +35,21 @@ public class ItemFacade {
     private final CategoryService categoryService;
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
-    private final ItemImageRepository itemImageRepository;
     private final SearchCacheEvictionService searchCacheEvictionService;
+    private final ItemImageService itemImageService;
 
     @Transactional
-    public Long createItem(Long sellerId, ItemCreateRequest request) {
+    public ItemCreateResponse createItem(Long sellerId, ItemCreateRequest request) {
         Client seller = clientService.getClient(sellerId);
         Category category = categoryService.getCategory(request.categoryId());
 
         Item item = itemService.saveItem(seller, category, request);
-        auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate());
+        AuctionStatus auctionStatus = item.isAuction()
+                ? auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate())
+                : null;
         searchCacheEvictionService.evictItemSearchV2AfterCommit();
 
-        return item.getId();
+        return ItemCreateResponse.of(item, auctionStatus);
     }
 
     @Transactional
@@ -134,7 +138,7 @@ public class ItemFacade {
 
         if (Boolean.TRUE.equals(item.getIsDraft())) {
             auctionStatusService.deleteByItemId(itemId);
-            itemImageRepository.deleteByItemId(itemId);
+            itemImageService.deleteByItemId(itemId);
             itemService.hardDeleteById(itemId);
             return;
         }

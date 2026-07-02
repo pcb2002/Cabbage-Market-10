@@ -6,9 +6,9 @@ import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileRespo
 import com.example.cabbagemarket10.domain.client.service.ClientService;
 import com.example.cabbagemarket10.domain.item.dto.response.MyItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.PageResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
-import com.example.cabbagemarket10.global.common.CommonResponse;
-import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

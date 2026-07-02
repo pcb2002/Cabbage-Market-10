@@ -2,8 +2,8 @@ package com.example.cabbagemarket10.domain.category.controller;
 
 import com.example.cabbagemarket10.domain.category.dto.CategoryResponse;
 import com.example.cabbagemarket10.domain.category.service.CategoryService;
-import com.example.cabbagemarket10.global.common.CommonResponse;
-import com.example.cabbagemarket10.global.common.PageResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;

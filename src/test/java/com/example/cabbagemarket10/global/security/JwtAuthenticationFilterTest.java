@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.cabbagemarket10.domain.auth.service.TokenBlacklistStore;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import com.example.cabbagemarket10.global.security.jwt.JwtClaims;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;

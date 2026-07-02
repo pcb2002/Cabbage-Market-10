@@ -1,4 +1,4 @@
-package com.example.cabbagemarket10.application.facade;
+package com.example.cabbagemarket10.domain.item.facade;
 
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.service.ClientService;

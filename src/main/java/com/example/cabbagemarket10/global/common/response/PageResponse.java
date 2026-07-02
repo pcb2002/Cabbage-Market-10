@@ -1,4 +1,4 @@
-package com.example.cabbagemarket10.global.common;
+package com.example.cabbagemarket10.global.common.response;
 
 import java.util.List;
 import lombok.Getter;

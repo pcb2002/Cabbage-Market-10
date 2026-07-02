@@ -1,6 +1,6 @@
 package com.example.cabbagemarket10.global.security;
 
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

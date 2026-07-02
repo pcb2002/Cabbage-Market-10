@@ -2,6 +2,8 @@ package com.example.cabbagemarket10.application.facade;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cabbagemarket10.domain.auction.facade.AuctionFacade;
+import com.example.cabbagemarket10.domain.auction.repository.AuctionBidHistoryRepository;
 import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
 import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
 import com.example.cabbagemarket10.domain.category.entity.Category;
@@ -51,6 +53,9 @@ class AuctionFacadeConcurrencyIntegrationTest {
     private AuctionStatusRepository auctionStatusRepository;
 
     @Autowired
+    private AuctionBidHistoryRepository auctionBidHistoryRepository;
+
+    @Autowired
     private ItemRepository itemRepository;
 
     @Autowired
@@ -66,6 +71,8 @@ class AuctionFacadeConcurrencyIntegrationTest {
         registry.add("spring.data.redis.port", () -> REDIS_PORT);
         registry.add("spring.data.redis.password", () -> "");
         registry.add("app.auction.redis-lock.enabled", () -> true);
+        registry.add("app.auction.redis-lock.wait-time-millis", () -> 30_000L);
+        registry.add("app.auction.redis-lock.lease-time-millis", () -> 60_000L);
     }
 
     @AfterAll
@@ -77,6 +84,7 @@ class AuctionFacadeConcurrencyIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        auctionBidHistoryRepository.deleteAllInBatch();
         auctionStatusRepository.deleteAllInBatch();
         itemRepository.deleteAllInBatch();
         categoryRepository.deleteAllInBatch();

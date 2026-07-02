@@ -1,4 +1,4 @@
-package com.example.cabbagemarket10.global.common;
+package com.example.cabbagemarket10.global.common.response;
 
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.fasterxml.jackson.annotation.JsonInclude;

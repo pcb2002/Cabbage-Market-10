@@ -6,7 +6,7 @@ import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryCreateResp
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryListResponse;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryUpdateResponse;
 import com.example.cabbagemarket10.domain.inquiry.service.InquiryService;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

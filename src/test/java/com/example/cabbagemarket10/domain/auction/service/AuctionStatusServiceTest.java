@@ -3,8 +3,11 @@ package com.example.cabbagemarket10.domain.auction.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
+import com.example.cabbagemarket10.domain.auction.entity.AuctionBidHistory;
 import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
+import com.example.cabbagemarket10.domain.auction.repository.AuctionBidHistoryRepository;
 import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
@@ -14,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,6 +26,9 @@ class AuctionStatusServiceTest {
 
     @Mock
     private AuctionStatusRepository auctionStatusRepository;
+
+    @Mock
+    private AuctionBidHistoryRepository auctionBidHistoryRepository;
 
     @InjectMocks
     private AuctionStatusService auctionStatusService;
@@ -37,6 +44,13 @@ class AuctionStatusServiceTest {
         assertThat(auctionStatus.getCurrentBid()).isEqualTo(12000L);
         assertThat(auctionStatus.getCurrentBidderId()).isEqualTo(2L);
         assertThat(auctionStatus.hasBidder()).isTrue();
+        ArgumentCaptor<AuctionBidHistory> captor = ArgumentCaptor.forClass(AuctionBidHistory.class);
+        verify(auctionBidHistoryRepository).save(captor.capture());
+        AuctionBidHistory history = captor.getValue();
+        assertThat(history.getItemId()).isEqualTo(1L);
+        assertThat(history.getBidderId()).isEqualTo(2L);
+        assertThat(history.getPreviousBid()).isEqualTo(10000L);
+        assertThat(history.getBidPrice()).isEqualTo(12000L);
     }
 
     @DisplayName("판매자는 본인 상품에 입찰할 수 없다")

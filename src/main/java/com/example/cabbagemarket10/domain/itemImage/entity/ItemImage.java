@@ -1,6 +1,6 @@
 package com.example.cabbagemarket10.domain.itemImage.entity;
 
-import com.example.cabbagemarket10.common.entity.BaseEntity;
+import com.example.cabbagemarket10.global.common.entity.BaseEntity;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;

@@ -1,4 +1,4 @@
-package com.example.cabbagemarket10.domain.search.controller;
+package com.example.cabbagemarket10.search;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

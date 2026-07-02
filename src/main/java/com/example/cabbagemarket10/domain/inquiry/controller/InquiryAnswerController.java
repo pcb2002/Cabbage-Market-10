@@ -3,7 +3,7 @@ package com.example.cabbagemarket10.domain.inquiry.controller;
 import com.example.cabbagemarket10.domain.inquiry.dto.request.InquiryAnswerCreateRequest;
 import com.example.cabbagemarket10.domain.inquiry.dto.response.InquiryAnswerCreateResponse;
 import com.example.cabbagemarket10.domain.inquiry.service.InquiryService;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

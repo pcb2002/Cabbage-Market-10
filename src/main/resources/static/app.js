@@ -1,5 +1,7 @@
-const API_BASE = window.BAECHU_API_BASE || localStorage.getItem("baechuApiBase") || "";
-const ACCESS_TOKEN_KEY = "baechuAccessToken";
+const API_BASE = window.BAECHU_API_BASE ||
+    localStorage.getItem("baechuApiBase") ||
+    "";
+const ACCESS_TOKEN_KEY = "cabbageAccessToken";
 
 const state = {
     token: localStorage.getItem(ACCESS_TOKEN_KEY) || "",
@@ -299,20 +301,47 @@ function productId(product) {
     return product.itemId || product.id;
 }
 
+function imageId(image) {
+    return image?.imageId || image?.id;
+}
+
+function normalizeImages(images = []) {
+    return images.map(image => ({
+        ...image,
+        imageId: imageId(image),
+        imageUrl: image.imageUrl || image.url,
+        isThumbnail: Boolean(image.isThumbnail)
+    })).filter(image => image.imageUrl);
+}
+
 function normalizeProduct(item, index = 0) {
     const fallback = state.products[index % state.products.length] || {};
+    const images = normalizeImages(item.images || fallback.images || []);
     return {
         ...fallback,
         ...item,
         itemId: item.itemId || item.id || fallback.itemId,
-        thumbnailUrl: item.thumbnailUrl || item.images?.find(image => image.isThumbnail)?.imageUrl || fallback.thumbnailUrl,
+        images,
+        thumbnailUrl: item.thumbnailUrl || images.find(image => image.isThumbnail)?.imageUrl || images[0]?.imageUrl || fallback.thumbnailUrl,
         categoryName: item.categoryName || fallback.categoryName || "중고",
+        categoryId: item.categoryId || fallback.categoryId,
         tradeType: item.tradeType || fallback.tradeType || "DIRECT",
         tradeStatus: item.tradeStatus || fallback.tradeStatus || "ON_SALE",
+        conditionType: item.conditionType || fallback.conditionType || "USED",
+        isDraft: Boolean(item.isDraft ?? item.draft ?? fallback.isDraft ?? false),
         likeCount: item.likeCount ?? fallback.likeCount ?? 0,
         viewCount: item.viewCount ?? fallback.viewCount ?? 0,
         createdAt: item.createdAt || fallback.createdAt || new Date().toISOString()
     };
+}
+
+function replaceProductState(product) {
+    const id = String(productId(product));
+    state.products = state.products.map(item => String(productId(item)) === id ? normalizeProduct({ ...item, ...product }) : item);
+}
+
+function removeProductState(itemId) {
+    state.products = state.products.filter(item => String(productId(item)) !== String(itemId));
 }
 
 function productCard(product) {
@@ -367,10 +396,40 @@ async function renderHome() {
     bindProductActions();
     document.querySelector("#searchForm").addEventListener("submit", handleSearch);
     document.querySelector("#loadMoreButton").addEventListener("click", () => loadMoreItems());
+    renderPopularSearches();
     await loadCategories();
     await loadHomeItems();
     grid.replaceChildren(...state.products.map(productCard));
     bindProductActions();
+}
+
+async function renderPopularSearches() {
+    try {
+        const popular = await apiClient.searchPopular();
+        const keywords = (Array.isArray(popular) ? popular : popular?.content || popular?.keywords || [])
+            .map(item => item.keyword || item.searchKeyword || item.word || item)
+            .filter(Boolean)
+            .slice(0, 8);
+        if (keywords.length === 0) return;
+
+        const searchBox = document.querySelector(".hero-search");
+        const row = document.createElement("div");
+        row.className = "popular-searches";
+        row.innerHTML = `<span>인기 검색어</span>`;
+        keywords.forEach(keyword => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = keyword;
+            button.addEventListener("click", () => {
+                document.querySelector("#keyword").value = keyword;
+                document.querySelector("#searchForm").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            });
+            row.append(button);
+        });
+        searchBox.append(row);
+    } catch {
+        // 인기 검색어 API가 비어 있거나 인증 전이면 홈 화면만 유지한다.
+    }
 }
 
 async function loadMoreItems() {
@@ -450,7 +509,8 @@ async function handleSignup(event) {
 function myProductCard(product, index) {
     const article = document.createElement("article");
     article.className = "my-product-card";
-    const status = index === 3 ? "임시저장" : statusLabel(product.tradeStatus);
+    const isDraft = Boolean(product.isDraft || product.draft);
+    const status = isDraft ? "임시저장" : statusLabel(product.tradeStatus);
     article.innerHTML = `
         <img src="${productImage(product)}" alt="${escapeHtml(product.title)}">
         <div class="my-product-body">
@@ -460,8 +520,10 @@ function myProductCard(product, index) {
             <strong>${formatPrice(product.currentBid || product.initialPrice)}</strong>
             <p class="product-meta">${timeAgo(product.createdAt)} · ♡ ${product.likeCount}</p>
             <div class="card-actions">
+                <button class="secondary tiny" type="button" data-detail="${productId(product)}">보기</button>
                 <button class="secondary tiny" type="button" data-route="edit" data-edit="${productId(product)}">수정</button>
-                <button class="primary tiny" type="button" data-status="${productId(product)}">${product.tradeStatus === "SOLD_OUT" ? "거래완료" : "상태 변경"}</button>
+                ${isDraft ? `<button class="primary tiny" type="button" data-publish="${productId(product)}">게시</button>` : `<button class="primary tiny" type="button" data-status="${productId(product)}">${product.tradeStatus === "SOLD_OUT" ? "거래완료" : "상태 변경"}</button>`}
+                <button class="danger-button tiny" type="button" data-delete-item="${productId(product)}">삭제</button>
                 ${product.tradeStatus === "SOLD_OUT" ? `<button class="secondary tiny" type="button" data-review="${productId(product)}">리뷰 작성</button>` : ""}
             </div>
         </div>
@@ -494,6 +556,9 @@ async function renderProfile() {
     }
     apiClient.listChatRooms({ page: 0, size: 20 }).catch(() => {});
     apiClient.listMyLikes({ page: 0, size: 20 }).catch(() => {});
+    apiClient.listFollowings({ page: 0, size: 20 }).catch(() => {});
+    apiClient.listFollowers({ page: 0, size: 20 }).catch(() => {});
+    apiClient.listWrittenReviews({ page: 0, size: 20 }).catch(() => {});
 }
 
 function paintProfile(me) {
@@ -504,12 +569,83 @@ function paintProfile(me) {
 }
 
 function bindProfileActions() {
+    document.querySelector(".profile-title .secondary")?.addEventListener("click", editMyProfile);
+    document.querySelector(".camera-button")?.addEventListener("click", editProfileImage);
+    document.querySelector(".verified")?.addEventListener("click", viewClientProfileById);
+    ensureReviewManagerButton();
     document.querySelectorAll("[data-status]").forEach(button => {
         button.addEventListener("click", () => updateStatus(button.dataset.status));
+    });
+    document.querySelectorAll("[data-publish]").forEach(button => {
+        button.addEventListener("click", () => publishDraft(button.dataset.publish));
+    });
+    document.querySelectorAll("[data-delete-item]").forEach(button => {
+        button.addEventListener("click", () => deleteMyItem(button.dataset.deleteItem));
     });
     document.querySelectorAll("[data-review]").forEach(button => {
         button.addEventListener("click", () => createReview(button.dataset.review));
     });
+    bindProductActions();
+}
+
+function ensureReviewManagerButton() {
+    const title = document.querySelector(".profile-title");
+    if (!title || document.querySelector("#reviewManagerButton")) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = "reviewManagerButton";
+    button.className = "secondary tiny";
+    button.textContent = "리뷰 관리";
+    button.addEventListener("click", manageReviewById);
+    title.append(button);
+}
+
+async function viewClientProfileById() {
+    const clientId = window.prompt("조회할 회원 ID를 입력하세요.");
+    if (!clientId) return;
+    try {
+        const profile = await apiClient.getClientProfile(clientId);
+        const reviews = await apiClient.listClientReviews(clientId).catch(() => null);
+        const reviewCount = reviews?.content?.length ?? profile.reviewCount ?? 0;
+        const action = profile.isFollowing ? "언팔로우" : "팔로우";
+        const message = `${profile.nickname || "회원"} · 평점 ${profile.averageRating ?? "-"} · 후기 ${reviewCount}개`;
+        if (window.confirm(`${message}\n${action} 요청을 보낼까요?`)) {
+            if (profile.isFollowing) await apiClient.unfollowClient(clientId);
+            else await apiClient.followClient(clientId);
+            showToast(`${action} 요청을 반영했습니다.`);
+        } else {
+            showToast(message);
+        }
+    } catch (error) {
+        showToast(error.message || "회원 프로필 조회에 실패했습니다.");
+    }
+}
+
+async function manageReviewById() {
+    const reviewId = window.prompt("수정하거나 삭제할 리뷰 ID를 입력하세요.");
+    if (!reviewId) return;
+    if (window.confirm("이 리뷰를 삭제할까요? 취소하면 수정 화면으로 이어집니다.")) {
+        try {
+            await apiClient.deleteReview(reviewId);
+            showToast("리뷰를 삭제했습니다.");
+        } catch (error) {
+            showToast(error.message || "리뷰 삭제에 실패했습니다.");
+        }
+        return;
+    }
+
+    const rating = Number(window.prompt("새 평점을 입력하세요. 비워두면 내용만 수정합니다.", ""));
+    const content = window.prompt("새 리뷰 내용을 입력하세요.");
+    if (!rating && !content) return;
+    try {
+        await apiClient.updateReview(reviewId, {
+            ...(rating ? { rating } : {}),
+            ...(content ? { content } : {})
+        });
+        showToast("리뷰를 수정했습니다.");
+    } catch (error) {
+        showToast(error.message || "리뷰 수정에 실패했습니다.");
+    }
 }
 
 async function updateStatus(itemId) {
@@ -521,10 +657,62 @@ async function updateStatus(itemId) {
         if (buyerId) payload.buyerId = Number(buyerId);
     }
     try {
-        await apiClient.updateItemStatus(itemId, payload);
+        const result = await apiClient.updateItemStatus(itemId, payload);
+        replaceProductState({ itemId, tradeStatus: result?.tradeStatus || nextStatus });
         showToast("판매 상태를 변경했습니다.");
+        await renderProfile();
     } catch (error) {
         showToast(error.message || "판매 상태 변경에 실패했습니다.");
+    }
+}
+
+async function publishDraft(itemId) {
+    if (!window.confirm("임시저장 상품을 게시할까요?")) return;
+    try {
+        await apiClient.publishItem(itemId);
+        replaceProductState({ itemId, isDraft: false, tradeStatus: "ON_SALE" });
+        showToast("상품을 게시했습니다.");
+        await renderProfile();
+    } catch (error) {
+        showToast(error.message || "상품 게시에 실패했습니다.");
+    }
+}
+
+async function deleteMyItem(itemId) {
+    if (!window.confirm("상품을 삭제할까요? 삭제 후 목록에서 보이지 않습니다.")) return;
+    try {
+        await apiClient.deleteItem(itemId);
+        removeProductState(itemId);
+        showToast("상품을 삭제했습니다.");
+        await renderProfile();
+    } catch (error) {
+        showToast(error.message || "상품 삭제에 실패했습니다.");
+    }
+}
+
+async function editMyProfile() {
+    const nickname = window.prompt("닉네임을 입력하세요.", document.querySelector(".profile-title h1")?.textContent || "");
+    if (!nickname) return;
+    const name = window.prompt("이름을 입력하세요. 비워두면 변경하지 않습니다.", "") || undefined;
+    const phone = window.prompt("전화번호를 입력하세요. 비워두면 변경하지 않습니다.", "") || undefined;
+    try {
+        const me = await apiClient.updateMe({ nickname, name, phone });
+        paintProfile(me);
+        showToast("프로필을 수정했습니다.");
+    } catch (error) {
+        showToast(error.message || "프로필 수정에 실패했습니다.");
+    }
+}
+
+async function editProfileImage() {
+    const profileImageUrl = window.prompt("프로필 이미지 URL을 입력하세요.");
+    if (!profileImageUrl) return;
+    try {
+        const me = await apiClient.updateMe({ profileImageUrl });
+        paintProfile(me);
+        showToast("프로필 이미지를 수정했습니다.");
+    } catch (error) {
+        showToast(error.message || "프로필 이미지 수정에 실패했습니다.");
     }
 }
 
@@ -540,7 +728,7 @@ async function createReview(itemId) {
     }
 }
 
-async function renderForm(mode = "sell") {
+async function renderForm(mode = "sell", id = null) {
     mount("formTemplate");
     await loadCategories();
     hydrateCategorySelect();
@@ -551,13 +739,18 @@ async function renderForm(mode = "sell") {
     if (mode === "edit") {
         formTitle.textContent = "상품 정보 수정";
         submitButton.textContent = "수정 완료";
-        const product = state.products[3];
+        const selectedId = id || state.currentItemId || productId(state.products[0]);
+        let product = state.products.find(item => String(productId(item)) === String(selectedId)) || state.products[0];
         state.currentItemId = productId(product);
-        form.title.value = product.title;
-        form.categoryId.value = state.categories[0]?.id || "1";
-        form.initialPrice.value = product.initialPrice;
-        form.description.value = "구매한 지 한 달 정도 된 커스텀 키보드입니다.\n사무실에서 사용하려고 샀는데 타건음이 생각보다 커서 내놓습니다.\n직거래는 강남역 인근에서 가능합니다.";
-        document.querySelector("#photoCount").textContent = "(3/10)";
+        try {
+            const detail = await apiClient.getItem(state.currentItemId);
+            product = normalizeProduct({ ...product, ...detail });
+            replaceProductState(product);
+        } catch {
+            product = normalizeProduct(product);
+        }
+        fillItemForm(form, product);
+        renderImageManager(product);
     }
     form.addEventListener("submit", event => submitItem(event, false));
     document.querySelector("#draftButton").addEventListener("click", event => submitItem(event, true));
@@ -572,6 +765,83 @@ async function renderForm(mode = "sell") {
         });
     });
     bindRouteButtons();
+}
+
+function fillItemForm(form, product) {
+    form.title.value = product.title || "";
+    form.categoryId.value = product.categoryId || state.categories.find(category => category.name === product.categoryName)?.id || state.categories[0]?.id || "";
+    form.initialPrice.value = product.initialPrice || 0;
+    form.description.value = product.description || "";
+    form.conditionType.value = product.conditionType || "USED";
+    form.tradeType.value = product.tradeType || "DIRECT";
+    if (product.closeDate) {
+        form.closeDate.value = String(product.closeDate).slice(0, 16);
+    }
+    form.querySelectorAll(".choice input").forEach(input => {
+        input.closest(".choice").classList.toggle("active", input.checked);
+    });
+    document.querySelector("#closeDateLabel").classList.toggle("hidden", form.tradeType.value !== "AUCTION");
+}
+
+function renderImageManager(product) {
+    const uploadRow = document.querySelector(".upload-row");
+    const oldManager = document.querySelector(".image-manager");
+    if (oldManager) oldManager.remove();
+
+    const images = normalizeImages(product.images || []);
+    document.querySelector("#photoCount").textContent = `(${images.length}/10)`;
+    if (images.length === 0) return;
+
+    const manager = document.createElement("div");
+    manager.className = "image-manager";
+    manager.innerHTML = `<p class="product-meta">등록된 이미지</p>`;
+    images.forEach(image => {
+        const card = document.createElement("article");
+        card.className = "image-manager-card";
+        card.innerHTML = `
+            <img src="${image.imageUrl}" alt="등록된 상품 이미지">
+            <div>
+                <strong>${image.isThumbnail ? "대표 이미지" : "상품 이미지"}</strong>
+                <div class="card-actions">
+                    <button class="secondary tiny" type="button" data-set-thumbnail="${image.imageId}" ${image.isThumbnail ? "disabled" : ""}>대표 설정</button>
+                    <button class="danger-button tiny" type="button" data-delete-image="${image.imageId}">삭제</button>
+                </div>
+            </div>
+        `;
+        manager.append(card);
+    });
+    uploadRow.after(manager);
+    bindImageActions(productId(product));
+}
+
+function bindImageActions(itemId) {
+    document.querySelectorAll("[data-set-thumbnail]").forEach(button => {
+        button.addEventListener("click", () => setItemThumbnail(itemId, button.dataset.setThumbnail));
+    });
+    document.querySelectorAll("[data-delete-image]").forEach(button => {
+        button.addEventListener("click", () => deleteItemImage(itemId, button.dataset.deleteImage));
+    });
+}
+
+async function setItemThumbnail(itemId, imageIdValue) {
+    try {
+        await apiClient.setThumbnail(itemId, imageIdValue);
+        showToast("대표 이미지를 변경했습니다.");
+        await renderForm("edit", itemId);
+    } catch (error) {
+        showToast(error.message || "대표 이미지 설정에 실패했습니다.");
+    }
+}
+
+async function deleteItemImage(itemId, imageIdValue) {
+    if (!window.confirm("이 이미지를 삭제할까요?")) return;
+    try {
+        await apiClient.deleteImage(itemId, imageIdValue);
+        showToast("이미지를 삭제했습니다.");
+        await renderForm("edit", itemId);
+    } catch (error) {
+        showToast(error.message || "이미지 삭제에 실패했습니다.");
+    }
 }
 
 function normalizeItemPayload(form, draft) {
@@ -677,6 +947,7 @@ function bindDetailActions(product) {
                 state.currentChatRoomId = room?.roomId || room?.id || state.currentChatRoomId;
                 showToast("채팅방을 만들었습니다.");
                 if (state.currentChatRoomId) await loadChatMessages(state.currentChatRoomId);
+                renderChatRoomActions();
             }
         } catch (error) {
             showToast(error.message || "구매 요청에 실패했습니다.");
@@ -686,15 +957,41 @@ function bindDetailActions(product) {
     const form = document.querySelector("#messageForm");
     form.replaceWith(form.cloneNode(true));
     document.querySelector("#messageForm").addEventListener("submit", event => sendMessage(event, product));
+    renderChatRoomActions();
+}
+
+function renderChatRoomActions() {
+    document.querySelector(".chat-room-actions")?.remove();
+    if (!state.currentChatRoomId) return;
+    const actions = document.createElement("div");
+    actions.className = "chat-room-actions";
+    actions.innerHTML = `<button type="button" class="secondary tiny" id="leaveChatRoomButton">채팅방 나가기</button>`;
+    document.querySelector(".purchase-box").after(actions);
+    document.querySelector("#leaveChatRoomButton").addEventListener("click", leaveCurrentChatRoom);
+}
+
+async function leaveCurrentChatRoom() {
+    if (!state.currentChatRoomId || !window.confirm("채팅방을 나갈까요?")) return;
+    try {
+        await apiClient.leaveChatRoom(state.currentChatRoomId);
+        state.currentChatRoomId = null;
+        document.querySelector("#chatWindow").replaceChildren();
+        document.querySelector(".chat-room-actions")?.remove();
+        showToast("채팅방을 나갔습니다.");
+    } catch (error) {
+        showToast(error.message || "채팅방 나가기에 실패했습니다.");
+    }
 }
 
 async function loadChatMessages(chatRoomId) {
     try {
         const data = await apiClient.listChatMessages(chatRoomId, { page: 0, size: 50 });
-        const messages = data?.content || [];
+        const messages = data?.content || data?.messages || [];
         const chatWindow = document.querySelector("#chatWindow");
         chatWindow.replaceChildren();
-        messages.forEach(message => appendChatBubble(message.content, true));
+        messages.forEach(message => appendChatBubble(message.content, message.mine ?? message.isMine ?? false, message.messageId || message.id));
+        await apiClient.markChatRoomRead(chatRoomId).catch(() => {});
+        bindChatMessageActions();
     } catch {
         // 채팅방이 아직 없거나 인증 전이면 기본 샘플 대화를 유지한다.
     }
@@ -709,6 +1006,7 @@ async function sendMessage(event, product) {
         if (!state.currentChatRoomId) {
             const room = await apiClient.createChatRoom(productId(product));
             state.currentChatRoomId = room?.roomId || room?.id;
+            renderChatRoomActions();
         }
         if (state.currentChatRoomId) {
             await sendStompMessage(state.currentChatRoomId, content);
@@ -720,11 +1018,33 @@ async function sendMessage(event, product) {
     input.value = "";
 }
 
-function appendChatBubble(content, mine) {
+function appendChatBubble(content, mine, messageId = null) {
     const bubble = document.createElement("p");
     bubble.className = mine ? "bubble mine" : "bubble";
     bubble.textContent = content;
+    if (messageId && mine) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "message-delete";
+        button.dataset.deleteMessage = messageId;
+        button.textContent = "삭제";
+        bubble.append(button);
+    }
     document.querySelector("#chatWindow").append(bubble);
+}
+
+function bindChatMessageActions() {
+    document.querySelectorAll("[data-delete-message]").forEach(button => {
+        button.addEventListener("click", async () => {
+            try {
+                await apiClient.deleteChatMessage(button.dataset.deleteMessage);
+                button.closest(".bubble")?.remove();
+                showToast("메시지를 삭제했습니다.");
+            } catch (error) {
+                showToast(error.message || "메시지 삭제에 실패했습니다.");
+            }
+        });
+    });
 }
 
 let stompSocket = null;
@@ -821,15 +1141,94 @@ async function loadInquiries(itemId) {
         }
         list.replaceChildren(...inquiries.map(inquiry => {
             const article = document.createElement("article");
+            const inquiryId = inquiry.inquiryID || inquiry.inquiryId || inquiry.id;
             article.innerHTML = `
                 <strong>${escapeHtml(inquiry.authorName || "문의자")}</strong>
                 <p>${escapeHtml(inquiry.contents)}</p>
                 <small>${(inquiry.date || "").slice(0, 10)}</small>
+                ${inquiryId ? `
+                    <div class="card-actions">
+                        <button class="secondary tiny" type="button" data-update-inquiry="${inquiryId}">수정</button>
+                        <button class="danger-button tiny" type="button" data-delete-inquiry="${inquiryId}">삭제</button>
+                        <button class="primary tiny" type="button" data-answer-inquiry="${inquiryId}">답변</button>
+                        <button class="secondary tiny" type="button" data-delete-answer="${inquiryId}">답변 삭제</button>
+                    </div>
+                ` : ""}
             `;
             return article;
         }));
+        bindInquiryActions(itemId);
     } catch {
         list.innerHTML = "<p class=\"product-meta\">문의 API는 로그인 후 사용할 수 있습니다.</p>";
+    }
+}
+
+function bindInquiryActions(itemId) {
+    document.querySelectorAll("[data-update-inquiry]").forEach(button => {
+        button.addEventListener("click", () => updateInquiry(itemId, button.dataset.updateInquiry));
+    });
+    document.querySelectorAll("[data-delete-inquiry]").forEach(button => {
+        button.addEventListener("click", () => deleteInquiry(itemId, button.dataset.deleteInquiry));
+    });
+    document.querySelectorAll("[data-answer-inquiry]").forEach(button => {
+        button.addEventListener("click", () => createOrUpdateInquiryAnswer(itemId, button.dataset.answerInquiry));
+    });
+    document.querySelectorAll("[data-delete-answer]").forEach(button => {
+        button.addEventListener("click", () => deleteInquiryAnswer(itemId, button.dataset.deleteAnswer));
+    });
+}
+
+async function updateInquiry(itemId, inquiryIdValue) {
+    const contents = window.prompt("수정할 문의 내용을 입력하세요.");
+    if (!contents) return;
+    const title = window.prompt("문의 제목을 입력하세요. 비워두면 기존 제목을 유지합니다.", "") || undefined;
+    try {
+        await apiClient.updateInquiry(inquiryIdValue, { title, contents });
+        showToast("문의를 수정했습니다.");
+        await loadInquiries(itemId);
+    } catch (error) {
+        showToast(error.message || "문의 수정에 실패했습니다.");
+    }
+}
+
+async function deleteInquiry(itemId, inquiryIdValue) {
+    if (!window.confirm("문의를 삭제할까요?")) return;
+    try {
+        await apiClient.deleteInquiry(inquiryIdValue);
+        showToast("문의를 삭제했습니다.");
+        await loadInquiries(itemId);
+    } catch (error) {
+        showToast(error.message || "문의 삭제에 실패했습니다.");
+    }
+}
+
+async function createOrUpdateInquiryAnswer(itemId, inquiryIdValue) {
+    const contents = window.prompt("답변 내용을 입력하세요.");
+    if (!contents) return;
+    const title = window.prompt("답변 제목을 입력하세요.", "답변") || "답변";
+    try {
+        await apiClient.createInquiryAnswer(inquiryIdValue, { title, contents });
+        showToast("답변을 등록했습니다.");
+        await loadInquiries(itemId);
+    } catch {
+        try {
+            await apiClient.updateInquiryAnswer(inquiryIdValue, { contents });
+            showToast("답변을 수정했습니다.");
+            await loadInquiries(itemId);
+        } catch (error) {
+            showToast(error.message || "답변 저장에 실패했습니다.");
+        }
+    }
+}
+
+async function deleteInquiryAnswer(itemId, inquiryIdValue) {
+    if (!window.confirm("답변을 삭제할까요?")) return;
+    try {
+        await apiClient.deleteInquiryAnswer(inquiryIdValue);
+        showToast("답변을 삭제했습니다.");
+        await loadInquiries(itemId);
+    } catch (error) {
+        showToast(error.message || "답변 삭제에 실패했습니다.");
     }
 }
 
@@ -856,7 +1255,7 @@ function bindProductActions() {
 function bindRouteButtons() {
     document.querySelectorAll("[data-route]").forEach(button => {
         button.addEventListener("click", () => {
-            location.hash = button.dataset.route;
+            location.hash = button.dataset.edit ? `${button.dataset.route}/${button.dataset.edit}` : button.dataset.route;
         });
     });
 }
@@ -868,13 +1267,23 @@ function updateLoginButton() {
     }
 }
 
+async function restoreSession() {
+    if (!state.token) return;
+    try {
+        await apiClient.refresh();
+    } catch {
+        state.token = "";
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+    }
+}
+
 function route() {
     const [name, id] = (location.hash || "#home").replace("#", "").split("/");
     document.querySelectorAll(".category-nav a").forEach(link => link.classList.toggle("active", name === "home"));
     if (name === "auth") renderAuth();
     else if (name === "profile") renderProfile();
     else if (name === "sell") renderForm("sell");
-    else if (name === "edit") renderForm("edit");
+    else if (name === "edit") renderForm("edit", id);
     else if (name === "detail") renderDetail(id);
     else renderHome();
     bindRouteButtons();
@@ -912,4 +1321,4 @@ document.querySelector("#loginNav").addEventListener("click", async () => {
 });
 
 window.addEventListener("hashchange", route);
-route();
+restoreSession().finally(route);
