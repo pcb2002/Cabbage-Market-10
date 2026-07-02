@@ -8,11 +8,13 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Pageable;
 
 public record ItemSearchCacheKey(
+        Long clientId,
         String keyword,
         Long categoryId,
         TradeStatus tradeStatus,
         TradeType tradeType,
         ConditionType conditionType,
+        boolean likedOnly,
         Long minPrice,
         Long maxPrice,
         int page,
@@ -20,13 +22,15 @@ public record ItemSearchCacheKey(
         String sort
 ) {
 
-    public static ItemSearchCacheKey from(ItemSearchRequest request, Pageable pageable) {
+    public static ItemSearchCacheKey from(ItemSearchRequest request, Pageable pageable, Long clientId) {
         return new ItemSearchCacheKey(
+                clientId,
                 normalizeKeyword(request.keyword()),
                 request.categoryId(),
                 request.tradeStatus(),
                 request.tradeType(),
                 request.conditionType(),
+                Boolean.TRUE.equals(request.likedOnly()),
                 request.minPrice(),
                 request.maxPrice(),
                 pageable.getPageNumber(),

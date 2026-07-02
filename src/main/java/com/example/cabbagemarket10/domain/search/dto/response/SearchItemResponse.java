@@ -15,6 +15,7 @@ public record SearchItemResponse(
         Long currentBid,
         TradeStatus tradeStatus,
         Long likeCount,
+        boolean likedByMe,
         LocalDateTime createdAt
 ) implements Serializable {
 }
