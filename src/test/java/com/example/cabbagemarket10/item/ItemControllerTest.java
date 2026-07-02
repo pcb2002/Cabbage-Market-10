@@ -541,12 +541,16 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.data.content[0].itemId").value(visibleItem.getId()))
                 .andExpect(jsonPath("$.data.content[0].thumbnailUrl")
                         .value("https://cdn.example.com/items/list-thumbnail.jpg"))
+                .andExpect(jsonPath("$.data.content[0].categoryName").value("list-category"))
                 .andExpect(jsonPath("$.data.content[0].title").value("visible auction cabbage"))
                 .andExpect(jsonPath("$.data.content[0].initialPrice").value(7000))
                 .andExpect(jsonPath("$.data.content[0].currentBid").value(9000))
                 .andExpect(jsonPath("$.data.content[0].tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.content[0].tradeType").value("AUCTION"))
+                .andExpect(jsonPath("$.data.content[0].conditionType").value("USED"))
                 .andExpect(jsonPath("$.data.content[0].likeCount").value(1))
                 .andExpect(jsonPath("$.data.content[0].closeDate").value("2026-08-01T10:00:00"))
+                .andExpect(jsonPath("$.data.content[0].createdAt").exists())
                 .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 

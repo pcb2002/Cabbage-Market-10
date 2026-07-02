@@ -45,12 +45,16 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                         select new com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse(
                             i.id,
                             thumbnail.imageUrl,
+                            i.category.name,
                             i.title,
                             i.initialPrice,
                             a.currentBid,
                             i.tradeStatus,
+                            i.tradeType,
+                            i.conditionType,
                             a.closeDate,
-                            i.likeCount
+                            i.likeCount,
+                            i.createdAt
                         )
                         from Item i
                         left join AuctionStatus a on a.item = i

@@ -160,7 +160,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 내 정보 수정 | phone | 선택, 형식 `01[0-9]-?\d{3,4}-?\d{4}` |
 | 내 정보 수정 | profileImageUrl | 선택, URL 형식, 최대 500자 |
 | 상품 등록 | categoryId | 필수, 존재하는 카테고리 ID |
-| 상품 등록 | tradeType | 필수, `SALE` 또는 `AUCTION` |
+| 상품 등록 | tradeType | 필수, `DIRECT` 또는 `AUCTION` |
 | 상품 등록 | title | 필수, 1~100자 |
 | 상품 등록 | description | 필수, 1~2000자 |
 | 상품 등록 | initialPrice | 필수, 0 이상 정수 |
@@ -686,7 +686,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 ```json
 {
   "categoryId": 1,
-  "tradeType": "SALE",
+  "tradeType": "DIRECT",
   "title": "싱싱한 배추",
   "description": "오늘 수확한 배추입니다.",
   "initialPrice": 12000,
@@ -700,7 +700,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | 필드 | 규칙 |
 |---|---|
 | categoryId | 필수, 존재하는 카테고리 ID |
-| tradeType | 필수, `SALE` 또는 `AUCTION` |
+| tradeType | 필수, `DIRECT` 또는 `AUCTION` |
 | title | 필수, 공백 불가, 1~100자 |
 | description | 필수, 공백 불가, 1~2000자 |
 | initialPrice | 필수, 0 이상 정수 |
@@ -751,12 +751,16 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 |---|---|
 | itemId | 상품 ID |
 | thumbnailUrl | 대표 이미지 URL, 없으면 null |
+| categoryName | 카테고리명 |
 | title | 상품 제목 |
 | initialPrice | 시작가 |
 | currentBid | 현재 입찰가, 경매 상태가 없으면 null |
 | tradeStatus | 판매 상태 |
+| tradeType | 거래 유형, `DIRECT` 또는 `AUCTION` |
+| conditionType | 상품 상태, `NEW` 또는 `USED` |
 | closeDate | 경매 마감 일시, 경매 상태가 없으면 null |
 | likeCount | 좋아요 수 |
+| createdAt | 상품 등록 일시 |
 
 `GET /api/items/{itemId}` 상품 상세 조회 응답은 `images` 배열을 포함한다. 각 이미지는 `imageId`, `imageUrl`, `sortOrder`, `isThumbnail`을 포함하며 `sortOrder` 오름차순으로 정렬된다. 이미지가 없으면 빈 배열을 반환한다.
 
