@@ -1,9 +1,11 @@
 package com.example.cabbagemarket10.domain.chat.controller;
 
+import com.example.cabbagemarket10.domain.chat.dto.restful.ChatRoomDetail;
 import com.example.cabbagemarket10.domain.chat.dto.restful.RoomCreate;
 import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageList;
 import com.example.cabbagemarket10.domain.chat.service.ChatService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -45,6 +47,15 @@ public class ChatController {
             @PageableDefault(size = 50) Pageable pageable
     ) {
         ChatMessageList resBody = chatService.getRecentMessages(chatRoomId, authenticatedClient.clientId(), pageable);
+        return CommonResponse.success(HttpStatus.OK, resBody).toResponseEntity();
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<CommonResponse<PageResponse<ChatRoomDetail>>> getMyChatRooms(
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        PageResponse<ChatRoomDetail> resBody = chatService.getMyChatRoom(authenticatedClient.clientId(), pageable);
         return CommonResponse.success(HttpStatus.OK, resBody).toResponseEntity();
     }
 }

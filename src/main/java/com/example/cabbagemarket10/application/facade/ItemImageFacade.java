@@ -119,4 +119,22 @@ public class ItemImageFacade {
 
         return ItemThumbnailUpdateResponse.of(itemId, targetImage.getId(), targetImage.getImageUrl());
     }
+
+    /**
+     * 상품 이미지 삭제 통합 워크플로우 제어 (복합 도메인 및 인프라 조율)
+     */
+    @Transactional
+    public void deleteItemImage(Long itemId, Long imageId, Long clientId) {
+        // 1. 상품 존재 여부 조회 및 판매자 권한 검증 (Item 도메인 영역)
+        Item item = itemService.getValidatedItem(itemId, clientId);
+
+        // 2. 이미지 조회 및 썸네일 방어 로직 검증 (ItemImage 도메인 영역)
+        ItemImage itemImage = itemImageService.getValidItemImage(imageId, item.getId());
+
+        // 3. 외부 스토리지(S3)에서 실제 파일 제거 (인프라 영역)
+        storageUploadUtils.delete(itemImage.getImageUrl(), ITEM_IMAGE_DIR);
+
+        // 4. DB에서 이미지 데이터 최종 물리 삭제 (ItemImage 도메인 영역)
+        itemImageService.delete(itemImage);
+    }
 }
