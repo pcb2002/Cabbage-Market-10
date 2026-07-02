@@ -4,10 +4,14 @@ import com.example.cabbagemarket10.domain.client.dto.request.ClientMyInfoUpdateR
 import com.example.cabbagemarket10.domain.client.dto.response.ClientMyInfoResponse;
 import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileResponse;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
+import com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse;
 import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +31,17 @@ public class ClientController {
         ClientMyInfoResponse response = clientService.getMyInfo(authenticatedClient.clientId());
 
         return CommonResponse.success(HttpStatus.OK, response)
+                .toResponseEntity();
+    }
+
+    @GetMapping("/me/likes")
+    public ResponseEntity<CommonResponse<PageResponse<MyLikedItemResponse>>> getMyLikedItems(
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            Pageable pageable
+    ) {
+        Page<MyLikedItemResponse> response = clientService.getMyLikedItems(authenticatedClient.clientId(), pageable);
+
+        return CommonResponse.success(HttpStatus.OK, PageResponse.from(response))
                 .toResponseEntity();
     }
 
