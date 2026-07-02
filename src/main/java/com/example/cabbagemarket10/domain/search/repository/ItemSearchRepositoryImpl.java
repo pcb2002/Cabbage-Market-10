@@ -6,20 +6,22 @@ import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.itemImage.entity.QItemImage;
+import com.example.cabbagemarket10.domain.itemLike.entity.QItemLike;
 import com.example.cabbagemarket10.domain.search.dto.response.SearchItemResponse;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -29,11 +31,13 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
 
     @Override
     public Page<SearchItemResponse> searchItemsV1(
+            Long clientId,
             String keyword,
             Long categoryId,
             TradeStatus tradeStatus,
             TradeType tradeType,
             ConditionType conditionType,
+            boolean likedOnly,
             Long minPrice,
             Long maxPrice,
             Pageable pageable
@@ -41,10 +45,12 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
         QItem item = QItem.item;
         QAuctionStatus auctionStatus = QAuctionStatus.auctionStatus;
         QItemImage thumbnail = QItemImage.itemImage;
+        QItemLike itemLike = QItemLike.itemLike;
         boolean currentBidSort = isCurrentBidSort(pageable);
 
         BooleanBuilder where = new BooleanBuilder();
         where.and(item.isDraft.isFalse());
+        where.and(item.isDeleted.isFalse());
 
         if (categoryId != null) {
             where.and(item.category.id.eq(categoryId));
@@ -85,12 +91,19 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
             where.and(auctionStatus.item.isNotNull());
         }
 
+        if (likedOnly) {
+            where.and(itemLike.item.id.isNotNull());
+        }
+
+        BooleanExpression likedByMeExpression = likedByMeExpression(clientId, itemLike);
+
         List<SearchItemResponse> content = jpaQueryFactory
-                .select(searchItemProjection(item, auctionStatus, thumbnail))
+                .select(searchItemProjection(item, auctionStatus, thumbnail, likedByMeExpression))
                 .from(item)
                 .join(item.category)
                 .leftJoin(auctionStatus).on(auctionStatus.item.eq(item))
                 .leftJoin(thumbnail).on(thumbnail.item.eq(item).and(thumbnail.isThumbnail.isTrue()))
+                .leftJoin(itemLike).on(itemLike.item.eq(item).and(hasClientId(clientId, itemLike)))
                 .where(where)
                 .orderBy(buildOrderSpecifiers(pageable, item, auctionStatus))
                 .offset(pageable.getOffset())
@@ -101,6 +114,7 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
                 .select(item.count())
                 .from(item)
                 .leftJoin(auctionStatus).on(auctionStatus.item.eq(item))
+                .leftJoin(itemLike).on(itemLike.item.eq(item).and(hasClientId(clientId, itemLike)))
                 .where(where)
                 .fetchOne();
 
@@ -110,7 +124,8 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
     private com.querydsl.core.types.ConstructorExpression<SearchItemResponse> searchItemProjection(
             QItem item,
             QAuctionStatus auctionStatus,
-            QItemImage thumbnail
+            QItemImage thumbnail,
+            BooleanExpression likedByMeExpression
     ) {
         return Projections.constructor(
                 SearchItemResponse.class,
@@ -123,8 +138,23 @@ public class ItemSearchRepositoryImpl implements ItemSearchRepository {
                 auctionStatus.currentBid,
                 item.tradeStatus,
                 item.likeCount,
+                likedByMeExpression,
                 item.createdAt
         );
+    }
+
+    private BooleanExpression likedByMeExpression(Long clientId, QItemLike itemLike) {
+        if (clientId == null) {
+            return Expressions.asBoolean(false).isTrue();
+        }
+        return itemLike.item.id.isNotNull();
+    }
+
+    private BooleanExpression hasClientId(Long clientId, QItemLike itemLike) {
+        if (clientId == null) {
+            return Expressions.FALSE.isTrue();
+        }
+        return itemLike.client.id.eq(clientId);
     }
 
     private OrderSpecifier<?>[] buildOrderSpecifiers(

@@ -17,6 +17,21 @@ spring:
     init:
       mode: never
 
+app:
+  cache:
+    item-search-v2:
+      type: redis
+  auction:
+    redis-lock:
+      enabled: false
+  search:
+    popular:
+      limit: 10
+      dedup-ttl: 1m
+      daily-key-ttl: 8d
+      daily-key-prefix: "popular:search:"
+      dedup-key-prefix: "popular:dedup:"
+
 jwt:
   secret: test-secret-key-for-cabbage-market-authentication
   access-token-expire-seconds: 3600

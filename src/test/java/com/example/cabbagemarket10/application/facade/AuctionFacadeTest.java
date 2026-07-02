@@ -14,6 +14,7 @@ import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
+import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import java.time.LocalDateTime;
@@ -44,6 +45,9 @@ class AuctionFacadeTest {
     @Mock
     private AuctionStatusService auctionStatusService;
 
+    @Mock
+    private SearchCacheEvictionService searchCacheEvictionService;
+
     @InjectMocks
     private AuctionFacade auctionFacade;
 
@@ -67,6 +71,7 @@ class AuctionFacadeTest {
 
         assertThat(response).isEqualTo(expectedResponse);
         verify(auctionStatusService).bid(1L, 2L, 3L, 12000L);
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
         verify(lock).unlock();
     }
 
@@ -82,6 +87,7 @@ class AuctionFacadeTest {
 
         verify(itemService, never()).getItem(1L);
         verify(auctionStatusService, never()).bid(1L, 2L, 3L, 12000L);
+        verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
         verify(lock, never()).unlock();
     }
 
@@ -97,6 +103,7 @@ class AuctionFacadeTest {
 
         assertThat(Thread.currentThread().isInterrupted()).isTrue();
         verify(auctionStatusService, never()).bid(1L, 2L, 3L, 12000L);
+        verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
         verify(lock, never()).unlock();
     }
 
@@ -129,6 +136,7 @@ class AuctionFacadeTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_BID_REQUEST));
 
         verify(auctionStatusService, never()).bid(1L, 2L, 3L, 12000L);
+        verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
         verify(lock).unlock();
     }
 
