@@ -4,9 +4,11 @@ import com.example.cabbagemarket10.domain.client.dto.request.ClientMyInfoUpdateR
 import com.example.cabbagemarket10.domain.client.dto.response.ClientMyInfoResponse;
 import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileResponse;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
+import com.example.cabbagemarket10.domain.item.dto.response.MyItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse;
 import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.common.response.PageResponse;
+import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class ClientController {
 
     private final ClientService clientService;
+    private final ItemService itemService;
 
     @GetMapping("/me")
     public ResponseEntity<CommonResponse<ClientMyInfoResponse>> getMyInfo(
@@ -31,6 +34,19 @@ public class ClientController {
         ClientMyInfoResponse response = clientService.getMyInfo(authenticatedClient.clientId());
 
         return CommonResponse.success(HttpStatus.OK, response)
+                .toResponseEntity();
+    }
+
+    @GetMapping("/me/items")
+    public ResponseEntity<CommonResponse<PageResponse<MyItemListItemResponse>>> getMyItems(
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            @RequestParam(required = false) String tradeStatus,
+            Pageable pageable
+    ) {
+        Page<MyItemListItemResponse> items = itemService.getMyItemList(
+                authenticatedClient.clientId(), tradeStatus, pageable);
+
+        return CommonResponse.success(HttpStatus.OK, PageResponse.from(items))
                 .toResponseEntity();
     }
 
