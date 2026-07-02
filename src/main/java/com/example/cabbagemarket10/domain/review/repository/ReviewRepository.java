@@ -25,14 +25,15 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             select new com.example.cabbagemarket10.domain.review.dto.response.ReceivedReviewListItemResponse(
                 r.id,
                 r.item.id,
-                r.reviewer.id,
-                r.reviewer.nickname,
-                r.reviewer.profileImageUrl,
+                reviewer.id,
+                reviewer.nickname,
+                reviewer.profileImageUrl,
                 r.rating,
                 r.content,
                 r.createdAt
             )
             from Review r
+            left join r.reviewer reviewer
             where r.reviewee.id = :revieweeId
             order by r.createdAt desc, r.id desc
             """,

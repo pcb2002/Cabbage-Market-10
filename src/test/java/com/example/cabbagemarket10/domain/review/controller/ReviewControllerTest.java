@@ -348,6 +348,30 @@ class ReviewControllerTest {
                 .andExpect(jsonPath("$.data.content[1].reviewId").value(olderReview.getId()));
     }
 
+    @DisplayName("리뷰 작성자가 탈퇴해도 받은 리뷰 목록에서 사라지지 않는다")
+    @Test
+    void 리뷰_작성자가_탈퇴해도_받은_리뷰_목록에서_사라지지_않는다() throws Exception {
+        Client seller = saveClient("withdrawn-reviewer-seller@example.com", "탈퇴리뷰판매자", "김판매");
+        Client buyer = saveClient("withdrawn-reviewer-buyer@example.com", "탈퇴리뷰구매자", "박구매");
+        Item item = saveAuctionItem(seller, TradeStatus.SOLD_OUT);
+        Review review = reviewRepository.save(Review.builder()
+                .item(item)
+                .reviewer(buyer)
+                .reviewee(seller)
+                .rating(5)
+                .content("작성자는 나중에 탈퇴함")
+                .build());
+        clientRepository.delete(buyer);
+        clientRepository.flush();
+
+        mockMvc.perform(get("/api/clients/{clientId}/reviews", seller.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].reviewId").value(review.getId()))
+                .andExpect(jsonPath("$.data.content[0].reviewerNickname")
+                        .value(org.hamcrest.Matchers.nullValue()));
+    }
+
     private Client saveClient(String email, String nickname, String name) {
         return clientRepository.save(Client.create(
                 email,
