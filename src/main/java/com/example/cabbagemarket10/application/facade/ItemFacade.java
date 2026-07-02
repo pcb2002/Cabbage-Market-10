@@ -43,7 +43,7 @@ public class ItemFacade {
 
         Item item = itemService.saveItem(seller, category, request);
         auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate());
-        searchCacheEvictionService.evictItemSearchV2();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
 
         return item.getId();
     }
@@ -77,7 +77,7 @@ public class ItemFacade {
 
         item.publish();
         itemService.flush();
-        searchCacheEvictionService.evictItemSearchV2();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
 
         return new ItemPublishResponse(item.getId(), item.getUpdatedAt());
     }
@@ -95,7 +95,7 @@ public class ItemFacade {
 
         item.updateInfo(category, request.title(), request.description(), request.initialPrice());
         itemService.flush();
-        searchCacheEvictionService.evictItemSearchV2();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
 
         return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
     }
@@ -108,7 +108,7 @@ public class ItemFacade {
         Client buyer = resolveBuyer(item, request);
 
         ItemStatusUpdateResponse response = itemService.updateItemStatus(item, request.tradeStatus(), buyer);
-        searchCacheEvictionService.evictItemSearchV2();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
         return response;
     }
 
@@ -140,6 +140,6 @@ public class ItemFacade {
         }
 
         itemService.softDelete(item);
-        searchCacheEvictionService.evictItemSearchV2();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
     }
 }

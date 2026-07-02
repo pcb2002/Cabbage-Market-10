@@ -63,7 +63,7 @@ class ItemLikeFacadeTest {
         assertThat(response.likeCount()).isEqualTo(1L);
         verify(itemLikeService).save(client, item);
         verify(itemService).incrementLikeCount(10L);
-        verify(searchCacheEvictionService).evictItemSearchV2();
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     @DisplayName("기존 좋아요가 있으면 상품 좋아요를 취소하고 좋아요 수를 감소시킨다")
@@ -87,7 +87,7 @@ class ItemLikeFacadeTest {
         assertThat(response.likeCount()).isEqualTo(1L);
         verify(itemLikeService).delete(itemLike);
         verify(itemService).decrementLikeCount(10L);
-        verify(searchCacheEvictionService).evictItemSearchV2();
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     @DisplayName("회원이 없으면 CLIENT_NOT_FOUND 예외가 발생한다")

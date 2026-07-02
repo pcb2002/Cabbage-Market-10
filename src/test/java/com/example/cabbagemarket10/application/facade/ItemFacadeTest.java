@@ -68,7 +68,7 @@ class ItemFacadeTest {
 
         itemFacade.createItem(1L, request);
 
-        verify(searchCacheEvictionService).evictItemSearchV2();
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     @DisplayName("상품 상태 변경 후 검색 캐시를 비운다")
@@ -86,7 +86,7 @@ class ItemFacadeTest {
 
         itemFacade.updateItemStatus(10L, 1L, request);
 
-        verify(searchCacheEvictionService).evictItemSearchV2();
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     @DisplayName("게시 상품 삭제 후 검색 캐시를 비운다")
@@ -100,7 +100,7 @@ class ItemFacadeTest {
         itemFacade.deleteItem(10L, 1L);
 
         verify(itemService).softDelete(item);
-        verify(searchCacheEvictionService).evictItemSearchV2();
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
     }
 
     @DisplayName("임시저장 상품 hard delete는 검색 캐시를 비우지 않는다")
@@ -114,7 +114,7 @@ class ItemFacadeTest {
         itemFacade.deleteItem(10L, 1L);
 
         verify(itemService).hardDeleteById(10L);
-        verify(searchCacheEvictionService, never()).evictItemSearchV2();
+        verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
     }
 
     private Client client(Long clientId) {

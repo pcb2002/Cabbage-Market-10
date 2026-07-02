@@ -71,7 +71,7 @@ class AuctionFacadeTest {
 
         assertThat(response).isEqualTo(expectedResponse);
         verify(auctionStatusService).bid(1L, 2L, 3L, 12000L);
-        verify(searchCacheEvictionService).evictItemSearchV2();
+        verify(searchCacheEvictionService).evictItemSearchV2AfterCommit();
         verify(lock).unlock();
     }
 
@@ -87,7 +87,7 @@ class AuctionFacadeTest {
 
         verify(itemService, never()).getItem(1L);
         verify(auctionStatusService, never()).bid(1L, 2L, 3L, 12000L);
-        verify(searchCacheEvictionService, never()).evictItemSearchV2();
+        verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
         verify(lock, never()).unlock();
     }
 
@@ -103,7 +103,7 @@ class AuctionFacadeTest {
 
         assertThat(Thread.currentThread().isInterrupted()).isTrue();
         verify(auctionStatusService, never()).bid(1L, 2L, 3L, 12000L);
-        verify(searchCacheEvictionService, never()).evictItemSearchV2();
+        verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
         verify(lock, never()).unlock();
     }
 
@@ -136,7 +136,7 @@ class AuctionFacadeTest {
                         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_BID_REQUEST));
 
         verify(auctionStatusService, never()).bid(1L, 2L, 3L, 12000L);
-        verify(searchCacheEvictionService, never()).evictItemSearchV2();
+        verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
         verify(lock).unlock();
     }
 
