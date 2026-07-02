@@ -249,6 +249,38 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 내 판매글 목록 | GET | `/api/clients/me/items` | 필요 | 페이징 | `200 OK` |
 | 내 관심목록 조회 | GET | `/api/clients/me/likes` | 필요 | 페이징 | `200 OK` |
 
+### 내 관심목록 조회
+
+`GET /api/clients/me/likes`는 로그인 회원이 좋아요한 공개 상품 목록을 페이징으로 조회한다.
+
+요청 Query:
+
+| 필드 | 규칙 |
+|---|---|
+| page | 선택, 0부터 시작 |
+| size | 선택 |
+| sort | 선택, 기본값 `likedAt,desc` |
+
+응답 `data.content` 항목:
+
+| 필드 | 설명 |
+|---|---|
+| itemId | 상품 ID |
+| title | 상품 제목 |
+| initialPrice | 시작가 |
+| currentBid | 경매 상품의 현재 입찰가, 직거래 상품이면 null |
+| tradeStatus | 판매 상태 |
+| closeDate | 경매 마감 일시, 직거래 상품이면 null |
+| tradeType | 거래 유형, `DIRECT` 또는 `AUCTION` |
+| conditionType | 상품 상태, `NEW` 또는 `USED` |
+| likeCount | 좋아요 수 |
+| likedByMe | 현재 로그인 회원의 좋아요 여부, 관심목록에서는 항상 `true` |
+| thumbnailUrl | 대표 이미지 URL, 없으면 null |
+| categoryId | 카테고리 ID |
+| createdAt | 상품 생성 일시 |
+
+임시저장 상품과 삭제된 상품은 관심목록에 노출하지 않는다.
+
 ### 회원 프로필 조회
 
 `GET /api/clients/{clientId}`는 비회원과 회원 모두 특정 회원의 공개 프로필을 조회한다.
@@ -477,7 +509,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | Status | Code | 설명 |
 |---:|---|---|
 | 401 | `UNAUTHORIZED` | 미인증 사용자 |
-| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제된 상품 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제되었거나 임시저장인 상품 |
 상품 이미지 업로드는 상품 판매자만 요청할 수 있다. `files`는 `jpg`, `jpeg`, `png`, `webp` 확장자만 허용하고 파일당 최대 크기는 5MB다. 기존 이미지가 없는 상품의 첫 번째 업로드 이미지는 썸네일로 저장된다.
 
 성공 응답 `data`:

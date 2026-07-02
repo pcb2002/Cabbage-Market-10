@@ -21,7 +21,12 @@ import com.example.cabbagemarket10.domain.category.entity.Category;
 import com.example.cabbagemarket10.domain.category.repository.CategoryRepository;
 import com.example.cabbagemarket10.domain.review.entity.Review;
 import com.example.cabbagemarket10.domain.review.repository.ReviewRepository;
+import com.example.cabbagemarket10.domain.itemLike.entity.ItemLike;
+import com.example.cabbagemarket10.domain.itemLike.repository.ItemLikeRepository;
+import com.example.cabbagemarket10.domain.auction.entity.AuctionStatus;
+import com.example.cabbagemarket10.domain.auction.repository.AuctionStatusRepository;
 import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,7 +56,13 @@ class ClientControllerTest {
     private ItemRepository itemRepository;
 
     @Autowired
+    private AuctionStatusRepository auctionStatusRepository;
+
+    @Autowired
     private ItemImageRepository itemImageRepository;
+
+    @Autowired
+    private ItemLikeRepository itemLikeRepository;
 
     @Autowired
     private FollowRepository followRepository;
@@ -71,9 +82,10 @@ class ClientControllerTest {
     @BeforeEach
     void setUp() {
         deleteIfExists("follow");
+        deleteIfExists("item_like");
         deleteIfExists("review");
-        deleteIfExists("auction_status");
         deleteIfExists("item_image");
+        deleteIfExists("auction_status");
         deleteIfExists("item");
         deleteIfExists("category");
         deleteIfExists("client");
@@ -119,6 +131,100 @@ class ClientControllerTest {
     @Test
     void 토큰_없이_내_정보_조회를_요청하면_401을_반환한다() throws Exception {
         mockMvc.perform(get("/api/clients/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("인증된 회원은 내 관심목록을 조회할 수 있다")
+    @Test
+    void 인증된_회원은_내_관심목록을_조회할_수_있다() throws Exception {
+        Client seller = saveClient(
+                "seller@example.com",
+                "판매자",
+                "판매자",
+                "010-7777-8888");
+        Client liker = saveClient(
+                "liker@example.com",
+                "좋아요회원",
+                "좋아요회원",
+                "010-8888-9999");
+        Category category = saveCategory();
+
+        Item directItem = saveItem(category, seller, "직거래 상품", TradeStatus.ON_SALE, false);
+        Item auctionItem = itemRepository.save(Item.builder()
+                .category(category)
+                .seller(seller)
+                .tradeType(TradeType.AUCTION)
+                .title("경매 상품")
+                .description("설명")
+                .initialPrice(2000L)
+                .conditionType(ConditionType.NEW)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+        auctionStatusRepository.save(AuctionStatus.builder()
+                .item(auctionItem)
+                .currentBid(3500L)
+                .closeDate(LocalDateTime.of(2026, 8, 1, 23, 59, 59))
+                .build());
+        itemImageRepository.save(ItemImage.builder()
+                .item(auctionItem)
+                .imageUrl("https://cdn.cabbage.test/auction-thumb.png")
+                .sortOrder(0)
+                .isThumbnail(true)
+                .build());
+        auctionItem.incrementLikeCount();
+        directItem.incrementLikeCount();
+        directItem.incrementLikeCount();
+        itemRepository.saveAndFlush(auctionItem);
+        itemRepository.saveAndFlush(directItem);
+        itemLikeRepository.save(ItemLike.builder()
+                .client(liker)
+                .item(directItem)
+                .build());
+        itemLikeRepository.save(ItemLike.builder()
+                .client(liker)
+                .item(auctionItem)
+                .build());
+
+        String accessToken = jwtTokenProvider.createAccessToken(liker);
+
+        mockMvc.perform(get("/api/clients/me/likes")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(auctionItem.getId()))
+                .andExpect(jsonPath("$.data.content[0].title").value("경매 상품"))
+                .andExpect(jsonPath("$.data.content[0].initialPrice").value(2000))
+                .andExpect(jsonPath("$.data.content[0].currentBid").value(3500))
+                .andExpect(jsonPath("$.data.content[0].tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.content[0].closeDate").value("2026-08-01T23:59:59"))
+                .andExpect(jsonPath("$.data.content[0].tradeType").value("AUCTION"))
+                .andExpect(jsonPath("$.data.content[0].conditionType").value("NEW"))
+                .andExpect(jsonPath("$.data.content[0].likeCount").value(1))
+                .andExpect(jsonPath("$.data.content[0].likedByMe").value(true))
+                .andExpect(jsonPath("$.data.content[0].thumbnailUrl").value("https://cdn.cabbage.test/auction-thumb.png"))
+                .andExpect(jsonPath("$.data.content[0].categoryId").value(category.getId()))
+                .andExpect(jsonPath("$.data.content[1].itemId").value(directItem.getId()))
+                .andExpect(jsonPath("$.data.content[1].currentBid").isEmpty())
+                .andExpect(jsonPath("$.data.content[1].closeDate").isEmpty())
+                .andExpect(jsonPath("$.data.content[1].tradeType").value("DIRECT"))
+                .andExpect(jsonPath("$.data.content[1].conditionType").value("USED"))
+                .andExpect(jsonPath("$.data.content[1].likeCount").value(2))
+                .andExpect(jsonPath("$.data.content[1].likedByMe").value(true))
+                .andExpect(jsonPath("$.data.content[1].thumbnailUrl").isEmpty())
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1));
+    }
+
+    @DisplayName("토큰 없이 내 관심목록 조회를 요청하면 401을 반환한다")
+    @Test
+    void 토큰_없이_내_관심목록_조회를_요청하면_401을_반환한다() throws Exception {
+        mockMvc.perform(get("/api/clients/me/likes"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));

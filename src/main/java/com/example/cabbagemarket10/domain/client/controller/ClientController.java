@@ -5,6 +5,7 @@ import com.example.cabbagemarket10.domain.client.dto.response.ClientMyInfoRespon
 import com.example.cabbagemarket10.domain.client.dto.response.ClientProfileResponse;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
 import com.example.cabbagemarket10.domain.item.dto.response.MyItemListItemResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.MyLikedItemResponse;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.global.common.CommonResponse;
 import com.example.cabbagemarket10.global.common.PageResponse;
@@ -46,6 +47,17 @@ public class ClientController {
                 authenticatedClient.clientId(), tradeStatus, pageable);
 
         return CommonResponse.success(HttpStatus.OK, PageResponse.from(items))
+                .toResponseEntity();
+    }
+
+    @GetMapping("/me/likes")
+    public ResponseEntity<CommonResponse<PageResponse<MyLikedItemResponse>>> getMyLikedItems(
+            @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            Pageable pageable
+    ) {
+        Page<MyLikedItemResponse> response = clientService.getMyLikedItems(authenticatedClient.clientId(), pageable);
+
+        return CommonResponse.success(HttpStatus.OK, PageResponse.from(response))
                 .toResponseEntity();
     }
 
