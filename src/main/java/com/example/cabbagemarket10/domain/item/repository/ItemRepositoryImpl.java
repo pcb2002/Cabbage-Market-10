@@ -46,7 +46,8 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                             i.initialPrice,
                             a.currentBid,
                             i.tradeStatus,
-                            a.closeDate
+                            a.closeDate,
+                            i.likeCount
                         )
                         from Item i
                         left join AuctionStatus a on a.item = i
