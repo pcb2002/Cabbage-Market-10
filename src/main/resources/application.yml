@@ -19,6 +19,13 @@ app:
       key-prefix: ${AUCTION_REDIS_LOCK_KEY_PREFIX:auction:bid:}
       wait-time-millis: ${AUCTION_REDIS_LOCK_WAIT_TIME_MILLIS:5000}
       lease-time-millis: ${AUCTION_REDIS_LOCK_LEASE_TIME_MILLIS:10000}
+  search:
+    popular:
+      limit: 10
+      dedup-ttl: 1m
+      daily-key-ttl: 8d
+      daily-key-prefix: "popular:search:"
+      dedup-key-prefix: "popular:dedup:"
 
 auth:
   cookie:

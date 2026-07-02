@@ -6,6 +6,7 @@ import com.example.cabbagemarket10.domain.search.service.SearchService;
 import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.common.response.PageResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,9 +30,12 @@ public class SearchController {
     public ResponseEntity<CommonResponse<PageResponse<SearchItemResponse>>> searchItemsV1(
             @Valid @ModelAttribute ItemSearchRequest request,
             @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            HttpServletRequest httpServletRequest,
             Pageable pageable
     ) {
-        Page<SearchItemResponse> items = searchService.searchItemsV1(request, pageable, clientIdOf(authenticatedClient));
+        Long clientId = clientIdOf(authenticatedClient);
+        Page<SearchItemResponse> items = searchService.searchItemsV1(request, pageable, clientId);
+        searchService.recordKeyword(request.keyword(), clientId, sessionIdOf(httpServletRequest, clientId, request.keyword()));
  
         return CommonResponse.success(
                 HttpStatus.OK,
@@ -43,9 +47,12 @@ public class SearchController {
     public ResponseEntity<CommonResponse<PageResponse<SearchItemResponse>>> searchItemsV2(
             @Valid @ModelAttribute ItemSearchRequest request,
             @AuthenticationPrincipal AuthenticatedClient authenticatedClient,
+            HttpServletRequest httpServletRequest,
             Pageable pageable
     ) {
-        Page<SearchItemResponse> items = searchService.searchItemsV2(request, pageable, clientIdOf(authenticatedClient));
+        Long clientId = clientIdOf(authenticatedClient);
+        Page<SearchItemResponse> items = searchService.searchItemsV2(request, pageable, clientId);
+        searchService.recordKeyword(request.keyword(), clientId, sessionIdOf(httpServletRequest, clientId, request.keyword()));
 
         return CommonResponse.success(
                 HttpStatus.OK,
@@ -55,5 +62,12 @@ public class SearchController {
 
     private Long clientIdOf(AuthenticatedClient authenticatedClient) {
         return authenticatedClient == null ? null : authenticatedClient.clientId();
+    }
+
+    private String sessionIdOf(HttpServletRequest request, Long clientId, String keyword) {
+        if (clientId != null || keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return request.getSession().getId();
     }
 }
