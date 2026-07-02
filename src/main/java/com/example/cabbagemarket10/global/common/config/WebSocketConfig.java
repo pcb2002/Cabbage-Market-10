@@ -1,4 +1,4 @@
-package com.example.cabbagemarket10.common.config;
+package com.example.cabbagemarket10.global.common.config;
 
 import com.example.cabbagemarket10.global.StompAuthInterceptor;
 import lombok.RequiredArgsConstructor;

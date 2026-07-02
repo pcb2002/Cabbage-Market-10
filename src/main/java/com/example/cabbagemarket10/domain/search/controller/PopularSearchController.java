@@ -2,7 +2,7 @@ package com.example.cabbagemarket10.domain.search.controller;
 
 import com.example.cabbagemarket10.domain.search.dto.response.PopularKeywordsResponse;
 import com.example.cabbagemarket10.domain.search.service.PopularSearchService;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

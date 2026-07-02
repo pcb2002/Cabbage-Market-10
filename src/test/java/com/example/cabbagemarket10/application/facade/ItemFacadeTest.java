@@ -11,14 +11,14 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.service.ClientService;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemStatusUpdateRequest;
-import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
+import com.example.cabbagemarket10.domain.item.facade.ItemFacade;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
-import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
+import com.example.cabbagemarket10.domain.itemImage.service.ItemImageService;
 import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
@@ -45,7 +45,7 @@ class ItemFacadeTest {
     private AuctionStatusService auctionStatusService;
 
     @Mock
-    private ItemImageRepository itemImageRepository;
+    private ItemImageService itemImageService;
 
     @Mock
     private SearchCacheEvictionService searchCacheEvictionService;
@@ -113,6 +113,8 @@ class ItemFacadeTest {
 
         itemFacade.deleteItem(10L, 1L);
 
+        verify(auctionStatusService).deleteByItemId(10L);
+        verify(itemImageService).deleteByItemId(10L);
         verify(itemService).hardDeleteById(10L);
         verify(searchCacheEvictionService, never()).evictItemSearchV2AfterCommit();
     }

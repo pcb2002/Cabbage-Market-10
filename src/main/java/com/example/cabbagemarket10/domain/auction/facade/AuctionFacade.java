@@ -1,5 +1,6 @@
-package com.example.cabbagemarket10.application.facade;
+package com.example.cabbagemarket10.domain.auction.facade;
 
+import com.example.cabbagemarket10.domain.auction.config.AuctionLockProperties;
 import com.example.cabbagemarket10.domain.auction.service.AuctionStatusService;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
@@ -19,18 +20,20 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty(name = "app.auction.redis-lock.enabled", havingValue = "true", matchIfMissing = true)
 public class AuctionFacade {
 
-    private static final String BID_LOCK_KEY_PREFIX = "auction:bid:";
-
     private final RedissonClient redissonClient;
+    private final AuctionLockProperties lockProperties;
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
     private final SearchCacheEvictionService searchCacheEvictionService;
 
     public ItemBidResponse bidItem(Long itemId, Long clientId, Long bidPrice) {
-        RLock lock = redissonClient.getLock(BID_LOCK_KEY_PREFIX + itemId);
+        RLock lock = redissonClient.getLock(lockProperties.getKeyPrefix() + itemId);
         boolean locked = false;
         try {
-            locked = lock.tryLock(5, 10, TimeUnit.SECONDS);
+            locked = lock.tryLock(
+                    lockProperties.getWaitTimeMillis(),
+                    lockProperties.getLeaseTimeMillis(),
+                    TimeUnit.MILLISECONDS);
             if (!locked) {
                 throw new BusinessException(ErrorCode.AUCTION_BID_LOCK_FAILED);
             }

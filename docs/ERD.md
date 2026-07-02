@@ -28,6 +28,8 @@ erDiagram
     item ||--o{ review : reviewed_by
 
     item |o--|| auctionStatus : open
+    auctionStatus ||--o{ auctionBidHistory : records
+    client ||--o{ auctionBidHistory : bids
     inquiry |o--|| inquiry : answers
 
     client["CLIENT"] {
@@ -148,6 +150,15 @@ erDiagram
         bigint current_bidder_id
         datetime close_date
     }
+
+    auctionBidHistory["AUCTION_BID_HISTORY"] {
+        bigint id PK
+        bigint item_id FK
+        bigint bidder_id FK
+        bigint previous_bid
+        bigint bid_price
+        datetime created_at
+    }
 ```
 
 ## Entity 목록
@@ -156,7 +167,7 @@ erDiagram
 |-----------------|------------------------------------------|
 | auth/membership | Client                                   |
 | categories      | Category                                 |
-| Items           | Item, ItemImage, ItemLike, AuctionStatus |
+| Items           | Item, ItemImage, ItemLike, AuctionStatus, AuctionBidHistory |
 | Inquiries       | InquiryLog                               |
 | Follow          | Follow                                   |
 | chat            | ChatRoom, ChatMember, ChatMessage        |
@@ -178,6 +189,8 @@ erDiagram
 - The Primary Key of `chat_member` is `(chat_room_id, client_id)`.
 - `auction_status.item_id` is both the PK and FK to `item.id`.
 - `auction_status.current_bidder_id` stores the current highest bidder's `client.id` and can be nullable before any bids are placed.
+- `auction_bid_history.item_id` stores the auction item id for each successful bid.
+- `auction_bid_history.bidder_id` stores the bidder's `client.id`.
 
 ## Deletion policies
 
@@ -194,3 +207,4 @@ erDiagram
 | ChatMember    | record `left_at`           |
 | Category      | `is_active` = false        |
 | AuctionStatus | Manage with Item lifecycle |
+| AuctionBidHistory | Keep bid audit records |

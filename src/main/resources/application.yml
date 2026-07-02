@@ -1,14 +1,24 @@
 spring:
   application:
     name: Cabbage-Market-10
+  config:
+    import: optional:file:./env/local.env[.properties]
 
 app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
   cache:
     item-search-v2:
       type: redis
       ttl: 5m
       maximum-size: 1000
       key-prefix: "item-search:v2:"
+  auction:
+    redis-lock:
+      enabled: ${AUCTION_REDIS_LOCK_ENABLED:true}
+      key-prefix: ${AUCTION_REDIS_LOCK_KEY_PREFIX:auction:bid:}
+      wait-time-millis: ${AUCTION_REDIS_LOCK_WAIT_TIME_MILLIS:5000}
+      lease-time-millis: ${AUCTION_REDIS_LOCK_LEASE_TIME_MILLIS:10000}
   search:
     popular:
       limit: 10

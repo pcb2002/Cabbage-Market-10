@@ -11,7 +11,7 @@ import com.example.cabbagemarket10.domain.auth.service.AuthCookieManager;
 import com.example.cabbagemarket10.domain.client.entity.AccountStatus;
 import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
-import com.example.cabbagemarket10.global.common.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.servlet.http.Cookie;
 import java.time.Clock;

@@ -12,7 +12,7 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
-import com.example.cabbagemarket10.global.common.PageResponse;
+import com.example.cabbagemarket10.global.common.response.PageResponse;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;

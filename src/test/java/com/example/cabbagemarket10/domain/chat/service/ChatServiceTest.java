@@ -25,7 +25,7 @@ import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
-import com.example.cabbagemarket10.global.common.PageResponse;
+import com.example.cabbagemarket10.global.common.response.PageResponse;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;

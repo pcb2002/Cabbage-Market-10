@@ -1,4 +1,4 @@
-package com.example.cabbagemarket10.common.config;
+package com.example.cabbagemarket10.global.common.config;
 
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;

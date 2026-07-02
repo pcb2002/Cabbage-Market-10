@@ -83,4 +83,9 @@ public class ItemImageService {
     public void delete(ItemImage itemImage) {
         itemImageRepository.delete(itemImage);
     }
+
+    @Transactional
+    public void deleteByItemId(Long itemId) {
+        itemImageRepository.deleteByItemId(itemId);
+    }
 }

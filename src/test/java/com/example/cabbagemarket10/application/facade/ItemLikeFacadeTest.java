@@ -12,6 +12,7 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.enums.ConditionType;
 import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
+import com.example.cabbagemarket10.domain.item.facade.ItemLikeFacade;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemLike.entity.ItemLike;
 import com.example.cabbagemarket10.domain.itemLike.service.ItemLikeService;

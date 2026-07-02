@@ -1,6 +1,6 @@
 package com.example.cabbagemarket10.domain.category.entity;
 
-import com.example.cabbagemarket10.common.entity.BaseEntity;
+import com.example.cabbagemarket10.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
