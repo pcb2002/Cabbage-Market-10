@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>배추 마켓</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="#home">배추 마켓</a>
+        <nav class="category-nav" aria-label="상품 카테고리">
+            <a href="#home" data-category="전체">전체제품</a>
+            <a href="#home" data-category="패션">패션</a>
+            <a href="#home" data-category="홈/리빙">홈/리빙</a>
+            <a href="#home" data-category="취미/게임">취미/게임</a>
+            <a href="#home" data-category="뷰티/미용">뷰티/미용</a>
+        </nav>
+        <form id="quickSearchForm" class="top-search" role="search">
+            <label class="sr-only" for="quickSearch">검색어</label>
+            <input id="quickSearch" type="search" placeholder="물건을 검색해보세요">
+            <button type="submit" class="icon-button" aria-label="검색">⌕</button>
+        </form>
+        <div class="top-actions">
+            <button class="text-link" type="button" data-route="auth" id="loginNav">로그인</button>
+            <button class="primary small" type="button" data-route="sell">판매하기</button>
+            <button class="icon-button account" type="button" data-route="profile" aria-label="마이페이지">♙</button>
+        </div>
+    </header>
+
+    <main id="app" class="page" tabindex="-1"></main>
+
+    <footer class="footer">
+        <div>
+            <strong>배추 마켓</strong>
+            <p>사용자 간의 안전하고 투명한 중고 거래를 지원하는 플랫폼입니다.</p>
+        </div>
+        <nav aria-label="푸터">
+            <a href="#home">이용약관</a>
+            <a href="#home">개인정보처리방침</a>
+            <a href="#home">고객센터</a>
+        </nav>
+        <small>© 2026 배추 마켓. All rights reserved.</small>
+    </footer>
+</div>
+
+<template id="homeTemplate">
+    <section class="hero-search">
+        <form id="searchForm" class="search-box">
+            <label class="sr-only" for="keyword">물건 검색</label>
+            <input id="keyword" name="keyword" type="search" placeholder="물품이나 동네를 검색해보세요">
+            <button type="submit" class="icon-button" aria-label="검색">⌕</button>
+        </form>
+    </section>
+    <section class="section-heading">
+        <h1>오늘의 추천 매물</h1>
+        <div class="segment">
+            <button type="button" class="active" data-filter="추천순">추천순</button>
+            <button type="button" data-filter="거리순">거리순</button>
+        </div>
+    </section>
+    <section id="productGrid" class="product-grid" aria-live="polite"></section>
+    <div class="center-row">
+        <button type="button" class="secondary" id="loadMoreButton">더보기</button>
+    </div>
+</template>
+
+<template id="authTemplate">
+    <section class="auth-grid">
+        <form id="loginForm" class="panel auth-card">
+            <h1>로그인</h1>
+            <div class="skeleton wide"></div>
+            <div class="skeleton"></div>
+            <label>이메일
+                <input name="email" type="email" placeholder="이메일 주소를 입력하세요" autocomplete="email" required>
+            </label>
+            <label>비밀번호
+                <input name="password" type="password" placeholder="비밀번호를 입력하세요" autocomplete="current-password" required>
+            </label>
+            <button class="primary" type="submit">로그인</button>
+        </form>
+
+        <form id="signupForm" class="panel auth-card">
+            <h1>회원가입</h1>
+            <div class="skeleton wide"></div>
+            <div class="skeleton"></div>
+            <label>닉네임
+                <input name="nickname" type="text" placeholder="닉네임" required>
+            </label>
+            <label>이름
+                <input name="name" type="text" placeholder="실명 입력" required>
+            </label>
+            <label>전화번호
+                <input name="phone" type="tel" placeholder="010-0000-0000" required>
+            </label>
+            <label>이메일
+                <input name="email" type="email" placeholder="email@example.com" autocomplete="email" required>
+            </label>
+            <label>비밀번호
+                <input name="password" type="password" placeholder="8자 이상" autocomplete="new-password" required>
+            </label>
+            <label>비밀번호 확인
+                <input name="passwordConfirm" type="password" placeholder="비밀번호 재입력" autocomplete="new-password" required>
+            </label>
+            <button class="primary" type="submit">가입하기</button>
+        </form>
+    </section>
+</template>
+
+<template id="profileTemplate">
+    <section class="profile-card panel">
+        <div class="profile-image-wrap">
+            <img class="profile-image" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80" alt="배추 도사 프로필">
+            <button type="button" class="camera-button" aria-label="프로필 이미지 변경">▣</button>
+        </div>
+        <div class="profile-main">
+            <div class="profile-title">
+                <h1>배추도사</h1>
+                <span class="verified">인증</span>
+                <button type="button" class="secondary tiny">프로필 수정</button>
+            </div>
+            <p>가입일: 2023.10.12</p>
+            <p>팔로우 <strong>128</strong> · 팔로잉 <strong>94</strong></p>
+            <p>별점 <strong>5.0</strong> · 후기 <strong>42</strong> · 거래완료 <strong>15</strong></p>
+        </div>
+    </section>
+    <section class="stat-grid">
+        <article><span>판매중</span><strong>5</strong></article>
+        <article><span>거래완료</span><strong>15</strong></article>
+        <article><span>관심상품</span><strong>24</strong></article>
+        <article><span>사용 가능 쿠폰</span><strong class="danger">2</strong></article>
+    </section>
+    <section class="tabs" aria-label="마이페이지 메뉴">
+        <button type="button" class="active">판매 내역(15)</button>
+        <button type="button">구매 내역(8)</button>
+        <button type="button">관심 목록(24)</button>
+        <button type="button">나의 채팅(12)</button>
+        <button type="button">상품 문의(3)</button>
+    </section>
+    <section class="filter-row">
+        <button type="button" class="active">전체</button>
+        <button type="button">임시저장</button>
+        <button type="button">판매중</button>
+        <button type="button">예약중</button>
+        <button type="button">거래완료</button>
+    </section>
+    <section id="profileProducts" class="my-product-grid"></section>
+</template>
+
+<template id="formTemplate">
+    <section class="form-shell">
+        <div class="form-head">
+            <button type="button" class="back-button" data-route="home">←</button>
+            <h1 id="formTitle">상품 등록</h1>
+            <button type="button" class="icon-button account" data-route="profile" aria-label="마이페이지">♙</button>
+        </div>
+        <form id="itemForm" class="item-form">
+            <fieldset>
+                <legend>상품 이미지 <span id="photoCount">(0/10)</span></legend>
+                <div class="upload-row">
+                    <button type="button" class="upload-box">▣<span>이미지 추가</span></button>
+                    <input id="itemImages" class="sr-only" name="files" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                    <div class="placeholder-box">Placeholder</div>
+                    <div class="placeholder-box">Placeholder</div>
+                    <div class="placeholder-box">Placeholder</div>
+                </div>
+            </fieldset>
+            <label>글 제목
+                <input name="title" type="text" placeholder="글 제목을 입력해주세요" required>
+            </label>
+            <label>카테고리
+                <select name="categoryId" required>
+                    <option value="">카테고리를 선택해주세요</option>
+                    <option value="1">디지털기기</option>
+                    <option value="2">가구/인테리어</option>
+                    <option value="3">생활</option>
+                    <option value="4">취미/게임</option>
+                </select>
+            </label>
+            <label>판매 가격
+                <input name="initialPrice" type="number" min="0" placeholder="가격을 입력해주세요" required>
+            </label>
+            <fieldset>
+                <legend>상품 컨디션</legend>
+                <div class="choice-row">
+                    <label class="choice active">
+                        <input type="radio" name="conditionType" value="USED" checked>
+                        중고상품
+                    </label>
+                    <label class="choice">
+                        <input type="radio" name="conditionType" value="NEW">
+                        새상품
+                    </label>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>거래 방식</legend>
+                <div class="choice-row">
+                    <label class="choice active">
+                        <input type="radio" name="tradeType" value="DIRECT" checked>
+                        직거래
+                    </label>
+                    <label class="choice">
+                        <input type="radio" name="tradeType" value="AUCTION">
+                        경매
+                    </label>
+                </div>
+            </fieldset>
+            <label id="closeDateLabel" class="hidden">경매 마감일
+                <input name="closeDate" type="datetime-local">
+            </label>
+            <label>설명
+                <textarea name="description" rows="8" placeholder="신뢰할 수 있는 거래를 위해 상품 상태를 자세하게 설명해주세요." required></textarea>
+            </label>
+            <div class="button-pair">
+                <button type="button" class="secondary" id="draftButton">임시저장</button>
+                <button type="submit" class="primary" id="submitItemButton">등록하기</button>
+            </div>
+        </form>
+    </section>
+</template>
+
+<template id="detailTemplate">
+    <section class="detail-layout">
+        <article class="detail-main">
+            <img id="detailHero" class="detail-hero" alt="상품 이미지">
+            <div id="thumbs" class="thumb-row"></div>
+            <h1 id="detailTitle"></h1>
+            <p class="price" id="detailPrice"></p>
+            <p class="meta" id="detailMeta"></p>
+            <div class="tabs compact">
+                <button class="active" type="button">설명</button>
+                <button type="button">판매자 리뷰</button>
+                <button type="button">문의</button>
+            </div>
+            <div id="detailDescription" class="description"></div>
+        </article>
+        <aside class="chat-panel">
+            <div class="seller-strip">
+                <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=80" alt="판매자">
+                <div>
+                    <strong>미니멀라이프</strong>
+                    <small>별점 4.2 · 서울시 마포구</small>
+                </div>
+            </div>
+            <div class="purchase-box">
+                <span>프리미엄 미니멀리스트 데스크 램프</span>
+                <strong>125,000원</strong>
+            </div>
+            <button type="button" class="primary" id="bidButton">구매하기</button>
+            <div class="chat-window" id="chatWindow">
+                <time>2024년 5월 15일</time>
+                <p class="bubble mine">안녕하세요, 구매 가능한가요?</p>
+                <p class="bubble">네, 가능합니다!</p>
+            </div>
+            <form id="messageForm" class="message-form">
+                <input name="message" type="text" placeholder="메시지를 입력하세요.">
+                <button type="button" class="icon-button" aria-label="이미지 첨부">▣</button>
+                <button type="submit" class="send-button" aria-label="전송">▶</button>
+            </form>
+        </aside>
+    </section>
+</template>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>
