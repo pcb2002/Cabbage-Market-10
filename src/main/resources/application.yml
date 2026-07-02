@@ -5,6 +5,8 @@ spring:
     import: optional:file:./env/local.env[.properties]
 
 app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
   cache:
     item-search-v2:
       type: redis
