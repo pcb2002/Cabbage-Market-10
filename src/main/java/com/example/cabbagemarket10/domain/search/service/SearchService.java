@@ -18,6 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class SearchService {
 
     private final ItemSearchRepository itemSearchRepository;
+    private final PopularSearchService popularSearchService;
+
+    public void recordKeyword(String keyword, Long clientId, String sessionId) {
+        popularSearchService.recordKeyword(keyword, clientId, sessionId);
+    }
 
     @Transactional(readOnly = true)
     public Page<SearchItemResponse> searchItemsV1(
