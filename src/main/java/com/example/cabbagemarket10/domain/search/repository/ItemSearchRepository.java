@@ -10,11 +10,13 @@ import org.springframework.data.domain.Pageable;
 public interface ItemSearchRepository {
 
     Page<SearchItemResponse> searchItemsV1(
+            Long clientId,
             String keyword,
             Long categoryId,
             TradeStatus tradeStatus,
             TradeType tradeType,
             ConditionType conditionType,
+            boolean likedOnly,
             Long minPrice,
             Long maxPrice,
             Pageable pageable

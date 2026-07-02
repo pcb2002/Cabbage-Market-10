@@ -24,3 +24,8 @@
 - 기능 구현 흐름은 [docs/workflow.md](docs/workflow.md)를 따른다.
 - 외부 API 계약 변경은 [docs/api.md](docs/api.md)를 갱신한다.
 - DB 스키마 변경은 [docs/ERD.md](docs/ERD.md)를 갱신한다.
+
+## 검색 캐시
+
+- `GET /api/v2/items/search`는 동일 검색 조건의 반복 조회 성능 개선을 위해 Redis 기반 Cache를 사용한다.
+- Redis를 사용하므로 다중 서버 환경에서도 동일 캐시를 공유할 수 있다.
