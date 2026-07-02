@@ -17,6 +17,9 @@ import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
 import com.example.cabbagemarket10.domain.itemImage.entity.ItemImage;
 import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
+import com.example.cabbagemarket10.domain.itemLike.entity.ItemLike;
+import com.example.cabbagemarket10.domain.itemLike.repository.ItemLikeRepository;
+import com.example.cabbagemarket10.global.security.jwt.JwtTokenProvider;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +30,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -54,7 +58,13 @@ class SearchControllerTest {
     private ItemImageRepository itemImageRepository;
 
     @Autowired
+    private ItemLikeRepository itemLikeRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -72,6 +82,7 @@ class SearchControllerTest {
         deleteIfExists("chat_room");
         deleteIfExists("inquiry_log");
         deleteIfExists("item_image");
+        deleteIfExists("item_like");
         deleteIfExists("follow");
         deleteIfExists("review");
         deleteIfExists("auction_status");
@@ -114,7 +125,8 @@ class SearchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.content.length()").value(1))
-                .andExpect(jsonPath("$.data.content[0].title").value("비로그인 검색 배추"));
+                .andExpect(jsonPath("$.data.content[0].title").value("비로그인 검색 배추"))
+                .andExpect(jsonPath("$.data.content[0].likedByMe").value(false));
     }
 
     @DisplayName("상품 검색 v2는 비로그인 사용자도 접근할 수 있다")
@@ -129,7 +141,8 @@ class SearchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.content.length()").value(1))
-                .andExpect(jsonPath("$.data.content[0].title").value("비로그인 검색 배추 v2"));
+                .andExpect(jsonPath("$.data.content[0].title").value("비로그인 검색 배추 v2"))
+                .andExpect(jsonPath("$.data.content[0].likedByMe").value(false));
     }
 
     @DisplayName("상품 검색 v2는 동일 요청 반복 시 캐시된 결과를 반환한다")
@@ -155,6 +168,98 @@ class SearchControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()").value(1))
                 .andExpect(jsonPath("$.data.content[0].itemId").value(cachedItem.getId()));
+    }
+
+    @DisplayName("상품 검색은 로그인 회원에게 likedByMe를 반환한다")
+    @Test
+    void searchItemsReturnsLikedByMeForAuthenticatedClient() throws Exception {
+        Client liker = saveClient("search-liker@example.com", "searchLiker");
+        Item likedItem = saveDirectItem("좋아요한 배추", "좋아요 상품", vegetableCategory, 10_000L);
+        saveDirectItem("좋아요 안 한 배추", "일반 상품", vegetableCategory, 11_000L);
+        itemLikeRepository.save(ItemLike.builder()
+                .client(liker)
+                .item(likedItem)
+                .build());
+
+        String accessToken = jwtTokenProvider.createAccessToken(liker);
+
+        mockMvc.perform(get("/api/v1/items/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .param("keyword", "배추")
+                        .param("sort", "initialPrice,asc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].itemId").value(likedItem.getId()))
+                .andExpect(jsonPath("$.data.content[0].likedByMe").value(true))
+                .andExpect(jsonPath("$.data.content[1].likedByMe").value(false));
+    }
+
+    @DisplayName("상품 검색은 likedOnly 요청 시 내 좋아요 상품만 반환한다")
+    @Test
+    void searchItemsFiltersOnlyLikedItems() throws Exception {
+        Client liker = saveClient("liked-only@example.com", "likedOnlyUser");
+        Item likedItem = saveDirectItem("관심 배추", "좋아요 상품", vegetableCategory, 10_000L);
+        saveDirectItem("일반 배추", "일반 상품", vegetableCategory, 11_000L);
+        itemLikeRepository.save(ItemLike.builder()
+                .client(liker)
+                .item(likedItem)
+                .build());
+
+        String accessToken = jwtTokenProvider.createAccessToken(liker);
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .param("keyword", "배추")
+                        .param("likedOnly", "true")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].itemId").value(likedItem.getId()))
+                .andExpect(jsonPath("$.data.content[0].likedByMe").value(true));
+    }
+
+    @DisplayName("상품 검색은 likedOnly 요청을 비로그인 사용자가 보내면 401을 반환한다")
+    @Test
+    void searchItemsRejectsLikedOnlyForAnonymous() throws Exception {
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("keyword", "배추")
+                        .param("likedOnly", "true"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("상품 검색 v2 캐시는 회원별 likedByMe 응답을 분리한다")
+    @Test
+    void searchItemsV2SeparatesCacheByClient() throws Exception {
+        Client liker = saveClient("cache-liker@example.com", "cacheLiker");
+        Client other = saveClient("cache-other@example.com", "cacheOther");
+        Item likedItem = saveDirectItem("회원별 캐시 배추", "캐시 테스트", vegetableCategory, 10_000L);
+        itemLikeRepository.save(ItemLike.builder()
+                .client(liker)
+                .item(likedItem)
+                .build());
+
+        String likerToken = jwtTokenProvider.createAccessToken(liker);
+        String otherToken = jwtTokenProvider.createAccessToken(other);
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + likerToken)
+                        .param("keyword", "회원별 캐시")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].likedByMe").value(true));
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + otherToken)
+                        .param("keyword", "회원별 캐시")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].likedByMe").value(false));
     }
 
     @DisplayName("상품 검색 v2는 sort 조건별로 서로 다른 캐시 key를 사용한다")
@@ -428,6 +533,16 @@ class SearchControllerTest {
     private Item saveDirectItem(String title, String description, Category category, Long initialPrice) {
         return saveItem(title, description, category, initialPrice,
                 TradeType.DIRECT, ConditionType.USED, TradeStatus.ON_SALE, false);
+    }
+
+    private Client saveClient(String email, String nickname) {
+        return clientRepository.save(Client.create(
+                email,
+                passwordEncoder.encode("password123!"),
+                nickname,
+                nickname,
+                "010-0000-0000"
+        ));
     }
 
     private Item saveAuctionItem(
