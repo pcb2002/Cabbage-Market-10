@@ -6,8 +6,8 @@ import com.example.cabbagemarket10.domain.review.dto.response.ReceivedReviewList
 import com.example.cabbagemarket10.domain.review.dto.response.ReviewCreateResponse;
 import com.example.cabbagemarket10.domain.review.dto.response.WrittenReviewListItemResponse;
 import com.example.cabbagemarket10.domain.review.service.ReviewService;
-import com.example.cabbagemarket10.global.common.CommonResponse;
-import com.example.cabbagemarket10.global.common.PageResponse;
+import com.example.cabbagemarket10.global.common.response.CommonResponse;
+import com.example.cabbagemarket10.global.common.response.PageResponse;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
