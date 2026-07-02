@@ -57,4 +57,30 @@ public class ItemImageService {
             throw new BusinessException(ErrorCode.NOT_FOUND);
         }
     }
+
+    /**
+     * 이미지 유효성 및 대표 이미지(썸네일) 차단 방어 로직 수행
+     */
+    public ItemImage getValidItemImage(Long imageId, Long itemId) {
+        ItemImage itemImage = itemImageRepository.findById(imageId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.IMAGE_NOT_FOUND));
+
+        // 요청 경로의 itemId와 실제 이미지의 상위 itemId 정합성 검증
+        if (!itemImage.getItem().getId().equals(itemId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+
+        // 엔티티 내부 캡슐화 로직 호출 : 대표 이미지(isThumbnail == true) 삭제 시 400 반환
+        itemImage.validateNotThumbnail();
+
+        return itemImage;
+    }
+
+    /**
+     * DB 레코드 물리 삭제
+     */
+    @Transactional
+    public void delete(ItemImage itemImage) {
+        itemImageRepository.delete(itemImage);
+    }
 }

@@ -2,6 +2,8 @@ package com.example.cabbagemarket10.domain.itemImage.entity;
 
 import com.example.cabbagemarket10.common.entity.BaseEntity;
 import com.example.cabbagemarket10.domain.item.entity.Item;
+import com.example.cabbagemarket10.global.exception.BusinessException;
+import com.example.cabbagemarket10.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -42,5 +44,14 @@ public class ItemImage extends BaseEntity {
     // 썸네일 여부 변경 메서드
     public void updateThumbnail(boolean isThumbnail) {
         this.isThumbnail = isThumbnail;
+    }
+
+    /**
+     * 현재 이미지가 대표 이미지(썸네일)인지 검증
+     */
+    public void validateNotThumbnail() {
+        if (this.isThumbnail) {
+            throw new BusinessException(ErrorCode.CANNOT_DELETE_THUMBNAIL);
+        }
     }
 }

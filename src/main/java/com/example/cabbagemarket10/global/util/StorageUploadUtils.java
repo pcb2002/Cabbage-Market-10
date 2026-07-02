@@ -3,6 +3,7 @@ package com.example.cabbagemarket10.global.util;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +15,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.IOException;
 import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class StorageUploadUtils {
@@ -85,7 +87,9 @@ public class StorageUploadUtils {
                     .build();
 
             s3Client.deleteObject(deleteObjectRequest);
+            log.info("Cloud storage file deleted successfully: {}", imageUrl);
         } catch (Exception e) {
+            log.error("Failed to delete file from S3: {}", imageUrl, e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
