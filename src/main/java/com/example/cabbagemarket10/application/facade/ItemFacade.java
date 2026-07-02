@@ -18,6 +18,7 @@ import com.example.cabbagemarket10.domain.item.enums.TradeStatus;
 import com.example.cabbagemarket10.domain.item.enums.TradeType;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemImage.repository.ItemImageRepository;
+import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class ItemFacade {
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
     private final ItemImageRepository itemImageRepository;
+    private final SearchCacheEvictionService searchCacheEvictionService;
 
     @Transactional
     public Long createItem(Long sellerId, ItemCreateRequest request) {
@@ -41,6 +43,7 @@ public class ItemFacade {
 
         Item item = itemService.saveItem(seller, category, request);
         auctionStatusService.createAuctionStatus(item, request.initialPrice(), request.closeDate());
+        searchCacheEvictionService.evictItemSearchV2();
 
         return item.getId();
     }
@@ -74,6 +77,7 @@ public class ItemFacade {
 
         item.publish();
         itemService.flush();
+        searchCacheEvictionService.evictItemSearchV2();
 
         return new ItemPublishResponse(item.getId(), item.getUpdatedAt());
     }
@@ -91,6 +95,7 @@ public class ItemFacade {
 
         item.updateInfo(category, request.title(), request.description(), request.initialPrice());
         itemService.flush();
+        searchCacheEvictionService.evictItemSearchV2();
 
         return new ItemUpdateResponse(item.getId(), item.getUpdatedAt());
     }
@@ -102,7 +107,9 @@ public class ItemFacade {
 
         Client buyer = resolveBuyer(item, request);
 
-        return itemService.updateItemStatus(item, request.tradeStatus(), buyer);
+        ItemStatusUpdateResponse response = itemService.updateItemStatus(item, request.tradeStatus(), buyer);
+        searchCacheEvictionService.evictItemSearchV2();
+        return response;
     }
 
     private Client resolveBuyer(Item item, ItemStatusUpdateRequest request) {
@@ -133,5 +140,6 @@ public class ItemFacade {
         }
 
         itemService.softDelete(item);
+        searchCacheEvictionService.evictItemSearchV2();
     }
 }

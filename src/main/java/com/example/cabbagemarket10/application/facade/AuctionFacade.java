@@ -4,6 +4,7 @@ import com.example.cabbagemarket10.domain.auction.service.AuctionStatusService;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
+import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import java.util.concurrent.TimeUnit;
@@ -23,6 +24,7 @@ public class AuctionFacade {
     private final RedissonClient redissonClient;
     private final ItemService itemService;
     private final AuctionStatusService auctionStatusService;
+    private final SearchCacheEvictionService searchCacheEvictionService;
 
     public ItemBidResponse bidItem(Long itemId, Long clientId, Long bidPrice) {
         RLock lock = redissonClient.getLock(BID_LOCK_KEY_PREFIX + itemId);
@@ -35,7 +37,9 @@ public class AuctionFacade {
 
             Item item = itemService.getItem(itemId);
             item.validateBiddable();
-            return auctionStatusService.bid(itemId, clientId, item.getSeller().getId(), bidPrice);
+            ItemBidResponse response = auctionStatusService.bid(itemId, clientId, item.getSeller().getId(), bidPrice);
+            searchCacheEvictionService.evictItemSearchV2();
+            return response;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);

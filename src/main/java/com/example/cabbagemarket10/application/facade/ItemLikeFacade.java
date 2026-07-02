@@ -7,6 +7,7 @@ import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.service.ItemService;
 import com.example.cabbagemarket10.domain.itemLike.entity.ItemLike;
 import com.example.cabbagemarket10.domain.itemLike.service.ItemLikeService;
+import com.example.cabbagemarket10.global.config.cache.SearchCacheEvictionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class ItemLikeFacade {
     private final ItemService itemService;
     private final ClientService clientService;
     private final ItemLikeService itemLikeService;
+    private final SearchCacheEvictionService searchCacheEvictionService;
 
     @Transactional
     public ItemLikeToggleResponse toggle(Long itemId, Long clientId) {
@@ -32,12 +34,14 @@ public class ItemLikeFacade {
     private ItemLikeToggleResponse addLike(Item item, Client client) {
         itemLikeService.save(client, item);
         itemService.incrementLikeCount(item.getId());
+        searchCacheEvictionService.evictItemSearchV2();
         return new ItemLikeToggleResponse(item.getId(), true, itemService.getLikeCount(item.getId()));
     }
 
     private ItemLikeToggleResponse cancelLike(Item item, ItemLike existingLike) {
         itemLikeService.delete(existingLike);
         itemService.decrementLikeCount(item.getId());
+        searchCacheEvictionService.evictItemSearchV2();
         return new ItemLikeToggleResponse(item.getId(), false, itemService.getLikeCount(item.getId()));
     }
 }
