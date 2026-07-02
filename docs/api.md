@@ -321,7 +321,7 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 임시저장 | POST | `/api/items/drafts` | 필요 | 상품 필수 필드, `closeDate` 선택 | `201 Created` |
 | 상품 이미지 업로드 | POST | `/api/items/{itemId}/images` | 필요 | `multipart/form-data`, `files` | `200 OK` |
 | 상품 임시저장 게시 | POST | `/api/items/{itemId}/publish` | 필요 | Path `itemId` | `200 OK` |
-| 상품 목록 조회 | GET | `/api/items` | 불필요 | `keyword`, `categoryId`, `tradeStatus`, `page`, `size` 선택 | `200 OK` |
+| 상품 목록 조회 | GET | `/api/items` | 불필요 | `categoryId`, `tradeStatus`, `page`, `size` 선택 | `200 OK` |
 | 상품 상세 조회 | GET | `/api/items/{itemId}` | 불필요 | Path `itemId` | `200 OK` |
 | 상품 검색 v1 | GET | `/api/v1/items/search` | 조건부 필요 | `keyword`, `categoryId`, `tradeStatus`, `likedOnly`, `page`, `size`, `sort` 선택 | `200 OK` |
 | 상품 검색 v2 | GET | `/api/v2/items/search` | 조건부 필요 | `keyword`, `categoryId`, `tradeStatus`, `likedOnly`, `page`, `size`, `sort` 선택 | `200 OK` |
@@ -738,7 +738,6 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 
 | 필드 | 규칙 |
 |---|---|
-| keyword | 선택, 최대 100자. 제목 또는 설명 포함 검색 |
 | categoryId | 선택, 해당 카테고리 상품만 조회 |
 | tradeStatus | 선택, `ON_SALE`, `RESERVED`, `SOLD_OUT` |
 | page | 선택, 0부터 시작 |
@@ -855,7 +854,3 @@ Redis Cache는 다중 서버 환경에서도 동일 캐시를 공유하며 TTL �
 | score | 당일 누적 검색 횟수 |
 
 동일 회원은 `userId`, 비회원은 `sessionId` 기준으로 동일 검색어의 짧은 시간 반복 검색을 중복 집계하지 않는다.
-
-## 열린 결정
-
-- 이미지 업로드 API 분리, 인기 검색어 집계 저장소는 [docs/adr/README.md](adr/README.md)에서 관리한다.

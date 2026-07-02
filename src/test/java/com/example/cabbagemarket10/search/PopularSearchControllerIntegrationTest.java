@@ -168,6 +168,37 @@ class PopularSearchControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.keywords.length()").value(0));
     }
 
+    @DisplayName("로그인 없이 likedOnly 검색에 실패하면 인기 검색어에 집계되지 않는다")
+    @Test
+    void 비로그인_likedOnly_검색_실패는_인기_검색어에_집계되지_않는다() throws Exception {
+        준비된_상품을_저장한다();
+
+        mockMvc.perform(get("/api/v1/items/search")
+                        .param("keyword", "당근")
+                        .param("likedOnly", "true"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/search/popular"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.keywords.length()").value(0));
+    }
+
+    @DisplayName("잘못된 가격 범위로 검색에 실패하면 인기 검색어에 집계되지 않는다")
+    @Test
+    void 잘못된_가격_범위_검색_실패는_인기_검색어에_집계되지_않는다() throws Exception {
+        준비된_상품을_저장한다();
+
+        mockMvc.perform(get("/api/v2/items/search")
+                        .param("keyword", "배추")
+                        .param("minPrice", "2000")
+                        .param("maxPrice", "1000"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/search/popular"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.keywords.length()").value(0));
+    }
+
     private void 준비된_상품을_저장한다() {
         Client seller = clientRepository.save(Client.create(
                 "popular-seller@example.com",

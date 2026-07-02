@@ -34,8 +34,8 @@ public class SearchController {
             Pageable pageable
     ) {
         Long clientId = clientIdOf(authenticatedClient);
-        searchService.recordKeyword(request.keyword(), clientId, sessionIdOf(httpServletRequest, clientId, request.keyword()));
         Page<SearchItemResponse> items = searchService.searchItemsV1(request, pageable, clientId);
+        searchService.recordKeyword(request.keyword(), clientId, sessionIdOf(httpServletRequest, clientId, request.keyword()));
  
         return CommonResponse.success(
                 HttpStatus.OK,
@@ -51,8 +51,8 @@ public class SearchController {
             Pageable pageable
     ) {
         Long clientId = clientIdOf(authenticatedClient);
-        searchService.recordKeyword(request.keyword(), clientId, sessionIdOf(httpServletRequest, clientId, request.keyword()));
         Page<SearchItemResponse> items = searchService.searchItemsV2(request, pageable, clientId);
+        searchService.recordKeyword(request.keyword(), clientId, sessionIdOf(httpServletRequest, clientId, request.keyword()));
 
         return CommonResponse.success(
                 HttpStatus.OK,
