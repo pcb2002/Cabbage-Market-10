@@ -89,6 +89,27 @@ public class ItemService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
     }
 
+    @Transactional
+    public Item getItemForUpdate(Long itemId) {
+        return itemRepository.findByIdForUpdate(itemId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+    }
+
+    @Transactional
+    public void incrementLikeCount(Long itemId) {
+        itemRepository.incrementLikeCount(itemId);
+    }
+
+    @Transactional
+    public void decrementLikeCount(Long itemId) {
+        itemRepository.decrementLikeCount(itemId);
+    }
+
+    @Transactional(readOnly = true)
+    public Long getLikeCount(Long itemId) {
+        return itemRepository.findLikeCountById(itemId);
+    }
+
     @Transactional(readOnly = true)
     public Item getItemValidatingAuthor(Long itemId, Long clientId) {
         Item item = getItem(itemId);

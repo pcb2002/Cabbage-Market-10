@@ -432,6 +432,14 @@ Notion `DB` 페이지의 API 명세 데이터베이스를 기준으로 정리한
 | 상품 좋아요 토글 | POST | `/api/items/{itemId}/likes` | 필요 | Path `itemId` | `200 OK` |
 | 입찰하기 | POST | `/api/items/{itemId}/auction-status/bid` | 필요 | `bidPrice` | `200 OK` |
 
+상품 좋아요 토글 성공 응답 `data`: `itemId`, `liked`, `likeCount`
+
+상품 좋아요 토글 오류 응답:
+
+| Status | Code | 설명 |
+|---:|---|---|
+| 401 | `UNAUTHORIZED` | 미인증 사용자 |
+| 404 | `ITEM_NOT_FOUND` | 존재하지 않거나 이미 삭제된 상품 |
 상품 이미지 업로드는 상품 판매자만 요청할 수 있다. `files`는 `jpg`, `jpeg`, `png`, `webp` 확장자만 허용하고 파일당 최대 크기는 5MB다. 기존 이미지가 없는 상품의 첫 번째 업로드 이미지는 썸네일로 저장된다.
 
 성공 응답 `data`:
@@ -701,6 +709,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | currentBid | 현재 입찰가, 경매 상태가 없으면 null |
 | tradeStatus | 판매 상태 |
 | closeDate | 경매 마감 일시, 경매 상태가 없으면 null |
+| likeCount | 좋아요 수 |
 
 `GET /api/items/{itemId}` 상품 상세 조회 응답은 `images` 배열을 포함한다. 각 이미지는 `imageId`, `imageUrl`, `sortOrder`, `isThumbnail`을 포함하며 `sortOrder` 오름차순으로 정렬된다. 이미지가 없으면 빈 배열을 반환한다.
 

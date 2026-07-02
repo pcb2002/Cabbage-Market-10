@@ -2,6 +2,7 @@ package com.example.cabbagemarket10.domain.item.controller;
 
 import com.example.cabbagemarket10.application.facade.AuctionFacade;
 import com.example.cabbagemarket10.application.facade.ItemFacade;
+import com.example.cabbagemarket10.application.facade.ItemLikeFacade;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemBidRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemCreateRequest;
 import com.example.cabbagemarket10.domain.item.dto.request.ItemDraftRequest;
@@ -10,6 +11,7 @@ import com.example.cabbagemarket10.domain.item.dto.request.ItemUpdateRequest;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemBidResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemDraftResponse;
+import com.example.cabbagemarket10.domain.item.dto.response.ItemLikeToggleResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemListItemResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemPublishResponse;
 import com.example.cabbagemarket10.domain.item.dto.response.ItemStatusUpdateResponse;
@@ -45,6 +47,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ItemController {
 
     private final ItemFacade itemFacade;
+    private final ItemLikeFacade itemLikeFacade;
     private final ItemService itemService;
     private final ObjectProvider<AuctionFacade> auctionFacadeProvider;
 
@@ -96,6 +99,15 @@ public class ItemController {
     @GetMapping("/{itemId}")
     public ResponseEntity<CommonResponse<ItemDetailResponse>> getItemDetail(@PathVariable Long itemId) {
         ItemDetailResponse response = itemService.getItemDetail(itemId);
+        return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
+    }
+
+    @PostMapping("/{itemId}/likes")
+    public ResponseEntity<CommonResponse<ItemLikeToggleResponse>> toggleItemLike(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal AuthenticatedClient userDetails
+    ) {
+        ItemLikeToggleResponse response = itemLikeFacade.toggle(itemId, userDetails.clientId());
         return CommonResponse.success(HttpStatus.OK, response).toResponseEntity();
     }
 

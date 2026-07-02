@@ -10,5 +10,6 @@ public record ItemListItemResponse(
         Long initialPrice,
         Long currentBid, // AuctionStatus와 조인하여 가져올 데이터
         TradeStatus tradeStatus,
-        LocalDateTime closeDate
+        LocalDateTime closeDate,
+        Long likeCount
 ) {}

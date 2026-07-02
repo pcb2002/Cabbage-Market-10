@@ -112,6 +112,21 @@ public class Item extends BaseEntity {
         this.viewCount++;
     }
 
+    public void incrementLikeCount() {
+        if (this.likeCount == null) {
+            this.likeCount = 0L;
+        }
+        this.likeCount++;
+    }
+
+    public void decrementLikeCount() {
+        if (this.likeCount == null || this.likeCount == 0L) {
+            this.likeCount = 0L;
+            return;
+        }
+        this.likeCount--;
+    }
+
     // 작성자 검증 로직
     public void verifySeller(Long clientId) {
         if (!this.seller.getId().equals(clientId)) {
