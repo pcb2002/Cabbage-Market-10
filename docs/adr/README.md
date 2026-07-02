@@ -17,3 +17,4 @@
 |---|---|
 | [docs/adr/ADR-001-auth.md](ADR-001-auth.md) | Access Token Stateless JWT와 Refresh Token Cookie 인증 |
 | [docs/adr/ADR-002-auction-bid-concurrency.md](ADR-002-auction-bid-concurrency.md) | 경매 입찰 동시성 제어는 Redis 기반 Redisson 분산 락 사용 |
+| [docs/adr/ADR-003-item-search-v2-redis-cache.md](ADR-003-item-search-v2-redis-cache.md) | 상품 검색 v2 캐시는 Redis remote cache를 기본 저장소로 사용 |

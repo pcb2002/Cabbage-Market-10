@@ -34,14 +34,14 @@ public class ItemLikeFacade {
     private ItemLikeToggleResponse addLike(Item item, Client client) {
         itemLikeService.save(client, item);
         itemService.incrementLikeCount(item.getId());
-        searchCacheEvictionService.evictItemSearchV2();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
         return new ItemLikeToggleResponse(item.getId(), true, itemService.getLikeCount(item.getId()));
     }
 
     private ItemLikeToggleResponse cancelLike(Item item, ItemLike existingLike) {
         itemLikeService.delete(existingLike);
         itemService.decrementLikeCount(item.getId());
-        searchCacheEvictionService.evictItemSearchV2();
+        searchCacheEvictionService.evictItemSearchV2AfterCommit();
         return new ItemLikeToggleResponse(item.getId(), false, itemService.getLikeCount(item.getId()));
     }
 }
