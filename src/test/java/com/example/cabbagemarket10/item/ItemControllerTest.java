@@ -25,6 +25,7 @@ import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -70,11 +71,17 @@ class ItemControllerTest {
     @BeforeEach
     void setUp() {
         jdbcTemplate.update("delete from review");
+        jdbcTemplate.update("delete from item_like");
         jdbcTemplate.update("delete from inquiry_log");
         jdbcTemplate.update("delete from auction_status");
         jdbcTemplate.update("delete from item");
         jdbcTemplate.update("delete from category");
         jdbcTemplate.update("delete from client");
+    }
+
+    @AfterEach
+    void tearDown() {
+        jdbcTemplate.update("delete from item_like");
     }
 
     @DisplayName("인증 회원이 상품을 등록하면 Item과 AuctionStatus가 함께 저장된다")
@@ -159,6 +166,103 @@ class ItemControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("인증 회원이 상품 좋아요를 처음 누르면 좋아요가 등록된다")
+    @Test
+    void 인증_회원이_상품_좋아요를_처음_누르면_좋아요가_등록된다() throws Exception {
+        Client seller = saveClient("like-seller@example.com", "판매자");
+        Client liker = saveClient("like-user@example.com", "좋아요회원");
+        Item item = saveDirectItem(seller, "좋아요 상품");
+
+        mockMvc.perform(post("/api/items/{itemId}/likes", item.getId())
+                        .with(authentication(authenticationOf(liker))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.itemId").value(item.getId()))
+                .andExpect(jsonPath("$.data.liked").value(true))
+                .andExpect(jsonPath("$.data.likeCount").value(1));
+
+        Long likeCount = jdbcTemplate.queryForObject(
+                "select like_count from item where id = ?",
+                Long.class,
+                item.getId());
+        Integer itemLikeCount = jdbcTemplate.queryForObject(
+                "select count(*) from item_like where item_id = ? and client_id = ?",
+                Integer.class,
+                item.getId(),
+                liker.getId());
+
+        assertThat(likeCount).isEqualTo(1L);
+        assertThat(itemLikeCount).isEqualTo(1);
+    }
+
+    @DisplayName("같은 회원이 상품 좋아요를 다시 누르면 좋아요가 취소된다")
+    @Test
+    void 같은_회원이_상품_좋아요를_다시_누르면_좋아요가_취소된다() throws Exception {
+        Client seller = saveClient("toggle-seller@example.com", "판매자");
+        Client liker = saveClient("toggle-user@example.com", "좋아요회원");
+        Item item = saveDirectItem(seller, "토글 상품");
+
+        mockMvc.perform(post("/api/items/{itemId}/likes", item.getId())
+                        .with(authentication(authenticationOf(liker))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.liked").value(true))
+                .andExpect(jsonPath("$.data.likeCount").value(1));
+
+        mockMvc.perform(post("/api/items/{itemId}/likes", item.getId())
+                        .with(authentication(authenticationOf(liker))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.liked").value(false))
+                .andExpect(jsonPath("$.data.likeCount").value(0));
+
+        Long likeCount = jdbcTemplate.queryForObject(
+                "select like_count from item where id = ?",
+                Long.class,
+                item.getId());
+        Integer itemLikeCount = jdbcTemplate.queryForObject(
+                "select count(*) from item_like where item_id = ? and client_id = ?",
+                Integer.class,
+                item.getId(),
+                liker.getId());
+
+        assertThat(likeCount).isEqualTo(0L);
+        assertThat(itemLikeCount).isEqualTo(0);
+    }
+
+    @DisplayName("인증 없이 상품 좋아요를 요청하면 401을 반환한다")
+    @Test
+    void 인증_없이_상품_좋아요를_요청하면_401을_반환한다() throws Exception {
+        mockMvc.perform(post("/api/items/{itemId}/likes", 1L))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @DisplayName("존재하지 않는 상품에 좋아요를 요청하면 ITEM_NOT_FOUND를 반환한다")
+    @Test
+    void 존재하지_않는_상품에_좋아요를_요청하면_ITEM_NOT_FOUND를_반환한다() throws Exception {
+        Client liker = saveClient("missing-like-user@example.com", "좋아요회원");
+
+        mockMvc.perform(post("/api/items/{itemId}/likes", 9999L)
+                        .with(authentication(authenticationOf(liker))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+    }
+
+    @DisplayName("임시저장 상품에 좋아요를 요청하면 ITEM_NOT_FOUND를 반환한다")
+    @Test
+    void 임시저장_상품에_좋아요를_요청하면_ITEM_NOT_FOUND를_반환한다() throws Exception {
+        Client seller = saveClient("draft-like-seller@example.com", "임시저장판매자");
+        Client liker = saveClient("draft-like-user@example.com", "좋아요회원");
+        Item draftItem = saveDraftItem(seller, "임시저장 좋아요 상품");
+
+        mockMvc.perform(post("/api/items/{itemId}/likes", draftItem.getId())
+                        .with(authentication(authenticationOf(liker))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
     }
 
     @DisplayName("인증 회원이 상품을 임시저장하면 isDraft true인 Item과 AuctionStatus가 저장된다")
@@ -349,6 +453,8 @@ class ItemControllerTest {
                 .tradeStatus(TradeStatus.ON_SALE)
                 .isDraft(false)
                 .build());
+        visibleItem.incrementLikeCount();
+        itemRepository.saveAndFlush(visibleItem);
         auctionStatusRepository.save(AuctionStatus.builder()
                 .item(visibleItem)
                 .currentBid(9000L)
@@ -390,6 +496,7 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.data.content[0].initialPrice").value(7000))
                 .andExpect(jsonPath("$.data.content[0].currentBid").value(9000))
                 .andExpect(jsonPath("$.data.content[0].tradeStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.data.content[0].likeCount").value(1))
                 .andExpect(jsonPath("$.data.content[0].closeDate").value("2026-08-01T10:00:00"))
                 .andExpect(jsonPath("$.data.totalElements").value(1));
     }
@@ -1497,6 +1604,53 @@ class ItemControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.code").value("ITEM_NOT_FOUND"));
+    }
+
+    private Client saveClient(String email, String nickname) {
+        return clientRepository.save(Client.create(
+                email,
+                passwordEncoder.encode("password123!"),
+                nickname,
+                nickname,
+                "010-1234-5678"));
+    }
+
+    private Item saveDirectItem(Client seller, String title) {
+        Category category = categoryRepository.save(Category.builder()
+                .name("like-category-" + title)
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        return itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title(title)
+                .description(title + " description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(false)
+                .build());
+    }
+
+    private Item saveDraftItem(Client seller, String title) {
+        Category category = categoryRepository.save(Category.builder()
+                .name("draft-like-category-" + title)
+                .sortOrder(1)
+                .isActive(true)
+                .build());
+        return itemRepository.save(Item.builder()
+                .seller(seller)
+                .category(category)
+                .title(title)
+                .description(title + " description")
+                .initialPrice(10000L)
+                .tradeType(TradeType.DIRECT)
+                .conditionType(ConditionType.USED)
+                .tradeStatus(TradeStatus.ON_SALE)
+                .isDraft(true)
+                .build());
     }
 
     private UsernamePasswordAuthenticationToken authenticationOf(Client seller) {

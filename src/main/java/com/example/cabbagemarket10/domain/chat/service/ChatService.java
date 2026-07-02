@@ -1,5 +1,6 @@
 package com.example.cabbagemarket10.domain.chat.service;
 
+import com.example.cabbagemarket10.domain.chat.dto.restful.ChatRoomDetail;
 import com.example.cabbagemarket10.domain.chat.dto.restful.RoomCreate;
 import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageDto;
 import com.example.cabbagemarket10.domain.chat.dto.websocket.ChatMessageList;
@@ -11,6 +12,7 @@ import com.example.cabbagemarket10.domain.client.entity.Client;
 import com.example.cabbagemarket10.domain.client.repository.ClientRepository;
 import com.example.cabbagemarket10.domain.item.entity.Item;
 import com.example.cabbagemarket10.domain.item.repository.ItemRepository;
+import com.example.cabbagemarket10.global.common.PageResponse;
 import com.example.cabbagemarket10.global.exception.BusinessException;
 import com.example.cabbagemarket10.global.exception.ErrorCode;
 import com.example.cabbagemarket10.global.security.jwt.AuthenticatedClient;
@@ -19,7 +21,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +91,16 @@ public class ChatService {
         Page<ChatMessage> chatMessagesPage = chatMessageRepository.findByChatRoomId(chatRoomId, descPageable);
 
         return ChatMessageList.from(chatMessagesPage);
+    }
 
+    @Transactional(readOnly = true)
+    public PageResponse<ChatRoomDetail> getMyChatRoom(Long clientId, Pageable pageable) {
+        Pageable searchPageable = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by("lastMessageAt").descending());
+
+        Page<ChatRoomDetail> chatRoomList = chatRoomRepository.findByClientId(clientId, searchPageable);
+        return PageResponse.from(chatRoomList);
     }
 }
