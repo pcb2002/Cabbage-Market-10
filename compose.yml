@@ -1,0 +1,62 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cabbage-market-app
+    env_file:
+      - ./env/local.env
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      LOCAL_DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-cabbage_market}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      LOCAL_REDIS_HOST: redis
+      LOCAL_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    container_name: cabbage-market-mysql
+    env_file:
+      - ./env/local.env
+    ports:
+      - "${LOCAL_DB_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: cabbage-market-redis
+    env_file:
+      - ./env/local.env
+    command:
+      - sh
+      - -c
+      - redis-server --appendonly yes --requirepass "$$LOCAL_REDIS_PASSWORD"
+    ports:
+      - "${LOCAL_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli -a "$$LOCAL_REDIS_PASSWORD" ping | grep PONG
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-data:
+  redis-data:

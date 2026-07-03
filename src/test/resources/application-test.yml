@@ -1,0 +1,7 @@
+app:
+  cache:
+    item-search-v2:
+      type: local
+  auction:
+    redis-lock:
+      enabled: false

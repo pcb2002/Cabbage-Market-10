@@ -1,0 +1,47 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+    import: optional:file:./env/local.env[.properties]
+  datasource:
+    url: ${LOCAL_DB_URL:jdbc:mysql://127.0.0.1:3306/cabbage_market?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${MYSQL_USER:cabbage}
+    password: ${MYSQL_PASSWORD:cabbage}
+    driver-class-name: ${LOCAL_DB_DRIVER:com.mysql.cj.jdbc.Driver}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+  data:
+    redis:
+      host: ${LOCAL_REDIS_HOST:127.0.0.1}
+      port: ${LOCAL_REDIS_PORT:6379}
+      password: ${LOCAL_REDIS_PASSWORD:cabbage-local-redis}
+  docker:
+    compose:
+      enabled: false
+logging:
+  level:
+    org.hibernate.SQL: debug
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expire-seconds: ${JWT_ACCESS_TOKEN_EXPIRE_SECONDS:3600}
+  refresh-token-expire-seconds: ${JWT_REFRESH_TOKEN_EXPIRE_SECONDS:1209600}
+
+auth:
+  cookie:
+    secure: false
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    s3:
+      region: ${AWS_REGION:ap-northeast-2}
+      bucket: ${AWS_S3_BUCKET}

@@ -1,0 +1,42 @@
+spring:
+  autoconfigure:
+    exclude: []
+  datasource:
+    url: jdbc:h2:mem:cabbage_market_redis_test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: never
+
+app:
+  cache:
+    item-search-v2:
+      type: redis
+  auction:
+    redis-lock:
+      enabled: false
+  search:
+    popular:
+      limit: 10
+      dedup-ttl: 1m
+      daily-key-ttl: 8d
+      daily-key-prefix: "popular:search:"
+      dedup-key-prefix: "popular:dedup:"
+
+jwt:
+  secret: test-secret-key-for-cabbage-market-authentication
+  access-token-expire-seconds: 3600
+  refresh-token-expire-seconds: 1209600
+
+auth:
+  cookie:
+    secure: false

@@ -1,0 +1,32 @@
+name: Feature
+description: 기능 추가 작업
+title: "[Feat] "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: 이 기능이 해결할 문제
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: 포함할 작업과 제외할 작업
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: 완료 판단 기준
+      placeholder: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: API, DB, 보안, ADR, 테스트 참고사항

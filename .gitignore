@@ -39,6 +39,11 @@ out/
 ### 민감 정보 및 환경변수 ###
 # DB 비밀번호, JWT Secret, Redis 접속 정보 등이 담긴 파일
 .env
+env/*.env
+env/*.local
+env/*.secret
+!env/*.example
+!env/.gitkeep
 application-secret.yml
 application-prod.yml
 

@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>배추마켓 | 상품상세</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script type="module" src="assets/js/pages/item-detail-page.js"></script>
+</head>
+<body>
+<div class="shell">
+    <header class="site-header">
+        <div class="site-header__inner">
+            <div class="header-top">
+                <a class="brand" href="index.html">배추<span>마켓</span></a>
+                
+                <!-- 검색창 및 최근/인기 검색어 팝업 레이어 -->
+                <div class="search-container">
+                    <form id="searchForm" class="search-bar">
+                        <input id="keywordInput" type="search" placeholder="상품명이나 상점명을 검색해주세요">
+                        <button type="submit">🔍</button>
+                    </form>
+                    
+                    <div class="search-suggest-layer">
+                        <div class="suggest-section">
+                            <div class="suggest-title">
+                                <span>최근 검색어</span>
+                                <span class="clear-btn">전체삭제</span>
+                            </div>
+                            <div class="recent-chips">
+                                <div class="recent-chip">가방 <span class="remove-tag">✕</span></div>
+                                <div class="recent-chip">아이폰 <span class="remove-tag">✕</span></div>
+                            </div>
+                        </div>
+                        <div class="suggest-section">
+                            <div class="suggest-title">인기검색어</div>
+                            <div class="popular-grid">
+                                <div class="popular-item"><span class="popular-num top-rank">1</span><span class="popular-keyword">에이티즈</span><span class="popular-stat up">2</span></div>
+                                <div class="popular-item"><span class="popular-num top-rank">2</span><span class="popular-keyword">망아살</span><span class="popular-stat same">0</span></div>
+                                <div class="popular-item"><span class="popular-num top-rank">3</span><span class="popular-keyword">르세라핌</span><span class="popular-stat up">5</span></div>
+                                <div class="popular-item"><span class="popular-num">4</span><span class="popular-keyword">아이폰5s</span><span class="popular-stat up">1</span></div>
+                                <div class="popular-item"><span class="popular-num">5</span><span class="popular-keyword">풀샥</span><span class="popular-stat up">3</span></div>
+                                <div class="popular-item"><span class="popular-num">6</span><span class="popular-keyword">베이프티셔츠</span><span class="popular-stat down">1</span></div>
+                                <div class="popular-item"><span class="popular-num">7</span><span class="popular-keyword">한화</span><span class="popular-stat up">2</span></div>
+                                <div class="popular-item"><span class="popular-num">8</span><span class="popular-keyword">칼하트</span><span class="popular-stat up">1</span></div>
+                                <div class="popular-item"><span class="popular-num">9</span><span class="popular-keyword">갤럭시 s24</span><span class="popular-stat up">12</span></div>
+                                <div class="popular-item"><span class="popular-num">10</span><span class="popular-keyword">마도카 피규어</span><span class="popular-stat up">4</span></div>
+                            </div>
+                        </div>
+                        <div class="suggest-close-bar">닫기</div>
+                    </div>
+                </div>
+                
+                <div class="header-actions">
+                    <span id="headerUserLabel" class="user-pill">비회원</span>
+                    <a id="headerLoginLink" class="button button--dark" href="login.html">로그인/회원가입</a>
+                    <button id="headerLogoutButton" type="button" class="button button--line hidden">로그아웃</button>
+                </div>
+            </div>
+            
+            <nav class="main-nav">
+                <a href="index.html">홈</a>
+                <a href="chat.html">채팅</a>
+                <a href="mypage.html">마이페이지</a>
+                <a href="sell.html">판매등록</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page">
+        <section id="itemDetail" class="detail-layout"></section>
+        <section id="purchaseReviewSection" class="section hidden">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">PURCHASE REVIEW</p>
+                    <h2>구매 후기 남기기</h2>
+                </div>
+            </div>
+            <div id="purchaseReviewPanel"></div>
+        </section>
+        <section class="section">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">ITEM REVIEW</p>
+                    <h2>상품 리뷰</h2>
+                </div>
+            </div>
+            <div id="sellerReviews" class="review-grid"></div>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- 상품 채팅 사이드바 -->
+<div id="itemChatOverlay" class="item-chat-overlay"></div>
+<aside id="itemChatSidebar" class="item-chat-sidebar" aria-label="채팅 목록">
+    <div class="item-chat-sidebar__head">
+        <div class="item-chat-sidebar__title">
+            채팅 확인
+        </div>
+        <button class="item-chat-sidebar__close" id="itemChatClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="item-chat-sidebar__body" id="itemChatBody">
+        <!-- 채팅방 목록 뷰 (기본) -->
+        <div class="item-chat-room-list" id="itemChatRoomList">
+            <div class="item-chat-empty">
+                <span class="icon">💬</span>
+                채팅방을 불러오는 중입니다…
+            </div>
+        </div>
+        <!-- 메시지 뷰 (채팅방 선택 시) -->
+        <div class="item-chat-msg-view hidden" id="itemChatMsgView">
+            <div class="item-chat-msg-view__head">
+                <button class="item-chat-msg-view__back" id="itemChatBack" aria-label="목록으로">‹</button>
+                <span class="item-chat-msg-view__name" id="itemChatPartnerName"></span>
+                <button class="item-chat-msg-view__open" id="itemChatOpenFull">전체화면</button>
+            </div>
+            <div class="item-chat-messages" id="itemChatMessages"></div>
+            <div class="item-chat-compose">
+                <input id="itemChatInput" type="text" placeholder="메시지를 입력하세요…" autocomplete="off">
+                <button id="itemChatSend">전송</button>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- 특정 상품 리뷰 필터링, 판매자용 채팅 확인 스왑, 관심 등록 하트 및 경매 마감 시 수정 차단 래핑 -->
+<script type="module">
+    import { api } from "./assets/js/core/api.js";
+    const originalListClientReviews = api.listClientReviews;
+    const originalGetItem = api.getItem;
+
+    let currentItem = null;
+
+    api.getItem = async function(itemId) {
+        currentItem = await originalGetItem.call(api, itemId);
+        return currentItem;
+    };
+
+    api.listClientReviews = async function(clientId, params) {
+        const response = await originalListClientReviews.call(api, clientId, params);
+        if (response && Array.isArray(response.content)) {
+            const currentItemId = new URLSearchParams(window.location.search).get("id");
+            if (currentItemId) {
+                response.content = response.content.filter(review => Number(review.itemId) === Number(currentItemId));
+            }
+        }
+        return response;
+    };
+
+
+    // 관심 등록 상태에 따라 하트(♥ / ♡)로 텍스트 치환 & 경매 마감 시 수정하기 버튼 감춤 (MutationObserver)
+    (async function() {
+        let hasLiked = false;
+        try {
+            const myLikes = await api.listMyLikes({ page: 0, size: 100 }).catch(() => null);
+            if (myLikes && Array.isArray(myLikes.content)) {
+                const currentItemId = new URLSearchParams(window.location.search).get("id");
+                hasLiked = myLikes.content.some(item => Number(item.itemId) === Number(currentItemId));
+            }
+        } catch(e) {}
+
+        const targetHeartText = hasLiked ? '♥ 관심' : '♡ 관심';
+        const targetColor = hasLiked ? '#ff5050' : '';
+
+        function applyHeartStyle(likeBtn) {
+            if (likeBtn.innerHTML !== targetHeartText) {
+                likeBtn.innerHTML = targetHeartText;
+                if (targetColor) {
+                    likeBtn.style.color = targetColor;
+                }
+            }
+        }
+
+        const observer = new MutationObserver(() => {
+            // 1. 하트 스왑
+            const likeBtn = document.getElementById("likeButton");
+            if (likeBtn) {
+                applyHeartStyle(likeBtn);
+            }
+            
+            // 2. 경매 마감 시 수정하기 버튼 제거
+            if (currentItem && currentItem.closeDate && new Date(currentItem.closeDate) <= new Date()) {
+                const editBtn = document.querySelector('a[href^="edit-item.html"]');
+                if (editBtn) {
+                    editBtn.style.display = "none";
+                }
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+        const likeBtn = document.getElementById("likeButton");
+        if (likeBtn) {
+            applyHeartStyle(likeBtn);
+        }
+    })();
+</script>
+<script type="module">
+    (async function() {
+        const keywordInput = document.getElementById("keywordInput");
+        const searchForm = document.getElementById("searchForm");
+        const recentContainer = document.querySelector(".recent-chips");
+        const clearBtn = document.querySelector(".clear-btn");
+        const popularGrid = document.querySelector(".popular-grid");
+
+        function triggerSearch(val) {
+            const kw = val.trim();
+            if (!kw) return;
+            let keywords = JSON.parse(localStorage.getItem("recentKeywords") || "[]");
+            keywords = keywords.filter(k => k !== kw);
+            keywords.unshift(kw);
+            localStorage.setItem("recentKeywords", JSON.stringify(keywords.slice(0, 8)));
+            
+            window.location.href = `index.html?keyword=${encodeURIComponent(kw)}`;
+        }
+
+        function renderRecentKeywords() {
+            if (!recentContainer) return;
+            const keywords = JSON.parse(localStorage.getItem("recentKeywords") || "[]");
+            if (keywords.length === 0) {
+                recentContainer.innerHTML = '<span style="font-size: 12px; color: #aaa; padding-left: 4px;">최근 검색어가 없습니다.</span>';
+                return;
+            }
+            
+            recentContainer.innerHTML = keywords.map(kw => `
+                <div class="recent-chip" style="cursor: pointer;">
+                    <span class="kw-text">${escape(kw)}</span>
+                    <span class="remove-tag" data-kw="${escape(kw)}">✕</span>
+                </div>
+            `).join("");
+        }
+
+        const escape = s => String(s).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+
+        if (searchForm && keywordInput) {
+            searchForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                triggerSearch(keywordInput.value);
+            });
+        }
+
+        if (recentContainer) {
+            recentContainer.addEventListener("click", (e) => {
+                const removeBtn = e.target.closest(".remove-tag");
+                if (removeBtn) {
+                    e.stopPropagation();
+                    const targetKw = removeBtn.getAttribute("data-kw");
+                    let keywords = JSON.parse(localStorage.getItem("recentKeywords") || "[]");
+                    keywords = keywords.filter(k => k !== targetKw);
+                    localStorage.setItem("recentKeywords", JSON.stringify(keywords));
+                    renderRecentKeywords();
+                    return;
+                }
+                
+                const chip = e.target.closest(".recent-chip");
+                if (chip) {
+                    const kwText = chip.querySelector(".kw-text").textContent;
+                    triggerSearch(kwText);
+                }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.style.cursor = "pointer";
+            clearBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                localStorage.removeItem("recentKeywords");
+                renderRecentKeywords();
+            });
+        }
+
+        if (popularGrid) {
+            try {
+                const res = await fetch("/api/search/popular");
+                if (res.ok) {
+                    const resJson = await res.json();
+                    let list = [];
+                    if (resJson && resJson.data && Array.isArray(resJson.data.keywords)) {
+                        list = resJson.data.keywords;
+                    } else if (Array.isArray(resJson)) {
+                        list = resJson;
+                    } else if (resJson && resJson.data && Array.isArray(resJson.data)) {
+                        list = resJson.data;
+                    } else {
+                        list = resJson.content || resJson.popularKeywords || [];
+                    }
+
+                    if (list.length > 0) {
+                        popularGrid.innerHTML = list.slice(0, 10).map((item, idx) => {
+                            const rank = item.rank || (idx + 1);
+                            const keyword = typeof item === 'string' ? item : (item.keyword || item.query || item.word || item.name || '');
+                            const change = typeof item === 'string' ? 0 : Number(item.rankChange || item.change || 0);
+                            
+                            let stat = '<span class="popular-stat same">- 0</span>';
+                            if (change > 0) stat = `<span class="popular-stat up">▲ ${change}</span>`;
+                            else if (change < 0) stat = `<span class="popular-stat down">▼ ${Math.abs(change)}</span>`;
+                            
+                            return `
+                                <div class="popular-item" style="cursor: pointer;" data-kw="${escape(keyword)}">
+                                    <span class="popular-num ${rank <= 3 ? 'top-rank' : ''}">${rank}</span>
+                                    <span class="popular-keyword">${escape(keyword)}</span>
+                                    ${stat}
+                                </div>
+                            `;
+                        }).join("");
+                    }
+                }
+            } catch(e) {}
+
+            popularGrid.addEventListener("click", (e) => {
+                const pItem = e.target.closest(".popular-item");
+                if (pItem) {
+                    const kw = pItem.getAttribute("data-kw");
+                    triggerSearch(kw);
+                }
+            });
+        }
+
+        renderRecentKeywords();
+    })();
+</script>
+</body>
+</html>
