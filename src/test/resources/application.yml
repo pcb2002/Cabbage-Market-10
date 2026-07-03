@@ -21,6 +21,13 @@ spring:
   sql:
     init:
       mode: never
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2
+      credentials:
+        access-key: test-access-key
+        secret-key: test-secret-key
 
 jwt:
   secret: test-secret-key-for-cabbage-market-authentication

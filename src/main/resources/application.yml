@@ -3,6 +3,10 @@ spring:
     name: Cabbage-Market-10
   config:
     import: optional:file:./env/local.env[.properties]
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-northeast-2}
 
 app:
   cors:
