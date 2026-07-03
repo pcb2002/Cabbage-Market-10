@@ -62,7 +62,23 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, ex) ->
                                 securityErrorResponseWriter.write(response, ErrorCode.FORBIDDEN)))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/", "/*.html", "/app.js", "/styles.css", "/assets/**").permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/",
+                                "/index.html",
+                                "/login.html",
+                                "/login-password.html",
+                                "/signup.html",
+                                "/item.html",
+                                "/sell.html",
+                                "/edit-item.html",
+                                "/mypage.html",
+                                "/chat.html",
+                                "/favicon.ico",
+                                "/app.js",
+                                "/styles.css"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/assets/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login", "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/items/**").permitAll()
