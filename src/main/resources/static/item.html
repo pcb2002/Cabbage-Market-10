@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>배추마켓 | 홈</title>
+    <title>배추마켓 | 상품상세</title>
     <link rel="stylesheet" href="assets/css/styles.css">
-    <script type="module" src="assets/js/pages/home.js"></script>
+    <script type="module" src="assets/js/pages/item-detail-page.js"></script>
 </head>
 <body>
 <div class="shell">
@@ -59,7 +59,7 @@
             </div>
             
             <nav class="main-nav">
-                <a class="is-active" href="index.html">홈</a>
+                <a href="index.html">홈</a>
                 <a href="chat.html">채팅</a>
                 <a href="mypage.html">마이페이지</a>
                 <a href="sell.html">판매등록</a>
@@ -68,62 +68,135 @@
     </header>
 
     <main class="page">
-        <section class="feed-shell">
-            <!-- 와이드 배너 슬라이더 -->
-            <div class="feed-head">
-                <div class="feed-head__content">
-                    <p class="eyebrow">Baechu Market Benefit</p>
-                    <h1>혜택이 더 커졌어요<br>2.5% 더 받고, 10% 할인 받는 배추머니</h1>
-                    <p class="hero-copy">경매부터 직거래까지 빠르고 안전한 우리 동네 마켓</p>
-                </div>
-                <div class="feed-head__banner">
-                    <img src="assets/images/banner.png" alt="배추마켓 마스코트">
+        <section id="itemDetail" class="detail-layout"></section>
+        <section id="purchaseReviewSection" class="section hidden">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">PURCHASE REVIEW</p>
+                    <h2>구매 후기 남기기</h2>
                 </div>
             </div>
-
-            <!-- 퀵메뉴 아이콘 바 (동적 카테고리 필터 연결) -->
-            <div id="categoryFilter" class="category-bar"></div>
-
-            <div class="feed-layout">
-                <section class="feed-stage">
-                    <div class="section-head">
-                        <div>
-                            <h2>오늘의 추천 아이템</h2>
-                            <div class="section-meta">
-                                <span id="heroAuthLabel" class="hidden">비회원</span>
-                                <span id="heroItemCount">로딩 중</span> · 
-                                <span id="feedMeta">상품을 불러오는 중입니다.</span>
-                            </div>
-                        </div>
-                        
-                        <!-- 수평 정렬 필터 바 -->
-                        <div class="horizontal-filters">
-                            <div class="filter-stack">
-                                <button type="button" class="chip is-active" data-status="">최신순</button>
-                                <button type="button" class="chip" data-status="ON_SALE">판매중</button>
-                                <button type="button" class="chip" data-status="RESERVED">예약중</button>
-                                <button type="button" class="chip" data-status="SOLD_OUT">거래완료</button>
-                            </div>
-                            <label class="check-line">
-                                <input id="likedOnlyInput" type="checkbox">
-                                <span>좋아요한 상품만 보기</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div id="itemGrid" class="item-grid"></div>
-                    
-                    <div class="section-foot">
-                        <button id="loadMoreButton" type="button" class="button button--line">더 보기</button>
-                    </div>
-                </section>
+            <div id="purchaseReviewPanel"></div>
+        </section>
+        <section class="section">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">ITEM REVIEW</p>
+                    <h2>상품 리뷰</h2>
+                </div>
             </div>
+            <div id="sellerReviews" class="review-grid"></div>
         </section>
     </main>
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<!-- 상품 채팅 사이드바 -->
+<div id="itemChatOverlay" class="item-chat-overlay"></div>
+<aside id="itemChatSidebar" class="item-chat-sidebar" aria-label="채팅 목록">
+    <div class="item-chat-sidebar__head">
+        <div class="item-chat-sidebar__title">
+            채팅 확인
+        </div>
+        <button class="item-chat-sidebar__close" id="itemChatClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="item-chat-sidebar__body" id="itemChatBody">
+        <!-- 채팅방 목록 뷰 (기본) -->
+        <div class="item-chat-room-list" id="itemChatRoomList">
+            <div class="item-chat-empty">
+                <span class="icon">💬</span>
+                채팅방을 불러오는 중입니다…
+            </div>
+        </div>
+        <!-- 메시지 뷰 (채팅방 선택 시) -->
+        <div class="item-chat-msg-view hidden" id="itemChatMsgView">
+            <div class="item-chat-msg-view__head">
+                <button class="item-chat-msg-view__back" id="itemChatBack" aria-label="목록으로">‹</button>
+                <span class="item-chat-msg-view__name" id="itemChatPartnerName"></span>
+                <button class="item-chat-msg-view__open" id="itemChatOpenFull">전체화면</button>
+            </div>
+            <div class="item-chat-messages" id="itemChatMessages"></div>
+            <div class="item-chat-compose">
+                <input id="itemChatInput" type="text" placeholder="메시지를 입력하세요…" autocomplete="off">
+                <button id="itemChatSend">전송</button>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- 특정 상품 리뷰 필터링, 판매자용 채팅 확인 스왑, 관심 등록 하트 및 경매 마감 시 수정 차단 래핑 -->
+<script type="module">
+    import { api } from "./assets/js/core/api.js";
+    const originalListClientReviews = api.listClientReviews;
+    const originalGetItem = api.getItem;
+
+    let currentItem = null;
+
+    api.getItem = async function(itemId) {
+        currentItem = await originalGetItem.call(api, itemId);
+        return currentItem;
+    };
+
+    api.listClientReviews = async function(clientId, params) {
+        const response = await originalListClientReviews.call(api, clientId, params);
+        if (response && Array.isArray(response.content)) {
+            const currentItemId = new URLSearchParams(window.location.search).get("id");
+            if (currentItemId) {
+                response.content = response.content.filter(review => Number(review.itemId) === Number(currentItemId));
+            }
+        }
+        return response;
+    };
+
+
+    // 관심 등록 상태에 따라 하트(♥ / ♡)로 텍스트 치환 & 경매 마감 시 수정하기 버튼 감춤 (MutationObserver)
+    (async function() {
+        let hasLiked = false;
+        try {
+            const myLikes = await api.listMyLikes({ page: 0, size: 100 }).catch(() => null);
+            if (myLikes && Array.isArray(myLikes.content)) {
+                const currentItemId = new URLSearchParams(window.location.search).get("id");
+                hasLiked = myLikes.content.some(item => Number(item.itemId) === Number(currentItemId));
+            }
+        } catch(e) {}
+
+        const targetHeartText = hasLiked ? '♥ 관심' : '♡ 관심';
+        const targetColor = hasLiked ? '#ff5050' : '';
+
+        function applyHeartStyle(likeBtn) {
+            if (likeBtn.innerHTML !== targetHeartText) {
+                likeBtn.innerHTML = targetHeartText;
+                if (targetColor) {
+                    likeBtn.style.color = targetColor;
+                }
+            }
+        }
+
+        const observer = new MutationObserver(() => {
+            // 1. 하트 스왑
+            const likeBtn = document.getElementById("likeButton");
+            if (likeBtn) {
+                applyHeartStyle(likeBtn);
+            }
+            
+            // 2. 경매 마감 시 수정하기 버튼 제거
+            if (currentItem && currentItem.closeDate && new Date(currentItem.closeDate) <= new Date()) {
+                const editBtn = document.querySelector('a[href^="edit-item.html"]');
+                if (editBtn) {
+                    editBtn.style.display = "none";
+                }
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+        const likeBtn = document.getElementById("likeButton");
+        if (likeBtn) {
+            applyHeartStyle(likeBtn);
+        }
+    })();
+</script>
 <script type="module">
     (async function() {
         const keywordInput = document.getElementById("keywordInput");
@@ -199,24 +272,11 @@
         }
 
         if (popularGrid) {
-            const fallbackList = [
-                { rank: 1, keyword: "아이폰", rankChange: 2 },
-                { rank: 2, keyword: "나이키", rankChange: -1 },
-                { rank: 3, keyword: "스톤아일랜드", rankChange: 0 },
-                { rank: 4, keyword: "에어팟", rankChange: 4 },
-                { rank: 5, keyword: "텐트", rankChange: 0 },
-                { rank: 6, keyword: "자전거", rankChange: 1 },
-                { rank: 7, keyword: "가방", rankChange: -2 },
-                { rank: 8, keyword: "스타벅스", rankChange: 0 },
-                { rank: 9, keyword: "맥북", rankChange: 3 },
-                { rank: 10, keyword: "패딩", rankChange: -1 }
-            ];
-
             try {
                 const res = await fetch("/api/search/popular");
-                let list = [];
                 if (res.ok) {
                     const resJson = await res.json();
+                    let list = [];
                     if (resJson && resJson.data && Array.isArray(resJson.data.keywords)) {
                         list = resJson.data.keywords;
                     } else if (Array.isArray(resJson)) {
@@ -226,43 +286,28 @@
                     } else {
                         list = resJson.content || resJson.popularKeywords || [];
                     }
-                }
 
-                if (list.length === 0) {
-                    list = fallbackList;
+                    if (list.length > 0) {
+                        popularGrid.innerHTML = list.slice(0, 10).map((item, idx) => {
+                            const rank = item.rank || (idx + 1);
+                            const keyword = typeof item === 'string' ? item : (item.keyword || item.query || item.word || item.name || '');
+                            const change = typeof item === 'string' ? 0 : Number(item.rankChange || item.change || 0);
+                            
+                            let stat = '<span class="popular-stat same">- 0</span>';
+                            if (change > 0) stat = `<span class="popular-stat up">▲ ${change}</span>`;
+                            else if (change < 0) stat = `<span class="popular-stat down">▼ ${Math.abs(change)}</span>`;
+                            
+                            return `
+                                <div class="popular-item" style="cursor: pointer;" data-kw="${escape(keyword)}">
+                                    <span class="popular-num ${rank <= 3 ? 'top-rank' : ''}">${rank}</span>
+                                    <span class="popular-keyword">${escape(keyword)}</span>
+                                    ${stat}
+                                </div>
+                            `;
+                        }).join("");
+                    }
                 }
-
-                popularGrid.innerHTML = list.slice(0, 10).map((item, idx) => {
-                    const rank = item.rank || (idx + 1);
-                    const keyword = typeof item === 'string' ? item : (item.keyword || item.query || item.word || item.name || '');
-                    const change = typeof item === 'string' ? 0 : Number(item.rankChange || item.change || 0);
-                    
-                    let stat = '<span class="popular-stat same">- 0</span>';
-                    if (change > 0) stat = `<span class="popular-stat up">▲ ${change}</span>`;
-                    else if (change < 0) stat = `<span class="popular-stat down">▼ ${Math.abs(change)}</span>`;
-                    
-                    return `
-                        <div class="popular-item" style="cursor: pointer;" data-kw="${escape(keyword)}">
-                            <span class="popular-num ${rank <= 3 ? 'top-rank' : ''}">${rank}</span>
-                            <span class="popular-keyword">${escape(keyword)}</span>
-                            ${stat}
-                        </div>
-                    `;
-                }).join("");
-            } catch(e) {
-                popularGrid.innerHTML = fallbackList.map(item => {
-                    let stat = '<span class="popular-stat same">- 0</span>';
-                    if (item.rankChange > 0) stat = `<span class="popular-stat up">▲ ${item.rankChange}</span>`;
-                    else if (item.rankChange < 0) stat = `<span class="popular-stat down">▼ ${Math.abs(item.rankChange)}</span>`;
-                    return `
-                        <div class="popular-item" style="cursor: pointer;" data-kw="${escape(item.keyword)}">
-                            <span class="popular-num ${item.rank <= 3 ? 'top-rank' : ''}">${item.rank}</span>
-                            <span class="popular-keyword">${escape(item.keyword)}</span>
-                            ${stat}
-                        </div>
-                    `;
-                }).join("");
-            }
+            } catch(e) {}
 
             popularGrid.addEventListener("click", (e) => {
                 const pItem = e.target.closest(".popular-item");
