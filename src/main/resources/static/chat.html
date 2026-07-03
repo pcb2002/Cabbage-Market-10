@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>배추마켓 | 홈</title>
+    <title>배추마켓 | 채팅</title>
     <link rel="stylesheet" href="assets/css/styles.css">
-    <script type="module" src="assets/js/pages/home.js"></script>
+    <script type="module" src="assets/js/pages/chat-page.js"></script>
 </head>
 <body>
 <div class="shell">
@@ -59,8 +59,8 @@
             </div>
             
             <nav class="main-nav">
-                <a class="is-active" href="index.html">홈</a>
-                <a href="chat.html">채팅</a>
+                <a href="index.html">홈</a>
+                <a class="is-active" href="chat.html">채팅</a>
                 <a href="mypage.html">마이페이지</a>
                 <a href="sell.html">판매등록</a>
             </nav>
@@ -68,62 +68,46 @@
     </header>
 
     <main class="page">
-        <section class="feed-shell">
-            <!-- 와이드 배너 슬라이더 -->
-            <div class="feed-head">
-                <div class="feed-head__content">
-                    <p class="eyebrow">Baechu Market Benefit</p>
-                    <h1>혜택이 더 커졌어요<br>2.5% 더 받고, 10% 할인 받는 배추머니</h1>
-                    <p class="hero-copy">경매부터 직거래까지 빠르고 안전한 우리 동네 마켓</p>
-                </div>
-                <div class="feed-head__banner">
-                    <img src="assets/images/banner.png" alt="배추마켓 마스코트">
-                </div>
+        <section class="chat-page-hero">
+            <div>
+                <p class="eyebrow">CABBAGE CHAT</p>
+                <h1>이웃과의 안전한 실시간 대화</h1>
             </div>
-
-            <!-- 퀵메뉴 아이콘 바 (동적 카테고리 필터 연결) -->
-            <div id="categoryFilter" class="category-bar"></div>
-
-            <div class="feed-layout">
-                <section class="feed-stage">
-                    <div class="section-head">
-                        <div>
-                            <h2>오늘의 추천 아이템</h2>
-                            <div class="section-meta">
-                                <span id="heroAuthLabel" class="hidden">비회원</span>
-                                <span id="heroItemCount">로딩 중</span> · 
-                                <span id="feedMeta">상품을 불러오는 중입니다.</span>
-                            </div>
-                        </div>
-                        
-                        <!-- 수평 정렬 필터 바 -->
-                        <div class="horizontal-filters">
-                            <div class="filter-stack">
-                                <button type="button" class="chip is-active" data-status="">최신순</button>
-                                <button type="button" class="chip" data-status="ON_SALE">판매중</button>
-                                <button type="button" class="chip" data-status="RESERVED">예약중</button>
-                                <button type="button" class="chip" data-status="SOLD_OUT">거래완료</button>
-                            </div>
-                            <label class="check-line">
-                                <input id="likedOnlyInput" type="checkbox">
-                                <span>좋아요한 상품만 보기</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div id="itemGrid" class="item-grid"></div>
-                    
-                    <div class="section-foot">
-                        <button id="loadMoreButton" type="button" class="button button--line">더 보기</button>
-                    </div>
-                </section>
+            <div class="chat-page-badge">
+                <span id="chatConnectionState">연결 대기</span>
             </div>
+        </section>
+
+        <section class="chat-layout">
+            <aside class="chat-sidebar">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">ROOMS</p>
+                        <h2>내 채팅방</h2>
+                    </div>
+                </div>
+                <div id="chatRoomList" class="chat-room-list"></div>
+            </aside>
+
+            <section class="chat-stage">
+                <div class="chat-stage__head">
+                    <div>
+                        <p class="eyebrow">LIVE CHAT</p>
+                        <h2 id="chatRoomTitle">채팅방을 선택하세요</h2>
+                    </div>
+                </div>
+                <div id="chatLoadState" class="chat-load-state hidden">이전 메시지를 불러오는 중입니다.</div>
+                <div id="chatMessages" class="chat-messages empty-box">채팅방을 고르면 메시지가 표시됩니다.</div>
+                <form id="chatForm" class="chat-compose">
+                    <input id="chatMessageInput" type="text" maxlength="1000" placeholder="메시지를 입력하세요">
+                    <button type="submit" class="button button--dark">전송</button>
+                </form>
+            </section>
         </section>
     </main>
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
 <script type="module">
     (async function() {
         const keywordInput = document.getElementById("keywordInput");
@@ -199,24 +183,11 @@
         }
 
         if (popularGrid) {
-            const fallbackList = [
-                { rank: 1, keyword: "아이폰", rankChange: 2 },
-                { rank: 2, keyword: "나이키", rankChange: -1 },
-                { rank: 3, keyword: "스톤아일랜드", rankChange: 0 },
-                { rank: 4, keyword: "에어팟", rankChange: 4 },
-                { rank: 5, keyword: "텐트", rankChange: 0 },
-                { rank: 6, keyword: "자전거", rankChange: 1 },
-                { rank: 7, keyword: "가방", rankChange: -2 },
-                { rank: 8, keyword: "스타벅스", rankChange: 0 },
-                { rank: 9, keyword: "맥북", rankChange: 3 },
-                { rank: 10, keyword: "패딩", rankChange: -1 }
-            ];
-
             try {
                 const res = await fetch("/api/search/popular");
-                let list = [];
                 if (res.ok) {
                     const resJson = await res.json();
+                    let list = [];
                     if (resJson && resJson.data && Array.isArray(resJson.data.keywords)) {
                         list = resJson.data.keywords;
                     } else if (Array.isArray(resJson)) {
@@ -226,43 +197,28 @@
                     } else {
                         list = resJson.content || resJson.popularKeywords || [];
                     }
-                }
 
-                if (list.length === 0) {
-                    list = fallbackList;
+                    if (list.length > 0) {
+                        popularGrid.innerHTML = list.slice(0, 10).map((item, idx) => {
+                            const rank = item.rank || (idx + 1);
+                            const keyword = typeof item === 'string' ? item : (item.keyword || item.query || item.word || item.name || '');
+                            const change = typeof item === 'string' ? 0 : Number(item.rankChange || item.change || 0);
+                            
+                            let stat = '<span class="popular-stat same">- 0</span>';
+                            if (change > 0) stat = `<span class="popular-stat up">▲ ${change}</span>`;
+                            else if (change < 0) stat = `<span class="popular-stat down">▼ ${Math.abs(change)}</span>`;
+                            
+                            return `
+                                <div class="popular-item" style="cursor: pointer;" data-kw="${escape(keyword)}">
+                                    <span class="popular-num ${rank <= 3 ? 'top-rank' : ''}">${rank}</span>
+                                    <span class="popular-keyword">${escape(keyword)}</span>
+                                    ${stat}
+                                </div>
+                            `;
+                        }).join("");
+                    }
                 }
-
-                popularGrid.innerHTML = list.slice(0, 10).map((item, idx) => {
-                    const rank = item.rank || (idx + 1);
-                    const keyword = typeof item === 'string' ? item : (item.keyword || item.query || item.word || item.name || '');
-                    const change = typeof item === 'string' ? 0 : Number(item.rankChange || item.change || 0);
-                    
-                    let stat = '<span class="popular-stat same">- 0</span>';
-                    if (change > 0) stat = `<span class="popular-stat up">▲ ${change}</span>`;
-                    else if (change < 0) stat = `<span class="popular-stat down">▼ ${Math.abs(change)}</span>`;
-                    
-                    return `
-                        <div class="popular-item" style="cursor: pointer;" data-kw="${escape(keyword)}">
-                            <span class="popular-num ${rank <= 3 ? 'top-rank' : ''}">${rank}</span>
-                            <span class="popular-keyword">${escape(keyword)}</span>
-                            ${stat}
-                        </div>
-                    `;
-                }).join("");
-            } catch(e) {
-                popularGrid.innerHTML = fallbackList.map(item => {
-                    let stat = '<span class="popular-stat same">- 0</span>';
-                    if (item.rankChange > 0) stat = `<span class="popular-stat up">▲ ${item.rankChange}</span>`;
-                    else if (item.rankChange < 0) stat = `<span class="popular-stat down">▼ ${Math.abs(item.rankChange)}</span>`;
-                    return `
-                        <div class="popular-item" style="cursor: pointer;" data-kw="${escape(item.keyword)}">
-                            <span class="popular-num ${item.rank <= 3 ? 'top-rank' : ''}">${item.rank}</span>
-                            <span class="popular-keyword">${escape(item.keyword)}</span>
-                            ${stat}
-                        </div>
-                    `;
-                }).join("");
-            }
+            } catch(e) {}
 
             popularGrid.addEventListener("click", (e) => {
                 const pItem = e.target.closest(".popular-item");

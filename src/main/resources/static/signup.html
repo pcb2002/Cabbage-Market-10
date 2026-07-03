@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>배추마켓 | 회원가입</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script type="module" src="assets/js/pages/signup.js"></script>
+</head>
+<body>
+<div class="shell">
+    <header class="site-header">
+        <div class="site-header__inner">
+            <div class="header-top">
+                <a class="brand" href="index.html">배추<span>마켓</span></a>
+                
+                <!-- 검색창 및 최근/인기 검색어 팝업 레이어 -->
+                <div class="search-container">
+                    <form id="searchForm" class="search-bar">
+                        <input id="keywordInput" type="search" placeholder="상품명이나 상점명을 검색해주세요">
+                        <button type="submit">🔍</button>
+                    </form>
+                    
+                    <div class="search-suggest-layer">
+                        <div class="suggest-section">
+                            <div class="suggest-title">
+                                <span>최근 검색어</span>
+                                <span class="clear-btn">전체삭제</span>
+                            </div>
+                            <div class="recent-chips">
+                                <div class="recent-chip">가방 <span class="remove-tag">✕</span></div>
+                                <div class="recent-chip">아이폰 <span class="remove-tag">✕</span></div>
+                            </div>
+                        </div>
+                        <div class="suggest-section">
+                            <div class="suggest-title">인기검색어</div>
+                            <div class="popular-grid">
+                                <div class="popular-item"><span class="popular-num top-rank">1</span><span class="popular-keyword">에이티즈</span><span class="popular-stat up">2</span></div>
+                                <div class="popular-item"><span class="popular-num top-rank">2</span><span class="popular-keyword">망아살</span><span class="popular-stat same">0</span></div>
+                                <div class="popular-item"><span class="popular-num top-rank">3</span><span class="popular-keyword">르세라핌</span><span class="popular-stat up">5</span></div>
+                                <div class="popular-item"><span class="popular-num">4</span><span class="popular-keyword">아이폰5s</span><span class="popular-stat up">1</span></div>
+                                <div class="popular-item"><span class="popular-num">5</span><span class="popular-keyword">풀샥</span><span class="popular-stat up">3</span></div>
+                                <div class="popular-item"><span class="popular-num">6</span><span class="popular-keyword">베이프티셔츠</span><span class="popular-stat down">1</span></div>
+                                <div class="popular-item"><span class="popular-num">7</span><span class="popular-keyword">한화</span><span class="popular-stat up">2</span></div>
+                                <div class="popular-item"><span class="popular-num">8</span><span class="popular-keyword">칼하트</span><span class="popular-stat up">1</span></div>
+                                <div class="popular-item"><span class="popular-num">9</span><span class="popular-keyword">갤럭시 s24</span><span class="popular-stat up">12</span></div>
+                                <div class="popular-item"><span class="popular-num">10</span><span class="popular-keyword">마도카 피규어</span><span class="popular-stat up">4</span></div>
+                            </div>
+                        </div>
+                        <div class="suggest-close-bar">닫기</div>
+                    </div>
+                </div>
+                
+                <div class="header-actions">
+                    <span id="headerUserLabel" class="user-pill">비회원</span>
+                    <a id="headerLoginLink" class="button button--dark" href="login.html">로그인/회원가입</a>
+                    <button id="headerLogoutButton" type="button" class="button button--line hidden">로그아웃</button>
+                </div>
+            </div>
+            
+            <nav class="main-nav">
+                <a href="index.html">홈</a>
+                <a href="chat.html">채팅</a>
+                <a href="mypage.html">마이페이지</a>
+                <a href="sell.html">판매등록</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page page--auth">
+        <section class="auth-layout">
+            <article class="auth-side">
+                <p class="eyebrow">SIGN UP</p>
+                <h1>동네 거래를 시작할 새 계정을 만듭니다.</h1>
+                <p>가입 후 바로 로그인되어 상품 피드로 이동합니다.</p>
+            </article>
+
+            <section class="auth-card">
+                <h2>회원가입</h2>
+                <form id="signupForm" class="stack-form">
+                    <label>닉네임<input name="nickname" type="text" placeholder="닉네임을 입력하세요" required></label>
+                    <label>이름<input name="name" type="text" placeholder="이름을 입력하세요" required></label>
+                    <label>전화번호<input name="phone" type="tel" placeholder="010-0000-0000" required></label>
+                    <label>이메일 주소<input name="email" type="email" autocomplete="email" placeholder="abc@email.co.kr" required></label>
+                    <label>비밀번호<input name="password" type="password" autocomplete="new-password" placeholder="8자 이상의 비밀번호" required></label>
+                    <button type="submit" class="button button--dark button--block">가입 완료</button>
+                </form>
+            </section>
+        </section>
+    </main>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

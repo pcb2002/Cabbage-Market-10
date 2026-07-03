@@ -54,7 +54,7 @@ public class ChatService {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHAT_ROOM_NOT_FOUND));
 
-        ChatMessage chatMessage =ChatMessage.builder()
+        ChatMessage chatMessage = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .sender(sender)
                 .content(chatMessageDto.content())

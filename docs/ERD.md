@@ -1,118 +1,117 @@
 # ERD
 
+현재 문서는 JPA 엔티티 기준이다.
+
 ## Mermaid
 
 ```mermaid
 erDiagram
-    direction LR
+    CATEGORY ||--o{ ITEM : classifies
+    CLIENT ||--o{ ITEM : sells
+    CLIENT ||--o{ ITEM : buys
+    ITEM ||--o{ ITEM_IMAGE : has
+    ITEM ||--o{ ITEM_LIKE : receives
+    CLIENT ||--o{ ITEM_LIKE : adds
 
-    category ||--o{ item : classifies
-    itemImage }o--|| item : belongs_to
-    item ||--|{ itemLike : receives
-    itemLike }o--|| client : added_by
-    inquiry }o--|| item : belongs_to
-    inquiry }o--|| client : written_by
-    item }o--|| client : sold_by
-    item }o--o| client : bought_by
+    ITEM ||--o{ INQUIRY_LOG : has
+    CLIENT ||--o{ INQUIRY_LOG : writes
+    INQUIRY_LOG ||--o| INQUIRY_LOG : answers
 
-    client ||--o{ follow : follows
-    client ||--o{ follow : followed_by
+    ITEM ||--o{ CHAT_ROOM : discussed_in
+    CLIENT ||--o{ CHAT_ROOM : creates
+    CHAT_ROOM ||--o{ CHAT_MESSAGE : contains
+    CLIENT ||--o{ CHAT_MESSAGE : sends
 
-    client ||--o{ chatRoom : creates
-    item ||--o{ chatRoom : discussed_in
-    chatRoom ||--o{ chatMessage : contains
-    client ||--o{ chatMessage : sends
+    ITEM ||--o{ REVIEW : reviewed
+    CLIENT ||--o{ REVIEW : writes
+    CLIENT ||--o{ REVIEW : receives
 
-    client ||--o{ review : writes
-    client ||--o{ review : receives
-    item ||--o{ review : reviewed_by
+    CLIENT ||--o{ FOLLOW : follows
+    CLIENT ||--o{ FOLLOW : followed_by
 
-    item |o--|| auctionStatus : open
-    auctionStatus ||--o{ auctionBidHistory : records
-    client ||--o{ auctionBidHistory : bids
-    inquiry |o--|| inquiry : answers
+    ITEM ||--|| AUCTION_STATUS : has
+    AUCTION_STATUS ||--o{ AUCTION_BID_HISTORY : records
 
-    client["CLIENT"] {
+    CLIENT {
         bigint id PK
         varchar email UK
         varchar password
         varchar nickname
         varchar name
         varchar phone
-        varchar(500) profile_image_url
-        varchar role
+        varchar profile_image_url
         varchar status
         boolean is_verified
+        boolean is_deleted
         datetime created_at
         datetime updated_at
-        boolean is_deleted
     }
 
-    category["CATEGORY"] {
+    CATEGORY {
         bigint id PK
-        bigint parent_id FK
-        varchar name UK
+        varchar name
         int sort_order
         boolean is_active
         datetime created_at
         datetime updated_at
     }
 
-    item["ITEM"] {
+    ITEM {
         bigint id PK
+        bigint category_id FK
         bigint seller_id FK
         bigint buyer_id FK
-        bigint category_id FK
         varchar trade_type
         varchar title
         text description
         bigint initial_price
         varchar condition_type
         varchar trade_status
+        boolean is_draft
+        boolean is_deleted
         bigint view_count
         bigint like_count
         bigint inquiry_count
-        boolean is_draft
         datetime created_at
         datetime updated_at
-        boolean is_deleted
     }
 
-    itemImage["ITEM_IMAGE"] {
+    ITEM_IMAGE {
         bigint id PK
         bigint item_id FK
         varchar image_url
         int sort_order
         boolean is_thumbnail
         datetime created_at
+        datetime updated_at
     }
 
-    itemLike["ITEM_LIKE"] {
-        bigint client_id PK, FK
-        bigint item_id PK, FK
+    ITEM_LIKE {
+        bigint client_id PK FK
+        bigint item_id PK FK
         datetime created_at
     }
 
-    inquiry["INQUIRY_LOG"] {
+    INQUIRY_LOG {
         bigint id PK
         bigint item_id FK
         bigint author_id FK
-        bigint target_inquiry_id FK
+        bigint target_inquiry_id FK UK
         varchar title
         text description
         varchar status
+        boolean is_deleted
         datetime created_at
         datetime updated_at
-        boolean is_deleted
     }
 
-    follow["FOLLOW"] {
-        bigint follower_id PK, FK
-        bigint following_id PK, FK
+    FOLLOW {
+        bigint follower_id PK FK
+        bigint following_id PK FK
         datetime created_at
     }
 
-    chatRoom["CHAT_ROOM"] {
+    CHAT_ROOM {
         varchar id PK
         bigint item_id FK
         bigint created_by FK
@@ -121,7 +120,7 @@ erDiagram
         datetime updated_at
     }
 
-    chatMessage["CHAT_MESSAGE"] {
+    CHAT_MESSAGE {
         bigint id PK
         varchar chat_room_id FK
         bigint sender_id FK
@@ -132,79 +131,67 @@ erDiagram
         datetime deleted_at
     }
 
-    review["REVIEW"] {
+    REVIEW {
         bigint id PK
         bigint item_id FK
         bigint reviewer_id FK
         bigint reviewee_id FK
         int rating
         text content
+        boolean is_deleted
         datetime created_at
         datetime updated_at
-        boolean is_deleted
     }
 
-    auctionStatus["AUCTION_STATUS"] {
-        bigint item_id PK,FK
+    AUCTION_STATUS {
+        bigint item_id PK FK
         bigint current_bid
         bigint current_bidder_id
         datetime close_date
     }
 
-    auctionBidHistory["AUCTION_BID_HISTORY"] {
+    AUCTION_BID_HISTORY {
         bigint id PK
-        bigint item_id FK
-        bigint bidder_id FK
+        bigint item_id
+        bigint bidder_id
         bigint previous_bid
         bigint bid_price
         datetime created_at
     }
 ```
 
-## Entity 목록
+## 현재 코드 기준 차이 메모
 
-| Domain          | Entity                                   |
-|-----------------|------------------------------------------|
-| auth/membership | Client                                   |
-| categories      | Category                                 |
-| Items           | Item, ItemImage, ItemLike, AuctionStatus, AuctionBidHistory |
-| Inquiries       | InquiryLog                               |
-| Follow          | Follow                                   |
-| chat            | ChatRoom, ChatMember, ChatMessage        |
-| reviews         | Review                                   |
+- `Category`는 `parent_id`가 없다.
+- `Category.name` 유니크 제약은 현재 엔티티에 없다.
+- `Client.role` 컬럼은 없다.
+- `ChatMember` 엔티티는 없다.
+- `ChatRoom.id`는 `UUID String`이다.
+- `ChatMessage`는 `deleted_at` soft delete를 쓴다.
+- `AuctionStatus.current_bidder_id`는 연관관계가 아니라 `Long` 값으로 저장한다.
 
-## Main Constraints
+## 주요 제약
 
-- `client.email` is unique.
-- `category.name`is unique.
-- `category.parent_id` refers `category.id`.
-- `item.seller_id` refers `client.id`.
-- `item.category_id` refers `category.id`.
-- The Primary key of `item_like` is `(client_id, item_id)`.
-- `inquiry_log.target_inquiry_id` refers `inquiry_log.id`, can be null, and is unique so each inquiry can have at most one answer.
-- The `title` request field of the inquiry API is stored in `inquiry_log.title`.
-- The `contents` request field of the inquiry API is stored in `inquiry_log.description`.
-- The Primary Key of `follow` is `(follower_id, following_id)`.
-- `follow.follower_id` and `follow.following_id` must be different.
-- The Primary Key of `chat_member` is `(chat_room_id, client_id)`.
-- `auction_status.item_id` is both the PK and FK to `item.id`.
-- `auction_status.current_bidder_id` stores the current highest bidder's `client.id` and can be nullable before any bids are placed.
-- `auction_bid_history.item_id` stores the auction item id for each successful bid.
-- `auction_bid_history.bidder_id` stores the bidder's `client.id`.
+- `client.email`은 unique다.
+- `item_like` PK는 `(client_id, item_id)`다.
+- `follow` PK는 `(follower_id, following_id)`다.
+- `follow`는 `follower_id <> following_id` check constraint가 있다.
+- `review`는 `(item_id, reviewer_id)` unique 제약이 있다.
+- `inquiry_log.target_inquiry_id`는 unique라 질문당 답변은 최대 1개다.
+- `auction_status.item_id`는 PK이자 `item.id` FK다.
 
-## Deletion policies
+## 삭제 정책
 
-| Entity        | Policies                   |
-|---------------|----------------------------|
-| Client        | Soft Delete, `is_deleted`  |
-| Item          | Draft: Hard Delete / Published: Soft Delete, `is_deleted` |
-| InquiryLog    | Soft Delete, `is_deleted`  |
-| ChatMessage   | Soft Delete, `deleted_at`  |
-| Review        | Soft Delete, `is_deleted`  |
-| ItemImage     | Hard Delete                |
-| ItemLike      | Hard Delete                |
-| Follow        | Hard Delete                |
-| ChatMember    | record `left_at`           |
-| Category      | `is_active` = false        |
-| AuctionStatus | Manage with Item lifecycle |
-| AuctionBidHistory | Keep bid audit records |
+| Entity | 정책 |
+|---|---|
+| Client | Soft Delete, `is_deleted` |
+| Item | 게시글 Soft Delete, `is_deleted` |
+| Item draft | Hard Delete |
+| InquiryLog | Soft Delete, `is_deleted` |
+| Review | Soft Delete, `is_deleted` |
+| ChatMessage | Soft Delete, `deleted_at` |
+| ItemImage | Hard Delete |
+| ItemLike | Hard Delete |
+| Follow | Hard Delete |
+| AuctionStatus | Item 생명주기에 종속 |
+| AuctionBidHistory | 입찰 이력 유지 |

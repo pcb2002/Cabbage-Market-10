@@ -1,24 +1,28 @@
 # 배추마켓 문서 인덱스
 
-저장소 루트: https://github.com/pcb2002/Cabbage-Market-10
-
-문서와 작업 지침의 파일 경로는 저장소 루트 기준으로 작성한다.
+현재 `docs/` 문서는 이 저장소의 **현재 코드 구현**을 기준으로 관리한다.
 
 | 문서 | 책임 |
 |---|---|
-| [docs/ERD.md](ERD.md) | Entity, 컬럼, 관계, 삭제 정책 |
-| [docs/api.md](api.md) | REST API와 WebSocket 경로 |
-| [docs/security.md](security.md) | 인증, 권한, 민감정보, WebSocket 보안 |
-| [docs/business-rules.md](business-rules.md) | 도메인 규칙과 상태 기준 |
-| [docs/convention.md](convention.md) | 기술 스택, 계층, 구현 규칙, 테스트, 네이밍 |
-| [docs/workflow.md](workflow.md) | 이슈·브랜치·커밋·PR·리뷰 흐름 |
-| [docs/adr/README.md](adr/README.md) | 중요한 기술 결정 기록 |
-| [docs/plans/](plans/) | 장기 작업 진행 상태 |
+| [docs/api.md](api.md) | 현재 구현된 REST API, WebSocket 경로, 인증 기준 |
+| [docs/ERD.md](ERD.md) | 현재 엔티티 기준 테이블, 컬럼, 관계, 삭제 정책 |
+| [docs/security.md](security.md) | JWT, Refresh Token Cookie, CSRF, WebSocket 인증 |
+| [docs/business-rules.md](business-rules.md) | 도메인별 상태 규칙, 권한 규칙, 삭제 정책 |
+| [docs/convention.md](convention.md) | 현재 패키지 구조, 계층 규칙, 테스트/문서 규칙 |
+| [docs/workflow.md](workflow.md) | 브랜치, 커밋, 리뷰, PR 작업 흐름 |
+| [docs/adr/README.md](adr/README.md) | 현재 코드에 반영된 기술 결정 기록 |
+| [docs/plans/README.md](plans/README.md) | 장기 작업 기록 규칙 |
 
-## 로컬 스킬
+## 현재 코드 기준 빠른 요약
 
-| 스킬 | 경로 | 용도 |
-|---|---|---|
-| git-pr | [.agents/skills/git-pr/SKILL.md](../.agents/skills/git-pr/SKILL.md) | PR 본문, 이슈 초안 작성 |
-| review | [.agents/skills/review/SKILL.md](../.agents/skills/review/SKILL.md) | 변경사항 코드 리뷰 |
-| git-setup | [.agents/skills/git-setup/SKILL.md](../.agents/skills/git-setup/SKILL.md) | Git hook, PR·이슈 템플릿 셋업 |
+- 인증: Access Token JWT + Refresh Token Cookie
+- 상품 검색: `v1` 일반 조회, `v2` 비로그인 검색 Redis 캐시
+- 인기 검색어: Redis Sorted Set 일별 집계
+- 상품 이미지: S3 업로드 + 별도 이미지 API
+- 채팅: STOMP WebSocket, `CONNECT` 시 `Authorization` 헤더 검증
+- 경매 입찰: Redis Redisson 분산 락
+
+## 주의
+
+- 문서에 없는 API는 현재 코드에 구현되지 않은 것으로 본다.
+- 코드와 문서가 다르면 코드를 우선하고, 문서를 즉시 갱신한다.

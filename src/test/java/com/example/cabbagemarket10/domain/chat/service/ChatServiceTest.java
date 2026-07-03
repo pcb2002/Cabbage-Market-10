@@ -255,10 +255,12 @@ class ChatServiceTest {
                 Sort.by("lastMessageAt").descending());
         ChatRoomDetail firstRoom = new ChatRoomDetail(
                 "room-2",
+                200L,
                 "자전거",
                 LocalDateTime.of(2026, 7, 1, 11, 0));
         ChatRoomDetail secondRoom = new ChatRoomDetail(
                 "room-1",
+                100L,
                 "노트북",
                 LocalDateTime.of(2026, 7, 1, 10, 0));
 

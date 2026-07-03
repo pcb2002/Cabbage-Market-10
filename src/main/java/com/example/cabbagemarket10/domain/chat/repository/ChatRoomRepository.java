@@ -13,7 +13,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, String> {
 
     @Query(value = """
             SELECT new com.example.cabbagemarket10.domain.chat.dto.restful.ChatRoomDetail
-                        (cr.id, i.title, cr.lastMessageAt)
+                        (cr.id, i.id, i.title, cr.lastMessageAt)
             FROM ChatRoom cr
             join cr.item i
             join cr.createdBy cbci
