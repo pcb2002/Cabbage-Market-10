@@ -67,6 +67,79 @@ flowchart LR
 
 자세한 결정 배경은 [docs/adr/README.md](docs/adr/README.md)를 참고하세요.
 
+## k6 성능 테스트와 검색 캐시
+
+### 결론
+
+검색 API는 캐시를 적용할 가치가 높습니다. item 100만 건 기준으로 캐시 없는 v1 검색은 p95 6.5s로 목표인 500ms를 크게 넘겼고, Redis 캐시가 적중한 v2 검색은 p95 13~25ms로 목표를 통과했습니다. 원본 수치는 별도 `REPORT.md`를 참고합니다.
+
+### 왜 검색 API에 캐시를 적용했는가
+
+캐시 적용 여부는 "쿼리가 비싼가"와 "결과가 반복 재사용되는가" 두 가지로 판단했습니다.
+
+첫째, 검색 쿼리 자체가 비쌉니다. `ItemSearchRepositoryImpl`은 제목·설명에 `containsIgnoreCase` 기반 `LIKE` 조건을 쓰고, 페이징을 위해 content 쿼리와 count 쿼리를 함께 실행합니다. 인덱스를 타기 어려운 풀스캔에 가까운 구조라 데이터가 커질수록, 동시 요청이 늘어날수록 응답 시간이 급격히 나빠집니다. v1의 p95 6.5s가 이를 보여줍니다.
+
+둘째, 검색은 캐시로 이득을 볼 수 있는 접근 패턴을 가집니다. `keyword=아이폰`, `tradeStatus=ON_SALE`, `page=0`, `size=20` 같은 조합은 여러 사용자가 짧은 시간에 반복 요청할 수 있습니다. 또한 검색 결과는 몇 분 정도 늦게 갱신돼도 무방한 읽기 중심 데이터라 강한 일관성이 필요하지 않습니다. "비싼 쿼리 + 반복되는 요청 + 약한 일관성 요구"라는 조건이 맞아 검색 API는 캐시 적중 시 이득이 큽니다.
+
+반대로 상품 상세 조회는 조회수 증가라는 쓰기 부작용이 있어 캐시 적용을 보류했고, 인기 검색어는 이미 Redis Sorted Set 조회만으로 충분히 빨라 p95 12.85ms를 기록했으므로 별도 캐시가 불필요했습니다. 즉 "느리고 반복되는 읽기"라는 조건에 검색 API가 가장 잘 맞았습니다.
+
+### k6 결과 요약
+
+| 대상 | 조건 | p95 | 판정 |
+|---|---|---:|---|
+| 검색 v1 | 캐시 없음 | 6.5s | 실패 |
+| 검색 v2 | 캐시 미적중(로그인) | 27.89s | 실패 |
+| 검색 v2 | 캐시 적중(비로그인) | 15.73ms | 통과 |
+| 검색 v2 | 캐시 적중(로그인, 실험) | 13.5ms / 24.52ms | 통과 |
+| 인기 검색어 | Redis Sorted Set 조회 | 12.85ms | 통과 |
+
+캐시 미스는 여전히 DB 비용을 그대로 받습니다. 따라서 캐시 적용 이후의 핵심은 적중률을 얼마나 높이느냐입니다.
+
+현재 `develop`의 `SearchService.searchItemsV2`는 `@Cacheable(condition = "#clientId == null")` 조건으로 비로그인 요청만 캐시합니다. 로그인 v2 결과인 13.5ms / 24.52ms는 이 조건을 제거한 실험 결과이며, 현재 코드 그대로라면 로그인 검색은 캐시가 적중하지 않습니다.
+
+### 테스트 대상
+
+- `search-api.js`: `/api/v1/items/search`, `/api/v2/items/search`
+- `popular-search-api.js`: `/api/search/popular`
+- VU 프로파일: 5명(30s) -> 20명(1m) -> 0명(30s)
+- Threshold: `checks rate>0.99`, `http_req_duration p95<500ms`, `http_req_failed rate<0.01`
+
+```bash
+k6 run -e API_VERSION=v1 performance/k6/search-api.js
+k6 run -e API_VERSION=v2 -e ANONYMOUS=true performance/k6/search-api.js
+k6 run performance/k6/popular-search-api.js
+
+# 로그인 검색
+k6 run -e API_VERSION=v2 -e K6_EMAIL=user@example.com -e K6_PASSWORD='password123!' performance/k6/search-api.js
+```
+
+### 캐시 전략
+
+Cache-aside(Lazy Loading)를 선택했습니다. 조회 시 캐시를 먼저 확인하고, 없으면 DB 조회 후 캐시에 채웁니다. Write-through나 write-back을 쓰지 않은 이유는 검색 결과가 원본 데이터가 아니라 필터·정렬로 만든 파생 데이터이기 때문입니다. 쓰기 시점마다 가능한 모든 검색 조건의 결과를 미리 계산하는 것은 조합이 너무 많아 비효율적입니다.
+
+캐시 key는 캐시 이름 `itemSearchV2`와 Redis prefix `item-search:v2:`를 사용합니다. `ItemSearchCacheKey`는 `clientId`, `keyword`, `categoryId`, `tradeStatus`, `tradeType`, `conditionType`, `likedOnly`, `minPrice`, `maxPrice`, `page`, `size`, `sort`를 포함해 서로 다른 조건이 캐시를 공유하지 않도록 합니다. `keyword`는 trim 후 빈 문자열을 `null`로 정규화합니다. 단, 현재는 `condition = "#clientId == null"` 때문에 실제 캐시 엔트리의 `clientId`는 대부분 `null`입니다.
+
+무효화는 TTL 5분과 이벤트 기반 전체 삭제를 함께 사용합니다. 상품 생성·게시·수정·상태 변경·삭제, 좋아요 토글, 입찰 성공 시 `SearchCacheEvictionService.evictItemSearchV2AfterCommit()`가 트랜잭션 커밋 후 `itemSearchV2` 전체를 비웁니다. 조건별로 정밀하게 무효화하지 않고 전체 삭제를 택한 이유는 검색 조건 조합 수가 많아 정확한 영향 범위 계산이 복잡하기 때문입니다. 단순성과 정합성을 우선한 선택이며, 쓰기가 잦으면 hit rate가 낮아질 수 있는 트레이드오프가 있습니다.
+
+Redis를 쓰는 이유는 scale-out 환경에서 캐시를 공유하기 위해서입니다. 로컬 캐시는 서버마다 캐시가 달라져 동일 조건도 서버별로 hit/miss가 갈리고 무효화도 서버마다 맞춰야 합니다. Redis는 서버 간 공유되는 remote cache라 일관성 유지가 쉽고, 이 프로젝트에서는 이미 경매 락, 토큰 블랙리스트, 인기 검색어에 사용하고 있어 추가 인프라 부담도 작습니다.
+
+```yaml
+app:
+  cache:
+    item-search-v2:
+      type: redis
+      ttl: 5m
+      maximum-size: 1000
+      key-prefix: "item-search:v2:"
+```
+
+### 남은 과제
+
+- 로그인 검색 캐시 적용 여부 결정: 적용 시 `condition = "#clientId == null"` 제거 또는 변경 필요
+- 다중 계정 k6 시나리오로 사용자별 key 분산 시 hit rate 측정
+- `LIKE` 풀스캔 대체용 full-text index 또는 검색 엔진 검토
+- 운영 환경 Redis `maxmemory` 정책 명시
+
 ## 도메인 모델
 
 주요 엔티티는 `Client`, `Category`, `Item`, `ItemImage`, `ItemLike`, `InquiryLog`, `Follow`, `ChatRoom`, `ChatMessage`, `Review`, `AuctionStatus`, `AuctionBidHistory`입니다.
