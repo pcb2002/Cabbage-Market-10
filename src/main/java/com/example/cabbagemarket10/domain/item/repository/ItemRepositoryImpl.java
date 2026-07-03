@@ -271,6 +271,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         String jpql = """
                 select new com.example.cabbagemarket10.domain.item.dto.response.ItemDetailResponse(
                     i.id,
+                    i.seller.id,
                     i.title,
                     i.description,
                     i.initialPrice,

@@ -26,7 +26,6 @@ public class ChatWebSocketController {
             @Valid @Payload ChatMessageDto chatMessageDto,
             Principal principal
     ) {
-
         chatService.sendMessage(roomId, chatMessageDto, principal);
         simpMessagingTemplate.convertAndSend("/sub/" + roomId + "/messages", chatMessageDto);
     }

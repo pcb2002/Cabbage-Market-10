@@ -6,6 +6,7 @@ import java.util.List;
 
 public record ItemDetailResponse(
         Long itemId,
+        Long sellerId,
         String title,
         String description,
         Long initialPrice,
@@ -19,6 +20,7 @@ public record ItemDetailResponse(
 ) {
     public ItemDetailResponse(
             Long itemId,
+            Long sellerId,
             String title,
             String description,
             Long initialPrice,
@@ -29,12 +31,12 @@ public record ItemDetailResponse(
             Long likeCount,
             Long inquiryCount
     ) {
-        this(itemId, title, description, initialPrice, currentBid, tradeStatus, closeDate,
+        this(itemId, sellerId, title, description, initialPrice, currentBid, tradeStatus, closeDate,
                 viewCount, likeCount, inquiryCount, List.of());
     }
 
     public ItemDetailResponse withImages(List<ItemDetailImageResponse> images) {
-        return new ItemDetailResponse(itemId, title, description, initialPrice, currentBid, tradeStatus, closeDate,
+        return new ItemDetailResponse(itemId, sellerId, title, description, initialPrice, currentBid, tradeStatus, closeDate,
                 viewCount, likeCount, inquiryCount, images);
     }
 }
