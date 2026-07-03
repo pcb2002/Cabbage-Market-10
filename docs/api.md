@@ -831,7 +831,7 @@ Redis 데이터는 TTL 만료 시 자동 삭제된다.
 | likeCount | 좋아요 수 |
 | createdAt | 상품 등록 일시 |
 
-`GET /api/items/{itemId}` 상품 상세 조회 응답은 `images` 배열을 포함한다. 각 이미지는 `imageId`, `imageUrl`, `sortOrder`, `isThumbnail`을 포함하며 `sortOrder` 오름차순으로 정렬된다. 이미지가 없으면 빈 배열을 반환한다.
+`GET /api/items/{itemId}` 상품 상세 조회 응답은 판매자 식별용 `sellerId`와 `images` 배열을 포함한다. 각 이미지는 `imageId`, `imageUrl`, `sortOrder`, `isThumbnail`을 포함하며 `sortOrder` 오름차순으로 정렬된다. 이미지가 없으면 빈 배열을 반환한다.
 
 ### 상품 검색 v1
 
