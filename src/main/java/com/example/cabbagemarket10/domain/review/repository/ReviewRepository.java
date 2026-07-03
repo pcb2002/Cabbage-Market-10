@@ -1,6 +1,7 @@
 package com.example.cabbagemarket10.domain.review.repository;
 
 import com.example.cabbagemarket10.domain.review.dto.response.ReceivedReviewListItemResponse;
+import com.example.cabbagemarket10.domain.review.dto.response.WrittenReviewListItemResponse;
 import com.example.cabbagemarket10.domain.review.entity.Review;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,4 +44,29 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             where r.reviewee.id = :revieweeId
             """)
     Page<ReceivedReviewListItemResponse> findReceivedReviews(@Param("revieweeId") Long revieweeId, Pageable pageable);
+
+    @Query(value = """
+            select new com.example.cabbagemarket10.domain.review.dto.response.WrittenReviewListItemResponse(
+                r.id,
+                item.id,
+                item.title,
+                (select min(ii.imageUrl) from ItemImage ii where ii.item = item and ii.isThumbnail = true),
+                reviewee.id,
+                reviewee.nickname,
+                r.rating,
+                r.content,
+                r.createdAt
+            )
+            from Review r
+            left join r.item item
+            left join r.reviewee reviewee
+            where r.reviewer.id = :reviewerId
+            order by r.createdAt desc, r.id desc
+            """,
+            countQuery = """
+            select count(r)
+            from Review r
+            where r.reviewer.id = :reviewerId
+            """)
+    Page<WrittenReviewListItemResponse> findWrittenReviews(@Param("reviewerId") Long reviewerId, Pageable pageable);
 }
