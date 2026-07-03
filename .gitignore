@@ -45,7 +45,6 @@ env/*.secret
 !env/*.example
 !env/.gitkeep
 application-secret.yml
-application-prod.yml
 
 ### OS 관련 임시 파일 ###
 .DS_Store

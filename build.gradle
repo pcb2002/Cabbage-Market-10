@@ -18,6 +18,12 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:4.0.2"
+    }
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
@@ -32,6 +38,7 @@ dependencies {
     implementation 'org.redisson:redisson:4.6.1'
     implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
     implementation 'software.amazon.awssdk:s3:2.25.20'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
